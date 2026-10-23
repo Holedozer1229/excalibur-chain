@@ -27,8 +27,12 @@ can re-run.
   checks every header, every AuxPoW attachment, and every difficulty
   transition (24,347 self-PoW + 1,208 AuxPoW blocks + 554 accepted
   under the consensus grace rule, replicated exactly). Full run:
-  ~7 seconds. Its DAA replication predicted the live window-boundary
-  retarget at height 25,680 to the bit.
+  under 10 seconds. Its DAA replication predicted the live
+  window-boundary retarget at height 25,680 to the bit — and the
+  first stratum-mined block followed at 25,681, ground through
+  `stratum_fork.py` by an independent miner implementation and
+  accepted by the node. Latest verified checkpoint: height 25,683
+  (`genealogy_checkpoint.json`).
 
 ## The numbers that matter
 
