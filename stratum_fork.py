@@ -31,14 +31,22 @@ address when the rig connects from another machine), STRATUM_PORT
 = every valid share is a block; raise for the GPU rig, e.g. M such that
 share_work ~ rig_hashrate * 2s), FORK_RPC_PORT (9432), TAG (coinbase
 tag, default "Excalibur").
+
+SPONSOR MODE (env SPONSOR_LOCK + SPONSOR_TAG): when SPONSOR_LOCK is
+set (a 42-char PKH lock hex or 40-char hash160), every coinbase pays
+that lock instead of the node wallet and carries SPONSOR_TAG as an
+extra scriptSig push — a sold block, delivered by construction: the
+buyer's lock and message are sealed by the block's proof-of-work and
+anyone can verify delivery with the genealogy verifier. Default off.
 """
 import asyncio, http.client, json, os, struct, sys, time
 
 sys.path.insert(0, "/home/hatch/workspace")
 import genesis_fork as gf
 from genesis_fork import (sha256d, ser_header, bits_to_target,
-                          target_to_bits, merkle_root, txid, subsidy)
-from txscript import make_coinbase_v2
+                          target_to_bits, merkle_root, txid, subsidy,
+                          push, ser_varint)
+from txscript import make_coinbase_v2, lock_pkh
 
 gf.use_network("fork")
 P = gf.network()
@@ -50,6 +58,13 @@ HOST = os.environ.get("STRATUM_HOST", "127.0.0.1")
 PORT = int(os.environ.get("STRATUM_PORT", "9434"))
 SHARE_MULT = int(os.environ.get("STRATUM_SHARE_MULT", "1"))
 TAG = os.environ.get("TAG", "Excalibur").encode()
+SPONSOR_TAG = os.environ.get("SPONSOR_TAG", "").encode()
+_slock = os.environ.get("SPONSOR_LOCK", "").strip().lower()
+if _slock.startswith("0x"): _slock = _slock[2:]
+SPONSOR_LOCK = None
+if _slock:
+    SPONSOR_LOCK = (bytes.fromhex(_slock) if len(_slock) == 42
+                    else lock_pkh(bytes.fromhex(_slock)))
 WORDSWAP = os.environ.get("STRATUM_PREVHASH_WORDSWAP", "1") == "1"
 DIFF1 = 0x00000000FFFF0000000000000000000000000000000000000000000000000000
 
@@ -95,6 +110,44 @@ def wordswap(b):
     return b"".join(b[i:i + 4][::-1] for i in range(0, len(b), 4))
 
 
+def sponsor_coinbase(height, bits, slot, lock, stag):
+    """Coinbase paying `lock` with `stag` sealed as an extra push.
+    Same shape as make_coinbase_v2 (lineage pins pushes[0]=bits)."""
+    script = (push(struct.pack("<I", bits)) + push(TAG)
+              + push(struct.pack("<I", height)) + push(stag)
+              + push(slot))
+    tx = struct.pack("<I", 1) + b"\x01"
+    tx += bytes(32) + struct.pack("<I", 0xFFFFFFFF)
+    tx += ser_varint(len(script)) + script
+    tx += struct.pack("<I", 0xFFFFFFFF) + b"\x01"
+    tx += struct.pack("<Q", subsidy(height))
+    tx += ser_varint(len(lock)) + lock
+    tx += struct.pack("<I", 0)
+    return tx
+
+
+SPONSORS_FILE = os.environ.get(
+    "SPONSORS_FILE", "/home/hatch/workspace/stratum_shim/sponsors.json")
+
+
+def load_registry():
+    """{height: (lock_bytes, tag_bytes)} from the sponsors registry —
+    the land registry for sold blocks. Reloaded per job; {} on error."""
+    try:
+        with open(SPONSORS_FILE) as f:
+            raw = json.load(f)
+        out = {}
+        for h, e in raw.items():
+            lk = e["lock"].strip().lower()
+            if lk.startswith("0x"): lk = lk[2:]
+            lock = (bytes.fromhex(lk) if len(lk) == 42
+                    else lock_pkh(bytes.fromhex(lk)))
+            out[int(h)] = (lock, e.get("tag", "").encode())
+        return out
+    except Exception:
+        return {}
+
+
 class Chain:
     """Incrementally tracked tip context from the node RPC."""
 
@@ -133,9 +186,17 @@ class Job:
         self.target = bits_to_target(self.bits)
         self.share_target = min(self.target * SHARE_MULT,
                                 (1 << 256) - 1)
-        cb = make_coinbase_v2(height, self.bits, TAG, 0,
-                              chain.wallet_pub,
-                              extra_pushes=[b"\x00" * 8])
+        reg = load_registry().get(height)
+        if reg is not None:
+            cb = sponsor_coinbase(height, self.bits, b"\x00" * 8,
+                                  reg[0], reg[1])
+        elif SPONSOR_LOCK is not None:
+            cb = sponsor_coinbase(height, self.bits, b"\x00" * 8,
+                                  SPONSOR_LOCK, SPONSOR_TAG)
+        else:
+            cb = make_coinbase_v2(height, self.bits, TAG, 0,
+                                  chain.wallet_pub,
+                                  extra_pushes=[b"\x00" * 8])
         marker = b"\x08" + b"\x00" * 8
         off = cb.rfind(marker)
         assert off > 0
@@ -285,7 +346,14 @@ class Shim:
 
 async def main():
     shim = Shim()
-    await asyncio.get_event_loop().run_in_executor(None, shim.chain.refresh)
+    for _ in range(60):  # ride out fork-node restart windows at boot
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, shim.chain.refresh)
+            break
+        except Exception as e:
+            log("waiting for fork node RPC:", e)
+            await asyncio.sleep(5)
     shim.job = Job(shim.chain)
     shim.register_job(shim.job)
     log(f"tip {shim.chain.tip['height']} bits "
