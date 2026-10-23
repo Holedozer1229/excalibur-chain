@@ -22,6 +22,8 @@ can re-run.
   follow the chain's window strategy — difficulty is frozen inside
   each 60-block window and retargets exactly at window boundaries,
   so mid-window block cost is a known constant.
+- **Sponsor No. 1 is unclaimed.** The first paying sponsor takes a
+  permanent, one-of-one seat at the head of the ledger: `FIRST.md`.
 - **Sponsored heights are open.** Pick a future block height, pay
   BTC with a self-describing OP_RETURN order, and the live payment
   watcher registers it after one confirmation. When the chain

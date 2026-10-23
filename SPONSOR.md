@@ -1,10 +1,14 @@
 # Sponsored blocks — own a height
 
 A sponsored block is a block of the Excalibur fork whose coinbase pays
-**your** lock and seals **your** message, delivered automatically by
-the stratum shim when the chain reaches your height. Delivery needs no
-trust: the block either carries your lock and tag or it doesn't, and
-anyone can check with `genealogy_verify.py` in under ten seconds.
+**your** lock and seals **your** message, delivered automatically when
+the chain reaches your height. Every block producer on this chain —
+the merge-mining sniper, the built-in CPU miners, and the stratum
+shim — builds its coinbase from the same sponsor registry, so a
+registered height **cannot be missed**: whichever producer finds the
+block, it pays your lock and seals your tag. Delivery needs no trust:
+the block either carries your lock and tag or it doesn't, and anyone
+can check with `genealogy_verify.py` in under ten seconds.
 
 What you are buying is permanence with a pedigree: a position in a
 chain anchored to Bitcoin block 968,698, whose lineage is
@@ -41,7 +45,10 @@ automatically after **one Bitcoin confirmation**.
    lock with your tag in the scriptSig — regardless of who mines the
    block. Verify delivery yourself: run the verifier and read the
    block's coinbase. The 50 EXCAL subsidy is yours under the chain's
-   normal rules, including 100-block coinbase maturity.
+   normal rules, including 100-block coinbase maturity. Since height
+   25,901 your block also carries the chain's Phase Omega
+   countersignature over its parent (see `OMEGA.md`) — your height is
+   sealed into a chain that post-quantum-signs its own history.
 
 The watcher implementation is `payment_watcher.py`; its simulated
 payment tests are in `test_watcher.py`.
