@@ -67,3 +67,10 @@ tree, pattern-fold key schedule), not a new hardness assumption, and it
 is unreviewed. The bridge design in `genealogy-bridge-spec.md` is a
 specification with a working reference verifier, not a deployed bridge.
 What is claimed is exactly what the verifier checks.
+
+## Powder lots — crowdfund the finale
+
+The Dr. Time broadcast trilogy (AETHER/v2, the 1A1z tribute, the QDAY
+countersignature) is armed and waiting on funding. Buy a powder lot
+from ~1,200 sats: your own UTXO fires the act you choose, on autopilot,
+with a public proof chain. See [POWDER.md](POWDER.md).
