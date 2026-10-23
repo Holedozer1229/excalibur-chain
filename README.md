@@ -74,3 +74,10 @@ The Dr. Time broadcast trilogy (AETHER/v2, the 1A1z tribute, the QDAY
 countersignature) is armed and waiting on funding. Buy a powder lot
 from ~1,200 sats: your own UTXO fires the act you choose, on autopilot,
 with a public proof chain. See [POWDER.md](POWDER.md).
+
+## Phase Omega — the chain countersigns itself (live from height 25,901)
+
+Every block's coinbase now carries a Trifold (hash-only, post-quantum)
+signature over its parent's header: block N countersigns block N−1,
+under published epoch roots. Verify the top of the chain yourself with
+`omega_verify.py`. Design, roots, and honest costs: [OMEGA.md](OMEGA.md).
