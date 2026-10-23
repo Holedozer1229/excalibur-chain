@@ -22,16 +22,22 @@ can re-run.
   follow the chain's window strategy — difficulty is frozen inside
   each 60-block window and retargets exactly at window boundaries,
   so mid-window block cost is a known constant.
+- **Sponsored heights are open.** Pick a future block height, pay
+  BTC with a self-describing OP_RETURN order, and the live payment
+  watcher registers it after one confirmation. When the chain
+  reaches that height, its coinbase pays your lock and seals your
+  tag automatically. Terms and exact payment format: `SPONSOR.md`;
+  the upcoming ~600-block GPU flood inventory: `FLOOD.md`.
 - **Verify it in seconds.** `genealogy_verify.py` is a stdlib-only
   reference verifier: it walks the chain from the Bitcoin anchor and
   checks every header, every AuxPoW attachment, and every difficulty
-  transition (24,347 self-PoW + 1,208 AuxPoW blocks + 554 accepted
-  under the consensus grace rule, replicated exactly). Full run:
-  under 10 seconds. Its DAA replication predicted the live
-  window-boundary retarget at height 25,680 to the bit — and the
-  first stratum-mined block followed at 25,681, ground through
+  transition (24,400 self-PoW + 1,431 AuxPoW blocks, including 599
+  accepted under the consensus grace rule, replicated exactly).
+  Full run: under 10 seconds. Its DAA replication predicted the
+  live window-boundary retarget at height 25,680 to the bit — and
+  the first stratum-mined block followed at 25,681, ground through
   `stratum_fork.py` by an independent miner implementation and
-  accepted by the node. Latest verified checkpoint: height 25,683
+  accepted by the node. Latest verified checkpoint: height 25,831
   (`genealogy_checkpoint.json`).
 
 ## The numbers that matter
