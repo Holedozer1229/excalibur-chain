@@ -32,7 +32,7 @@ MAGIC = b"EXCAL1"
 # Lot prices in sats (mirror SPONSOR.md / FLOOD.md).
 PRICE_ORDINARY = 100_000          # 0.001 BTC
 PRICE_ROUND = 1_000_000           # 0.01 BTC  (height % 1000 == 0)
-PRICE_PREMIUM = {26_400: 5_000_000}  # 0.05 BTC named premium lots
+PRICE_PREMIUM = {26_400: 5_000_000, 30_000: 5_000_000}  # 0.05 BTC named premium lots
 
 
 def price_for(height):
