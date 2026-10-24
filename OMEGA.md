@@ -36,6 +36,7 @@ roots are public:
 | Epoch | Root | From height |
 |---|---|---|
 | 1 | `1128e5657397a91bb9ab36f13432099dbf6f1a974156ba3b004cb0c63b468f0e` | 25,901 |
+| 2 | `8c4969b186388069d286b1fc96c977f8580928d784d91b877d16ab20afcf6a22` | 26,557 |
 
 The machine-readable ledger is `omega_epochs.json`.
 
