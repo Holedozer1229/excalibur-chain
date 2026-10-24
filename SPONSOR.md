@@ -57,7 +57,7 @@ payment tests are in `test_watcher.py`.
 
 | Height class | Price |
 |---|---|
-| Any ordinary future height | 0.001 |
+| Any ordinary future height | 0.00021 |
 | Round heights (…27,000, 28,000, …) | 0.01 |
 | The GPU-flood equilibration block (named when the rig connects) | 0.05 |
 | Height 30,000 | 0.05 |

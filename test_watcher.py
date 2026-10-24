@@ -84,7 +84,7 @@ ok, reason = pw.validate(pw.parse_order(txu), 100000,
 check("unconfirmed held pending", not ok and reason == "unconfirmed")
 
 # price table sanity
-check("prices", pw.price_for(25800) == 100000
+check("prices", pw.price_for(25800) == 21000
       and pw.price_for(26000) == 1000000
       and pw.price_for(26400) == 5000000)
 

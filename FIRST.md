@@ -24,7 +24,7 @@ project, and it can only ever be claimed once.
   joins that chain the moment it is mined.
 
 **How to claim it:** buy any height at its listed price — an
-ordinary height is 0.001 BTC — using the order format in
+ordinary height is 0.00021 BTC — using the order format in
 `SPONSOR.md`, or fund any [POWDER.md](POWDER.md) lot in full if you
 would rather fire the Bitcoin-mainnet trilogy. The first confirmed
 payment, by block timestamp, takes the seat. There is no auction

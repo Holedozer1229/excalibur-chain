@@ -29,7 +29,7 @@ served at the SPONSOR.md schedule (payment in BTC to
 
 | Lot class | Heights | Price (BTC) |
 |---|---|---|
-| Ordinary / flood ordinary | Any unsold future height, except below | 0.001 |
+| Ordinary / flood ordinary | Any unsold future height, except below | 0.00021 |
 | Round height | **26,000** (and each later x,000 height) | 0.01 |
 | Equilibration block | The actual height where the DAA settles at the rig's weight, assigned when the rig connects | 0.05 |
 

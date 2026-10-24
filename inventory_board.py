@@ -14,7 +14,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REGISTRY = "/home/hatch/workspace/stratum_shim/sponsors.json"
-PRICE_ORDINARY = 100_000
+PRICE_ORDINARY = 21_000
 PRICE_ROUND = 1_000_000
 PRICE_PREMIUM = {26_400: 5_000_000, 30_000: 5_000_000}
 WINDOW = 120
@@ -72,12 +72,12 @@ def main():
             mark = " — premium lot"
         elif h % 1000 == 0:
             mark = " — round height"
-        lines.append(f"| {h} | {p:,} | {p / 1e8:.3f} | {status}{mark} |")
+        lines.append(f"| {h} | {p:,} | {p / 1e8:.5f} | {status}{mark} |")
     lines += [
         "",
         "Landmarks ahead: height **26,400** (premium, 0.05 BTC) and",
         "height **30,000** (premium, 0.05 BTC). Round heights",
-        "(every 1,000th) are 0.01 BTC; all others 0.001 BTC.",
+        "(every 1,000th) are 0.01 BTC; all others 0.00021 BTC.",
         "",
         "EXCAL has no market and no return is promised — a sponsored",
         "height buys a permanent, self-verifiable place in this",
