@@ -1,6 +1,6 @@
 # Sponsored Heights — Live Inventory
 
-Fork tip **26565** · board generated 2026-10-24 11:30 UTC · refreshed hourly.
+Fork tip **26578** · board generated 2026-10-24 12:30 UTC · refreshed hourly.
 
 Every height below is for sale at the price shown — the same
 price the payment watcher enforces (see [SPONSOR.md](SPONSOR.md)
@@ -12,19 +12,6 @@ sponsored block: height 25,889, delivered 2026-10-23).
 
 | Height | Price (sats) | Price (BTC) | Status |
 |-------:|-------------:|------------:|:-------|
-| 26567 | 21,000 | 0.00021 | OPEN |
-| 26568 | 21,000 | 0.00021 | OPEN |
-| 26569 | 21,000 | 0.00021 | OPEN |
-| 26570 | 21,000 | 0.00021 | OPEN |
-| 26571 | 21,000 | 0.00021 | OPEN |
-| 26572 | 21,000 | 0.00021 | OPEN |
-| 26573 | 21,000 | 0.00021 | OPEN |
-| 26574 | 21,000 | 0.00021 | OPEN |
-| 26575 | 21,000 | 0.00021 | OPEN |
-| 26576 | 21,000 | 0.00021 | OPEN |
-| 26577 | 21,000 | 0.00021 | OPEN |
-| 26578 | 21,000 | 0.00021 | OPEN |
-| 26579 | 21,000 | 0.00021 | OPEN |
 | 26580 | 21,000 | 0.00021 | OPEN |
 | 26581 | 21,000 | 0.00021 | OPEN |
 | 26582 | 21,000 | 0.00021 | OPEN |
@@ -132,6 +119,19 @@ sponsored block: height 25,889, delivered 2026-10-23).
 | 26684 | 21,000 | 0.00021 | OPEN |
 | 26685 | 21,000 | 0.00021 | OPEN |
 | 26686 | 21,000 | 0.00021 | OPEN |
+| 26687 | 21,000 | 0.00021 | OPEN |
+| 26688 | 21,000 | 0.00021 | OPEN |
+| 26689 | 21,000 | 0.00021 | OPEN |
+| 26690 | 21,000 | 0.00021 | OPEN |
+| 26691 | 21,000 | 0.00021 | OPEN |
+| 26692 | 21,000 | 0.00021 | OPEN |
+| 26693 | 21,000 | 0.00021 | OPEN |
+| 26694 | 21,000 | 0.00021 | OPEN |
+| 26695 | 21,000 | 0.00021 | OPEN |
+| 26696 | 21,000 | 0.00021 | OPEN |
+| 26697 | 21,000 | 0.00021 | OPEN |
+| 26698 | 21,000 | 0.00021 | OPEN |
+| 26699 | 21,000 | 0.00021 | OPEN |
 
 Landmarks ahead: height **26,400** (premium, 0.05 BTC) and
 height **30,000** (premium, 0.05 BTC). Round heights
