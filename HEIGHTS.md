@@ -1,6 +1,6 @@
 # Sponsored Heights — Live Inventory
 
-Fork tip **27539** · board generated 2026-10-25 09:30 UTC · refreshed hourly.
+Fork tip **27555** · board generated 2026-10-25 10:30 UTC · refreshed hourly.
 
 Every height below is for sale at the price shown — the same
 price the payment watcher enforces (see [SPONSOR.md](SPONSOR.md)
@@ -12,22 +12,6 @@ sponsored block: height 25,889, delivered 2026-10-23).
 
 | Height | Price (sats) | Price (BTC) | Status |
 |-------:|-------------:|------------:|:-------|
-| 27541 | 21,000 | 0.00021 | OPEN |
-| 27542 | 21,000 | 0.00021 | OPEN |
-| 27543 | 21,000 | 0.00021 | OPEN |
-| 27544 | 21,000 | 0.00021 | OPEN |
-| 27545 | 21,000 | 0.00021 | OPEN |
-| 27546 | 21,000 | 0.00021 | OPEN |
-| 27547 | 21,000 | 0.00021 | OPEN |
-| 27548 | 21,000 | 0.00021 | OPEN |
-| 27549 | 21,000 | 0.00021 | OPEN |
-| 27550 | 21,000 | 0.00021 | OPEN |
-| 27551 | 21,000 | 0.00021 | OPEN |
-| 27552 | 21,000 | 0.00021 | OPEN |
-| 27553 | 21,000 | 0.00021 | OPEN |
-| 27554 | 21,000 | 0.00021 | OPEN |
-| 27555 | 21,000 | 0.00021 | OPEN |
-| 27556 | 21,000 | 0.00021 | OPEN |
 | 27557 | 21,000 | 0.00021 | OPEN |
 | 27558 | 21,000 | 0.00021 | OPEN |
 | 27559 | 21,000 | 0.00021 | OPEN |
@@ -132,6 +116,22 @@ sponsored block: height 25,889, delivered 2026-10-23).
 | 27658 | 21,000 | 0.00021 | OPEN |
 | 27659 | 21,000 | 0.00021 | OPEN |
 | 27660 | 21,000 | 0.00021 | OPEN |
+| 27661 | 21,000 | 0.00021 | OPEN |
+| 27662 | 21,000 | 0.00021 | OPEN |
+| 27663 | 21,000 | 0.00021 | OPEN |
+| 27664 | 21,000 | 0.00021 | OPEN |
+| 27665 | 21,000 | 0.00021 | OPEN |
+| 27666 | 21,000 | 0.00021 | OPEN |
+| 27667 | 21,000 | 0.00021 | OPEN |
+| 27668 | 21,000 | 0.00021 | OPEN |
+| 27669 | 21,000 | 0.00021 | OPEN |
+| 27670 | 21,000 | 0.00021 | OPEN |
+| 27671 | 21,000 | 0.00021 | OPEN |
+| 27672 | 21,000 | 0.00021 | OPEN |
+| 27673 | 21,000 | 0.00021 | OPEN |
+| 27674 | 21,000 | 0.00021 | OPEN |
+| 27675 | 21,000 | 0.00021 | OPEN |
+| 27676 | 21,000 | 0.00021 | OPEN |
 
 Landmarks ahead: height **26,400** (premium, 0.05 BTC) and
 height **30,000** (premium, 0.05 BTC). Round heights
