@@ -32,4 +32,4 @@ and no second first.
 
 EXCAL has no market and no return is promised. What is on offer is
 a one-of-one, self-verifiable place at the head of this chain's
-history — and it is priced, today, at one-thousandth of a bitcoin.
+history — and it is priced, today, at 0.00021 BTC (21,000 sats) for an ordinary height.
