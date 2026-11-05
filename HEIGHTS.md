@@ -1,6 +1,6 @@
 # Sponsored Heights — Live Inventory
 
-Fork tip **26571** · board generated 2026-11-05 22:30 UTC · refreshed hourly.
+Fork tip **26571** · board generated 2026-11-05 23:30 UTC · refreshed hourly.
 
 Every height below is for sale at the price shown — the same
 price the payment watcher enforces (see [SPONSOR.md](SPONSOR.md)
