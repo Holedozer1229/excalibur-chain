@@ -59,6 +59,7 @@ roots are public:
 | 22 | `04560da67a5ef2926ac1342224c8ee396e6cc24b095bb5212db971eba6d2cdd6` | 39,640 |
 | 23 | `74cf72d2de3455c0678588d0a1f74c5a44fa538133811904fd3b8c8090c41c04` | 40,281 |
 | 24 | `478aecd64fcfdc8d7574791c0df1eef56612e791f592007ed8a8ee4e88e7d3c0` | 40,942 |
+| 25 | `4ed511261b5853ad9abbf5e99739a2d6717f010bbab774ef4e7b74eb107bc7ec` | 41,581 |
 
 The machine-readable ledger is `omega_epochs.json`.
 
