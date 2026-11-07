@@ -30,7 +30,7 @@ def price_for(h):
 
 def tip():
     try:
-        c = http.client.HTTPConnection("127.0.0.1", 9432, timeout=8)
+        c = http.client.HTTPConnection("127.0.0.1", 9532, timeout=8)
         c.request("POST", "/", json.dumps(
             {"jsonrpc": "2.0", "id": 1, "method": "getblockcount",
              "params": []}))
