@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Generate HEIGHTS.md — the live sponsored-height inventory board.
 
-Reads the fork tip (local RPC, checkpoint file as fallback) and the
+Reads the fork tip (peer RPC 9532, checkpoint file as fallback) and the
 sponsor registry, then lists the next 120 heights with the exact
-prices the payment watcher enforces. Prices here mirror
+prices the payment watcher enforces. The board header names the tip
+source (live RPC or checkpoint fallback) so a stale fallback is
+visible instead of silent. Prices here mirror
 payment_watcher.py (PRICE_ORDINARY / PRICE_ROUND / PRICE_PREMIUM) —
 if they ever disagree, the watcher is the law and this board is wrong.
 """
@@ -29,29 +31,35 @@ def price_for(h):
 
 
 def tip():
-    try:
-        c = http.client.HTTPConnection("127.0.0.1", 9532, timeout=8)
-        c.request("POST", "/", json.dumps(
-            {"jsonrpc": "2.0", "id": 1, "method": "getblockcount",
-             "params": []}))
-        return int(json.loads(c.getresponse().read())["result"])
-    except Exception:
-        ck = json.load(open(os.path.join(HERE,
-                                         "genealogy_checkpoint.json")))
-        return int(ck.get("height") or ck.get("tip_height") or 0)
+    """Return (height, source). Source is 'live' (peer RPC 9532) or
+    'checkpoint' (fallback when the RPC is unreachable after a retry)."""
+    for attempt in range(2):
+        try:
+            c = http.client.HTTPConnection("127.0.0.1", 9532, timeout=8)
+            c.request("POST", "/", json.dumps(
+                {"jsonrpc": "2.0", "id": 1, "method": "getblockcount",
+                 "params": []}))
+            return int(json.loads(c.getresponse().read())["result"]), "live"
+        except Exception:
+            if attempt == 0:
+                time.sleep(2)
+    ck = json.load(open(os.path.join(HERE,
+                                     "genealogy_checkpoint.json")))
+    return int(ck.get("height") or ck.get("tip_height") or 0), "checkpoint"
 
 
 def main():
-    t = tip()
+    t, src = tip()
     try:
         sold = json.load(open(REGISTRY))
     except Exception:
         sold = {}
     now = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+    src_note = "live RPC" if src == "live" else "checkpoint fallback"
     lines = [
         "# Sponsored Heights — Live Inventory",
         "",
-        f"Fork tip **{t}** · board generated {now} · refreshed hourly.",
+        f"Fork tip **{t}** · via {src_note} · board generated {now} · refreshed hourly.",
         "",
         "Every height below is for sale at the price shown — the same",
         "price the payment watcher enforces (see [SPONSOR.md](SPONSOR.md)",
@@ -73,11 +81,22 @@ def main():
         elif h % 1000 == 0:
             mark = " — round height"
         lines.append(f"| {h} | {p:,} | {p / 1e8:.5f} | {status}{mark} |")
+    next_round = ((t // 1000) + 1) * 1000
+    future_premium = sorted(h for h in PRICE_PREMIUM if h > t)
+    if future_premium:
+        premium_note = ("Premium lots ahead: " +
+                        ", ".join(f"**{h:,}**" for h in future_premium) +
+                        " (0.05 BTC).")
+    else:
+        premium_note = ("The named premium lots (" +
+                        ", ".join(f"{h:,}" for h in sorted(PRICE_PREMIUM)) +
+                        ", 0.05 BTC) are behind the tip.")
     lines += [
         "",
-        "Landmarks ahead: height **26,400** (premium, 0.05 BTC) and",
-        "height **30,000** (premium, 0.05 BTC). Round heights",
-        "(every 1,000th) are 0.01 BTC; all others 0.00021 BTC.",
+        f"Next round height: **{next_round:,}** (0.01 BTC). "
+        f"{premium_note}",
+        "Round heights (every 1,000th) are 0.01 BTC; all others",
+        "0.00021 BTC.",
         "",
         "EXCAL has no market and no return is promised — a sponsored",
         "height buys a permanent, self-verifiable place in this",

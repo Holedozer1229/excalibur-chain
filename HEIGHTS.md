@@ -1,6 +1,6 @@
 # Sponsored Heights — Live Inventory
 
-Fork tip **42647** · board generated 2026-11-07 19:56 UTC · refreshed hourly.
+Fork tip **42647** · via live RPC · board generated 2026-11-07 20:29 UTC · refreshed hourly.
 
 Every height below is for sale at the price shown — the same
 price the payment watcher enforces (see [SPONSOR.md](SPONSOR.md)
@@ -133,9 +133,9 @@ sponsored block: height 25,889, delivered 2026-10-23).
 | 42767 | 21,000 | 0.00021 | OPEN |
 | 42768 | 21,000 | 0.00021 | OPEN |
 
-Landmarks ahead: height **26,400** (premium, 0.05 BTC) and
-height **30,000** (premium, 0.05 BTC). Round heights
-(every 1,000th) are 0.01 BTC; all others 0.00021 BTC.
+Next round height: **43,000** (0.01 BTC). The named premium lots (26,400, 30,000, 0.05 BTC) are behind the tip.
+Round heights (every 1,000th) are 0.01 BTC; all others
+0.00021 BTC.
 
 EXCAL has no market and no return is promised — a sponsored
 height buys a permanent, self-verifiable place in this
