@@ -1,6 +1,6 @@
 # Sponsored Heights — Live Inventory
 
-Fork tip **42647** · via checkpoint fallback · board generated 2026-11-08 06:30 UTC · refreshed hourly.
+Fork tip **42657** · via live RPC · board generated 2026-11-08 07:30 UTC · refreshed hourly.
 
 Every height below is for sale at the price shown — the same
 price the payment watcher enforces (see [SPONSOR.md](SPONSOR.md)
@@ -12,16 +12,6 @@ sponsored block: height 25,889, delivered 2026-10-23).
 
 | Height | Price (sats) | Price (BTC) | Status |
 |-------:|-------------:|------------:|:-------|
-| 42649 | 21,000 | 0.00021 | OPEN |
-| 42650 | 21,000 | 0.00021 | OPEN |
-| 42651 | 21,000 | 0.00021 | OPEN |
-| 42652 | 21,000 | 0.00021 | OPEN |
-| 42653 | 21,000 | 0.00021 | OPEN |
-| 42654 | 21,000 | 0.00021 | OPEN |
-| 42655 | 21,000 | 0.00021 | OPEN |
-| 42656 | 21,000 | 0.00021 | OPEN |
-| 42657 | 21,000 | 0.00021 | OPEN |
-| 42658 | 21,000 | 0.00021 | OPEN |
 | 42659 | 21,000 | 0.00021 | OPEN |
 | 42660 | 21,000 | 0.00021 | OPEN |
 | 42661 | 21,000 | 0.00021 | OPEN |
@@ -132,6 +122,16 @@ sponsored block: height 25,889, delivered 2026-10-23).
 | 42766 | 21,000 | 0.00021 | OPEN |
 | 42767 | 21,000 | 0.00021 | OPEN |
 | 42768 | 21,000 | 0.00021 | OPEN |
+| 42769 | 21,000 | 0.00021 | OPEN |
+| 42770 | 21,000 | 0.00021 | OPEN |
+| 42771 | 21,000 | 0.00021 | OPEN |
+| 42772 | 21,000 | 0.00021 | OPEN |
+| 42773 | 21,000 | 0.00021 | OPEN |
+| 42774 | 21,000 | 0.00021 | OPEN |
+| 42775 | 21,000 | 0.00021 | OPEN |
+| 42776 | 21,000 | 0.00021 | OPEN |
+| 42777 | 21,000 | 0.00021 | OPEN |
+| 42778 | 21,000 | 0.00021 | OPEN |
 
 Next round height: **43,000** (0.01 BTC). The named premium lots (26,400, 30,000, 0.05 BTC) are behind the tip.
 Round heights (every 1,000th) are 0.01 BTC; all others
