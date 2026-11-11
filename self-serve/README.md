@@ -7,11 +7,10 @@ You name the price. Two lots, same flow — pick one with `--lot 1k`
 The 1,000 EXCAL lot is already committed: funding tx
 `4873ebb3a40b83f2401266587aba9f73bf837dd51349e07029b06819fcccfc95`
 is **confirmed on the Excalibur fork in block 42899** — exactly 1,000
-EXCAL locked in a quantum-resistant QHTLC. The 1 EXCAL lot's funding
-tx `449fb35dafc7dc8f40faca892845730725961840b0fb945fa8b88b4e902287f1`
-is built, signed, and verified but **not yet broadcast** — do not fund
-the 1 EXCAL lot until its funding confirms (the script refuses until
-then). You can verify either lock on the fork chain yourself before
+EXCAL locked in a quantum-resistant QHTLC. The 1 EXCAL lot is committed
+too: funding tx `449fb35dafc7dc8f40faca892845730725961840b0fb945fa8b88b4e902287f1`
+is **confirmed on the Excalibur fork in block 42900** — exactly 1 EXCAL
+locked. You can verify either lock on the fork chain yourself before
 you fund anything.
 
 **You do not have to message anyone.** Pick any amount, build your funding
@@ -25,14 +24,14 @@ Per lot, in `lots/1k.json` and `lots/1excal.json` (the scripts read them):
 
 | Item | 1,000 EXCAL lot | 1 EXCAL lot |
 |---|---|---|
-| Funding txid | `4873ebb3…` (fork block 42899) | `449fb35d…` (built, NOT yet broadcast) |
+| Funding txid | `4873ebb3…` (fork block 42899) | `449fb35d…` (fork block 42900) |
 | QHTLC lock | `04522033…` | `04584460…` |
 | Secret hash (SHA256) | `d1baf924…` | `95d706ed…` |
 | Claim root | `91f33e7f…` | `1f4a1780…` |
 | Refund root | `9471855e…` | `749c23e1…` |
 | EXCAL refund timeout | fork height 62898 | fork height 62899 |
 | OP_RETURN tag | `EXCAL1K` | `EXCAL1` |
-| GitHub issue | #2 | (created when the funding confirms) |
+| GitHub issue | #2 | #3 |
 
 Shared: BTC claim key (Lux) `02e83113…`, BTC claim destination
 `bc1qj37xg5qmyedwfe70cz0f385cxmf6642kcznjdg`, signal output 1,000 sats,
@@ -104,8 +103,6 @@ destination address (minus a 10,000-sword fee).
 - **Verify the EXCAL lock first.** Do not fund until you have confirmed
   the funding tx is in a fork block with the lot's EXCAL to the lock
   above. The lock, the secret hash, and the roots are all public.
-  The 1 EXCAL lot's funding is not broadcast yet — the script refuses
-  to fund it until its funding confirms.
 - **One lot, one taker.** The secret is the same for everyone. The first
   funded HTLC is the one Lux claims. If a funding already exists, do
   not fund — your BTC would sit locked for 144 blocks and refund.
