@@ -103,8 +103,53 @@ def save_state(s):
 def lot_state(state, lot_name):
     return state["lots"].setdefault(lot_name, {"seen": [], "delivered_txid": None})
 
+def bc_tx_to_mempool_shape(bc_tx):
+    """Translate one BlockCypher tx into the mempool.space shape the
+    verifier expects: {"txid", "vout": [{"scriptpubkey", "value"}]}.
+    Only the discovery fetch differs; verification is unchanged."""
+    return {
+        "txid": bc_tx.get("hash"),
+        "vout": [
+            {"scriptpubkey": o.get("script", ""), "value": o.get("value", 0)}
+            for o in bc_tx.get("outputs", [])
+        ],
+    }
+
+def signal_txs_blockcypher():
+    """Fallback signal-address poll via BlockCypher (unauthenticated).
+    One addr request per check plus one tx fetch per tx seen; the signal
+    address normally has ~0 txs, so volume stays far under the free limit.
+    txrefs are most-recent-first, so new fundings are always on page 1."""
+    addr = json.loads(curl(
+        f"https://api.blockcypher.com/v1/btc/main/addrs/{SIGNAL_ADDR}?limit=50"))
+    hashes = []
+    for refs in (addr.get("txrefs") or [], addr.get("unconfirmed_txrefs") or []):
+        for r in refs:
+            h = r.get("tx_hash")
+            if h and h not in hashes:
+                hashes.append(h)
+    txs = []
+    for h in hashes:
+        bc = json.loads(curl(f"https://api.blockcypher.com/v1/btc/main/txs/{h}"))
+        txs.append(bc_tx_to_mempool_shape(bc))
+    return txs
+
+def fetch_tx(txid):
+    """Fetch one BTC tx in mempool.space shape; mempool.space first,
+    BlockCypher fallback."""
+    try:
+        return json.loads(curl(f"https://mempool.space/api/tx/{txid}"))
+    except Exception as e:
+        print(f"warning: mempool.space tx fetch failed ({str(e)[:120]}); trying BlockCypher")
+        bc = json.loads(curl(f"https://api.blockcypher.com/v1/btc/main/txs/{txid}"))
+        return bc_tx_to_mempool_shape(bc)
+
 def signal_txs():
-    return json.loads(curl(f"https://mempool.space/api/address/{SIGNAL_ADDR}/txs"))
+    try:
+        return json.loads(curl(f"https://mempool.space/api/address/{SIGNAL_ADDR}/txs"))
+    except Exception as e:
+        print(f"warning: mempool.space unreachable ({str(e)[:120]}); falling back to BlockCypher")
+        return signal_txs_blockcypher()
 
 def find_delivery_key(tx, lots):
     """Find (lot, delivery_pubkey, htlc_vout, htlc_value) in a funding tx.
@@ -184,7 +229,7 @@ def deliver(funding_txid, witness_script_hex, lot):
     if ls.get("delivered_txid"):
         print(f"[{lot['lot']}] already delivered for {ls['delivered_txid']}; refusing a second delivery")
         return False
-    tx = json.loads(curl(f"https://mempool.space/api/tx/{funding_txid}"))
+    tx = fetch_tx(funding_txid)
     found = find_delivery_key(tx, [lot])
     if not found:
         print(f"[{lot['lot']}] funding tx has no {lot['tag']} OP_RETURN + P2WSH HTLC output; skipping")
