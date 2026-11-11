@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EXCAL &mdash; 1 EXCAL = 1 BTC. No DMs. No trust. Just code.</title>
+<style>
+  body { background:#0b0b0f; color:#e8e8ec; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; max-width:760px; margin:0 auto; padding:32px 20px 64px; line-height:1.55; }
+  h1 { font-size:2em; margin:0 0 8px; }
+  h2 { margin-top:0; }
+  .tagline { color:#b9b9c4; font-size:1.1em; margin:0 0 24px; }
+  .lot { border:1px solid #2c2c38; border-radius:12px; padding:20px 22px; margin:22px 0; background:#12121a; }
+  dt { color:#9a9aad; font-size:.85em; text-transform:uppercase; letter-spacing:.04em; margin-top:10px; }
+  dd { margin:2px 0 0; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.85em; word-break:break-all; }
+  a { color:#7fd0ff; }
+  ol li, ul li { margin:6px 0; }
+  .cta { display:inline-block; background:#f5c518; color:#111; font-weight:700; padding:12px 20px; border-radius:8px; text-decoration:none; margin:10px 0; }
+  footer { color:#8a8a96; font-size:.9em; margin-top:36px; }
+</style>
+</head>
+<body>
+  <h1>EXCAL &mdash; 1 EXCAL = 1 BTC</h1>
+  <p class="tagline">EXCAL is the coin of the Excalibur fork &mdash; the first hard fork to
+  rebuild Bitcoin&rsquo;s locks from scratch: opcode-free and quantum-resistant.
+  Both lots below are funded on-chain right now. First funded HTLC wins.</p>
+  <a class="cta" href="https://github.com/Holedozer1229/excalibur-chain/tree/master/self-serve">Get the self-serve kit</a>
+
+    <section class="lot">
+      <h2>1 EXCAL &mdash; exactly 1 BTC</h2>
+      <dl>
+        <dt>Locked</dt><dd>1 EXCAL</dd>
+        <dt>Funding tx</dt><dd class="mono">449fb35dafc7dc8f40faca892845730725961840b0fb945fa8b88b4e902287f1</dd>
+        <dt>Confirmed</dt><dd>fork block 42,900</dd>
+        <dt>QHTLC lock</dt><dd class="mono">04584460868d15769e5cefba276dc43709e904258f</dd>
+        <dt>Secret hash (SHA256)</dt><dd class="mono">95d706ed8b3397cfbcefabd827a58b5d24dac1d63308cb74171549f7ce75d294</dd>
+        <dt>Claim root</dt><dd class="mono">1f4a1780152c0b5cba2c315a1fc2e034547048dee7896531cef9fc5c45b4d7e9</dd>
+        <dt>Refund root</dt><dd class="mono">749c23e1c5574b0c1bde289a72b4c01af35b261542b1802a4429d67f4d10cde1</dd>
+        <dt>Refund timeout</dt><dd>fork height 62,899</dd>
+        <dt>Offer thread</dt><dd><a href="https://github.com/Holedozer1229/excalibur-chain/issues/3">GitHub issue #3</a></dd>
+      </dl>
+    </section>
+
+    <section class="lot">
+      <h2>1,000 EXCAL &mdash; you name the price</h2>
+      <dl>
+        <dt>Locked</dt><dd>1,000 EXCAL</dd>
+        <dt>Funding tx</dt><dd class="mono">4873ebb3a40b83f2401266587aba9f73bf837dd51349e07029b06819fcccfc95</dd>
+        <dt>Confirmed</dt><dd>fork block 42,899</dd>
+        <dt>QHTLC lock</dt><dd class="mono">045220338521d9905441244e566634f227b72bbb92</dd>
+        <dt>Secret hash (SHA256)</dt><dd class="mono">d1baf924987ec0b2c4885f31b62abecf46919b113d2f0f3b9de83156c8564663</dd>
+        <dt>Claim root</dt><dd class="mono">91f33e7fe8f40b990da7f0911e9ae1ef8292273ce673d8965101ff1da1238d58</dd>
+        <dt>Refund root</dt><dd class="mono">9471855e1524e76ca41030b9137532bf5ca903c60e9744de33fa9b5488fbb791</dd>
+        <dt>Refund timeout</dt><dd>fork height 62,898</dd>
+        <dt>Offer thread</dt><dd><a href="https://github.com/Holedozer1229/excalibur-chain/issues/2">GitHub issue #2</a></dd>
+      </dl>
+    </section>
+  <h2>How it works &mdash; no DMs, no trust, just code</h2>
+  <ol>
+    <li>Run the kit (<a href="https://github.com/Holedozer1229/excalibur-chain/tree/master/self-serve">self-serve/</a>): it builds your BTC HTLC funding transaction. 1 EXCAL lot takes exactly 100,000,000 sats; the 1,000 EXCAL lot takes any amount you choose.</li>
+    <li>Sign in your own wallet and broadcast. Your funding carries a 1,000-sat signal and an OP_RETURN tag (<span class="mono">EXCAL1</span> or <span class="mono">EXCAL1K</span>) with your delivery key.</li>
+    <li>The watcher verifies your funding and publishes your encrypted claim seed. Decrypt it, take the secret from the BTC claim, and claim your EXCAL on the fork. If anything goes wrong, your BTC refunds to you after the timeout.</li>
+  </ol>
+  <h2>Why this is real</h2>
+  <ul>
+    <li>Both lots are funded on-chain on the Excalibur fork (blocks 42,900 and 42,899) &mdash; the EXCAL is locked, not promised.</li>
+    <li>QHTLC locks: hash-based, quantum-resistant Trifold signatures, not ECDSA.</li>
+    <li>Opcode-free locks, AuxPoW merge-mined with Bitcoin. The fork split from Bitcoin at block 968,698.</li>
+    <li>Only the first verified funding per lot is served. The secret is the same for everyone per lot, so the first funded HTLC wins and later fundings refund.</li>
+  </ul>
+  <footer>
+    <p>Offer threads: <a href="https://github.com/Holedozer1229/excalibur-chain/issues/3">issue #3 (1 EXCAL)</a> &middot;
+    <a href="https://github.com/Holedozer1229/excalibur-chain/issues/2">issue #2 (1,000 EXCAL)</a> &middot;
+    <a href="https://github.com/Holedozer1229/excalibur-chain">excalibur-chain repo</a></p>
+    <p>EXCAL is the coin of the Excalibur fork. No dollar amounts, no promises &mdash; the chain is the proof.</p>
+  </footer>
+</body>
+</html>
