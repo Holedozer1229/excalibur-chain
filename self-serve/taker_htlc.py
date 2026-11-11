@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""taker_htlc.py — self-serve BTC funding for the 1,000 EXCAL offer.
+"""taker_htlc.py — self-serve BTC funding for the EXCAL offers.
 
 The taker runs this LOCALLY. No message to Lux is needed. It builds the
-UNSIGNED funding PSBT for their Bitcoin HTLC at ANY amount they choose,
-then they sign it in their own wallet (Sparrow / Electrum / Bitcoin Core)
-and broadcast it themselves.
+UNSIGNED funding PSBT for their Bitcoin HTLC — at ANY amount they choose
+for the 1,000 EXCAL lot, or exactly 1 BTC (100,000,000 sats) for the
+1 EXCAL lot (1:1 — 1 sword = 1 sat) — then they sign it in their own
+wallet (Sparrow / Electrum / Bitcoin Core) and broadcast it themselves.
 
 What the funding transaction does (4 outputs):
   0. P2WSH HTLC locking <amount> sats.
@@ -186,7 +187,7 @@ def curl_json(url):
 def main():
     ap = argparse.ArgumentParser(description="Build the unsigned BTC HTLC funding PSBT for the 1,000 EXCAL offer.")
     ap.add_argument("--utxo", required=True, help="Funding input TXID:VOUT (display-order txid)")
-    ap.add_argument("--amount", type=int, required=True, help="BTC offered, in satoshis (any amount)")
+    ap.add_argument("--amount", type=int, required=True, help="BTC offered, in satoshis (any amount for the 1,000 EXCAL lot; exactly 100,000,000 for the 1 EXCAL lot)")
     ap.add_argument("--refund-pubkey", required=True, help="Taker's compressed pubkey hex (33 bytes) for the HTLC refund path")
     ap.add_argument("--change-address", required=True, help="Taker's P2WPKH change address (bc1q...)")
     ap.add_argument("--fee-rate", type=int, default=5, help="Fee rate in sats/vB (default 5)")
@@ -208,6 +209,10 @@ def main():
             "at your own risk.)")
 
     if args.amount <= 0: sys.exit("amount must be positive")
+    ask = lot.get("ask_sats")
+    if ask is not None and args.amount != ask:
+        sys.exit(f"the {lot['label']} lot asks exactly {ask} sats "
+                 f"(1 BTC, 1:1 — 1 sword = 1 sat); re-run with --amount {ask}")
     try:
         txid_disp, vout_s = args.utxo.split(":")
         vout = int(vout_s)

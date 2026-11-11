@@ -1,7 +1,8 @@
 # 1,000 EXCAL and 1 EXCAL for BTC — self-serve atomic swaps (no messaging)
 
-**The offers:** 1,000 EXCAL and 1 EXCAL, each for whatever BTC you offer.
-You name the price. Two lots, same flow — pick one with `--lot 1k`
+**The offers:** 1,000 EXCAL for whatever BTC you offer (you name the
+price), and 1 EXCAL for exactly 1 BTC (1:1 — 1 sword = 1 sat).
+Two lots, same flow — pick one with `--lot 1k`
 (the default) or `--lot 1excal`.
 
 The 1,000 EXCAL lot is already committed: funding tx
@@ -13,10 +14,11 @@ is **confirmed on the Excalibur fork in block 42900** — exactly 1 EXCAL
 locked. You can verify either lock on the fork chain yourself before
 you fund anything.
 
-**You do not have to message anyone.** Pick any amount, build your funding
-transaction with the script below, sign it in your own wallet, broadcast
-it. The rest happens on-chain and in public. No DMs, no negotiation, no
-waiting on a reply.
+**You do not have to message anyone.** Pick your amount — any amount
+for the 1,000 EXCAL lot, exactly 1 BTC (100,000,000 sats) for the
+1 EXCAL lot — build your funding transaction with the script below,
+sign it in your own wallet, broadcast it. The rest happens on-chain
+and in public. No DMs, no negotiation, no waiting on a reply.
 
 ## Public parameters (verify them yourself — do not trust this file alone)
 
@@ -24,6 +26,7 @@ Per lot, in `lots/1k.json` and `lots/1excal.json` (the scripts read them):
 
 | Item | 1,000 EXCAL lot | 1 EXCAL lot |
 |---|---|---|
+| Ask | whatever BTC you offer | exactly 1 BTC (100,000,000 sats) |
 | Funding txid | `4873ebb3…` (fork block 42899) | `449fb35d…` (fork block 42900) |
 | QHTLC lock | `04522033…` | `04584460…` |
 | Secret hash (SHA256) | `d1baf924…` | `95d706ed…` |
@@ -42,13 +45,17 @@ BTC HTLC timeout = your funding height + 144 blocks (~24h).
 Get the kit: `git clone https://github.com/Holedozer1229/excalibur-chain.git`
 — everything below lives in `self-serve/`.
 
-**1. Fund your BTC HTLC — any amount.**
+**1. Fund your BTC HTLC — any amount for the 1,000 EXCAL lot, exactly
+1 BTC (100,000,000 sats) for the 1 EXCAL lot.**
 Run `taker_htlc.py` (stdlib only, no keys leave your machine):
 ```
 python3 taker_htlc.py --utxo TXID:VOUT --amount SATS \
     --refund-pubkey <your compressed pubkey hex> \
     --change-address <your bc1q change address> [--lot 1excal]
 ```
+For the 1 EXCAL lot, `--amount` must be `100000000` — the script
+refuses any other amount. For the 1,000 EXCAL lot, any positive amount
+works.
 It builds an unsigned PSBT for a funding tx with 4 outputs: your HTLC
 (`amount` sats), an OP_RETURN carrying the lot's tag (`EXCAL1K` for the
 1,000 EXCAL lot, `EXCAL1` for the 1 EXCAL lot) + your fresh delivery
@@ -108,7 +115,8 @@ destination address (minus a 10,000-sword fee).
   not fund — your BTC would sit locked for 144 blocks and refund.
 - **Claim promptly.** After the secret appears, claim the EXCAL right
   away. If you never claim, the EXCAL stays locked until fork height
-  62898, when Lux can refund it — and your BTC is already gone.
+  62898 (1,000 EXCAL lot) / 62899 (1 EXCAL lot), when Lux can refund
+  it — and your BTC is already gone.
 - **Keep `delivery_key.txt` safe.** Lose it and you cannot decrypt the
   claim seed; without the seed you cannot claim the EXCAL.
 - **The claim seed is never published raw.** Anyone telling you to send
@@ -116,7 +124,7 @@ destination address (minus a 10,000-sword fee).
 
 ## Files
 
-- `taker_htlc.py` — build your unsigned BTC HTLC funding PSBT (any amount).
+- `taker_htlc.py` — build your unsigned BTC HTLC funding PSBT (any amount for the 1k lot; exactly 1 BTC for the 1excal lot).
 - `decrypt_seed.py` — decrypt the published claim seed (needs `pip install cryptography`).
 - `taker_claim.py` — build + sign the EXCAL claim (needs the excalibur-chain repo modules).
 - `deliver_seed.py` — Lux-side watcher: verify funding, publish the encrypted seed.
