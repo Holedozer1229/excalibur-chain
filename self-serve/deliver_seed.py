@@ -41,10 +41,9 @@ State: self-serve/watch_state.json (per lot: seen txids, delivered txid).
 import argparse, hashlib, json, os, re, subprocess, sys
 from datetime import datetime, timezone
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.expanduser("~/workspace"))
 sys.path.insert(0, os.path.join(HERE, "vendor"))
-
-HERE = os.path.dirname(os.path.abspath(__file__))
 OFFER_ROOT = os.path.expanduser("~/workspace")
 OUT_DIR = os.path.join(HERE, "claim-seeds")
 STATE_FILE = os.path.join(HERE, "watch_state.json")
@@ -219,7 +218,11 @@ def check_once():
     by_tag = {lot["tag"]: lot for lot in lots}
     state = load_state()
     scripts_by_issue = {}
-    txs = signal_txs()
+    try:
+        txs = signal_txs()
+    except Exception as e:
+        print(f"warning: signal address unreachable ({str(e)[:150]}); will retry next run")
+        return
     for tx in txs:
         txid = tx["txid"]
         found = find_delivery_key(tx, lots)
