@@ -94,6 +94,7 @@ class WatcherSecurityTests(unittest.TestCase):
             "status": {
                 "confirmed": True,
                 "block_height": 100,
+                "block_hash": "ef" * 32,
             },
         }
         with self.assertRaisesRegex(ValueError, "different txid"):
@@ -114,6 +115,7 @@ class WatcherSecurityTests(unittest.TestCase):
             "status": {
                 "confirmed": True,
                 "block_height": 100,
+                "block_hash": "ef" * 32,
             },
         }
         with self.assertRaisesRegex(ValueError, "1 confirmations"):
@@ -157,6 +159,30 @@ class WatcherSecurityTests(unittest.TestCase):
                 lot_state = state["lots"].get("test", {})
                 self.assertNotIn(TXID, lot_state.get("seen", []))
                 self.assertIsNone(lot_state.get("delivered_txid"))
+
+    def test_canonical_block_hash_must_match_active_chain(self):
+        tx = {"status": {"block_hash": "ef" * 32}}
+        self.assertTrue(
+            watcher.verify_canonical_block(tx, "ef" * 32)
+        )
+        with self.assertRaisesRegex(ValueError, "not on the active chain"):
+            watcher.verify_canonical_block(tx, "aa" * 32)
+
+    def test_missing_block_hash_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "omitted confirmed block hash"):
+            watcher.verify_canonical_block({"status": {}}, "ef" * 32)
+
+    def test_blockcypher_block_hash_is_preserved(self):
+        bc_tx = {
+            "hash": TXID,
+            "confirmations": 3,
+            "block_height": 100,
+            "block_hash": "ef" * 32,
+            "outputs": [],
+        }
+        tx = watcher.bc_tx_to_mempool_shape(bc_tx)
+        self.assertEqual(tx["status"]["block_hash"], "ef" * 32)
+
     def test_blockcypher_confirmation_metadata_is_preserved(self):
         bc_tx = {
             "hash": TXID,
