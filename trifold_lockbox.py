@@ -42,6 +42,7 @@ one assumption forty years of trying has not dented.
 
 Pure stdlib. Test keys only. No network.
 """
+import fcntl
 import hashlib
 import json
 import os
@@ -100,16 +101,14 @@ class TrifoldKey:
     """Stateful. The counter climbs in trits and never rolls back.
 
     One-time-leaf persistence: a Lamport leaf must never sign two
-    different messages. next_index lives in memory by default, so a
-    key rebuilt from the same seed after a restart would reuse leaf 0.
-    Pass state_path (a JSON file) or state_dir (a directory; the file
-    is named by this tree's root) to persist next_index across
-    restarts. The counter is reserved (incremented + saved) BEFORE
-    the signature is built, so a crash after signing cannot cause a
-    reuse — at worst a leaf is skipped, never repeated. The
-    spent-leaf registry is a second, independent guard at consensus
-    (validation rejects a spent leaf), but persistence is the guard
-    that stops the reuse from being signed in the first place.
+    different messages. A persistent state_path/state_dir is required
+    for restart safety. Reservations are serialized with an OS file
+    lock and the counter is reread while holding that lock, so
+    concurrent processes cannot reserve the same leaf. The counter
+    is durably saved BEFORE signature construction; a crash can skip
+    a leaf but cannot cause it to be reused. Without a configured
+    state path, the object is memory-only and is NOT safe across
+    restarts or multiple processes.
     """
 
     def __init__(self, seed: bytes, height: int = 6,
@@ -131,52 +130,88 @@ class TrifoldKey:
                 state_dir, "trifold_state_" + self.root.hex() + ".json")
         self._load_state()
 
-    def _load_state(self):
-        """Load next_index from the state file, if one is configured
-        and present. A file for a different root is ignored (start at
-        0). A corrupt file fails closed — silently resetting to 0
-        could reuse a leaf."""
+    def _read_state_unlocked(self):
+        """Read and validate persisted state. Caller holds the lock."""
         if not self.state_path or not os.path.exists(self.state_path):
-            return
-        with open(self.state_path) as f:
-            try:
+            return 0
+        try:
+            with open(self.state_path) as f:
                 st = json.load(f)
-            except Exception as e:
-                raise ValueError(
-                    f"corrupt Trifold state file {self.state_path}: {e}")
-        if st.get("root") != self.root.hex():
-            return
+        except Exception as e:
+            raise ValueError(
+                f"corrupt Trifold state file {self.state_path}: {e}")
+        if not isinstance(st, dict) or st.get("root") != self.root.hex():
+            raise ValueError(
+                f"Trifold state root mismatch in {self.state_path}; "
+                "refusing to reset the one-time-leaf counter")
         n = st.get("next_index")
         if not isinstance(n, int) or isinstance(n, bool) \
                 or n < 0 or n > self.capacity:
             raise ValueError(
                 f"corrupt Trifold state file {self.state_path}: "
                 f"bad next_index {n!r}")
-        self.next_index = n
+        return n
 
-    def _save_state(self):
-        """Atomically persist next_index (tmp + fsync + replace)."""
+    def _load_state(self):
+        """Load and validate next_index; a root mismatch fails closed."""
         if not self.state_path:
             return
-        d = os.path.dirname(self.state_path)
+        lock_path = self.state_path + ".lock"
+        d = os.path.dirname(lock_path)
         if d:
             os.makedirs(d, exist_ok=True)
+        with open(lock_path, "a+") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            self.next_index = self._read_state_unlocked()
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+    def _save_state(self):
+        """Atomically and durably persist next_index. Caller holds lock."""
+        if not self.state_path:
+            return
+        d = os.path.dirname(self.state_path) or "."
+        os.makedirs(d, exist_ok=True)
         tmp = self.state_path + ".tmp"
         with open(tmp, "w") as f:
+            os.chmod(tmp, 0o600)
             json.dump({"root": self.root.hex(),
                        "next_index": int(self.next_index)}, f)
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, self.state_path)
+        dir_fd = os.open(d, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+
+    def _reserve_index(self):
+        """Reserve one unique leaf, serialized across processes."""
+        if not self.state_path:
+            idx = self.next_index
+            if idx >= self.capacity:
+                raise RuntimeError("tree exhausted — every leaf spent")
+            self.next_index = idx + 1
+            return idx
+
+        lock_path = self.state_path + ".lock"
+        d = os.path.dirname(lock_path)
+        if d:
+            os.makedirs(d, exist_ok=True)
+        with open(lock_path, "a+") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            try:
+                idx = self._read_state_unlocked()
+                if idx >= self.capacity:
+                    raise RuntimeError("tree exhausted — every leaf spent")
+                self.next_index = idx + 1
+                self._save_state()
+                return idx
+            finally:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
     def sign(self, msg: bytes):
-        idx = self.next_index
-        if idx >= self.capacity:
-            raise RuntimeError("tree exhausted — every leaf spent")
-        self.next_index += 1
-        # Reserve the leaf BEFORE building the signature: a crash
-        # after this point skips the leaf, never reuses it.
-        self._save_state()
+        idx = self._reserve_index()
         digest = _h(msg)
         ots_sig, ots_pub = [], []
         for pos in range(256):
