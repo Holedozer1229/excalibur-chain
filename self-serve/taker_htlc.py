@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""taker_htlc.py — self-serve BTC funding for the 1,000 EXCAL offer.
+"""taker_htlc.py — self-serve BTC funding for the EXCAL offers.
 
 The taker runs this LOCALLY. No message to Lux is needed. It builds the
-UNSIGNED funding PSBT for their Bitcoin HTLC at ANY amount they choose,
-then they sign it in their own wallet (Sparrow / Electrum / Bitcoin Core)
-and broadcast it themselves.
+UNSIGNED funding PSBT for their Bitcoin HTLC — at ANY amount they choose
+for the 1,000 EXCAL lot, exactly 1 BTC (100,000,000 sats) for the
+1 EXCAL lot (1:1 — 1 sword = 1 sat), or exactly 0.001 BTC (100,000 sats)
+for the 0.001 EXCAL pilot lot — then they sign it in their own wallet
+(Sparrow / Electrum / Bitcoin Core) and broadcast it themselves.
 
 What the funding transaction does (4 outputs):
   0. P2WSH HTLC locking <amount> sats.
@@ -184,9 +186,9 @@ def curl_json(url):
 
 # ---------------------------------------------------------------- main
 def main():
-    ap = argparse.ArgumentParser(description="Build the unsigned BTC HTLC funding PSBT for the 1,000 EXCAL offer.")
+    ap = argparse.ArgumentParser(description="Build the unsigned BTC HTLC funding PSBT for an EXCAL offer lot.")
     ap.add_argument("--utxo", required=True, help="Funding input TXID:VOUT (display-order txid)")
-    ap.add_argument("--amount", type=int, required=True, help="BTC offered, in satoshis (any amount)")
+    ap.add_argument("--amount", type=int, required=True, help="BTC offered, in satoshis (any amount for the 1,000 EXCAL lot; exactly 100,000,000 for the 1 EXCAL lot; exactly 100,000 for the 0.001 EXCAL pilot lot)")
     ap.add_argument("--refund-pubkey", required=True, help="Taker's compressed pubkey hex (33 bytes) for the HTLC refund path")
     ap.add_argument("--change-address", required=True, help="Taker's P2WPKH change address (bc1q...)")
     ap.add_argument("--fee-rate", type=int, default=5, help="Fee rate in sats/vB (default 5)")
@@ -194,7 +196,7 @@ def main():
     ap.add_argument("--utxo-value", type=int, default=None, help="Funding UTXO value in sats (auto-fetched if omitted)")
     ap.add_argument("--utxo-scriptpubkey", default=None, help="Funding UTXO scriptPubKey hex (auto-fetched if omitted)")
     ap.add_argument("--force", action="store_true", help="Fund even if a swap is already in progress (NOT recommended)")
-    ap.add_argument("--lot", default="1k", help="Which lot: 1k (1,000 EXCAL) or 1excal (1 EXCAL). Default 1k.")
+    ap.add_argument("--lot", default="1k", help="Which lot: 1k (1,000 EXCAL), 1excal (1 EXCAL, exactly 1 BTC), or pilot001 (0.001 EXCAL, exactly 0.001 BTC). Default 1k.")
     args = ap.parse_args()
     lot = load_lot(args.lot)
     tag = lot["tag"].encode()
@@ -208,6 +210,10 @@ def main():
             "at your own risk.)")
 
     if args.amount <= 0: sys.exit("amount must be positive")
+    ask = lot.get("ask_sats")
+    if ask is not None and args.amount != ask:
+        sys.exit(f"the {lot['label']} lot asks exactly {ask} sats; "
+                 f"re-run with --amount {ask}")
     try:
         txid_disp, vout_s = args.utxo.split(":")
         vout = int(vout_s)

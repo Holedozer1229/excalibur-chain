@@ -23,7 +23,7 @@
   <h1>EXCAL &mdash; 1 EXCAL = 1 BTC</h1>
   <p class="tagline">EXCAL is the coin of the Excalibur fork &mdash; the first hard fork to
   rebuild Bitcoin&rsquo;s locks from scratch: opcode-free and quantum-resistant.
-  Both lots below are funded on-chain right now. First funded HTLC wins.</p>
+  All three lots below are funded on-chain right now. First funded HTLC wins.</p>
   <a class="cta" href="https://github.com/Holedozer1229/excalibur-chain/tree/master/self-serve">Get the self-serve kit</a>
 
     <section class="lot">
@@ -55,15 +55,30 @@
         <dt>Offer thread</dt><dd><a href="https://github.com/Holedozer1229/excalibur-chain/issues/2">GitHub issue #2</a></dd>
       </dl>
     </section>
+
+    <section class="lot">
+      <h2>0.001 EXCAL pilot &mdash; exactly 0.001 BTC</h2>
+      <dl>
+        <dt>Locked</dt><dd>0.001 EXCAL</dd>
+        <dt>Funding tx</dt><dd class="mono">6ee1f5da1aaa83c0652603a3f2f07018603b8d1d32b7fda26edfa500b0e1c439</dd>
+        <dt>Confirmed</dt><dd>fork block 43,571</dd>
+        <dt>QHTLC lock</dt><dd class="mono">04e1f59c409dbdf7aff0ded74513a608a7d1943b63</dd>
+        <dt>Secret hash (SHA256)</dt><dd class="mono">59db7d74824126b4a8d6e9290c3afa36ec6d230442658767187db487a1c77601</dd>
+        <dt>Claim root</dt><dd class="mono">1efd23e36b3fb58f00999b9e60eb9d6a91434f8b384263ff61ccbde95265f7fd</dd>
+        <dt>Refund root</dt><dd class="mono">66df77c5745c22139e6efc8c15f17663fceb42d8dff7e8be96a5bfed4db3b5cc</dd>
+        <dt>Refund timeout</dt><dd>fork height 63,557</dd>
+        <dt>Offer thread</dt><dd><a href="https://github.com/Holedozer1229/excalibur-chain/issues/4">GitHub issue #4</a></dd>
+      </dl>
+    </section>
   <h2>How it works &mdash; no DMs, no trust, just code</h2>
   <ol>
-    <li>Run the kit (<a href="https://github.com/Holedozer1229/excalibur-chain/tree/master/self-serve">self-serve/</a>): it builds your BTC HTLC funding transaction. 1 EXCAL lot takes exactly 100,000,000 sats; the 1,000 EXCAL lot takes any amount you choose.</li>
+    <li>Run the kit (<a href="https://github.com/Holedozer1229/excalibur-chain/tree/master/self-serve">self-serve/</a>): it builds your BTC HTLC funding transaction. 1 EXCAL lot takes exactly 100,000,000 sats; the 1,000 EXCAL lot takes any amount you choose; the 0.001 EXCAL pilot takes exactly 100,000 sats.</li>
     <li>Sign in your own wallet and broadcast. Your funding carries a 1,000-sat signal and an OP_RETURN tag (<span class="mono">EXCAL1</span> or <span class="mono">EXCAL1K</span>) with your delivery key.</li>
     <li>The watcher verifies your funding and publishes your encrypted claim seed. Decrypt it, take the secret from the BTC claim, and claim your EXCAL on the fork. If anything goes wrong, your BTC refunds to you after the timeout.</li>
   </ol>
   <h2>Why this is real</h2>
   <ul>
-    <li>Both lots are funded on-chain on the Excalibur fork (blocks 42,900 and 42,899) &mdash; the EXCAL is locked, not promised.</li>
+    <li>All three lots are funded on-chain on the Excalibur fork (blocks 42,900, 42,899 and 43,571) &mdash; the EXCAL is locked, not promised.</li>
     <li>QHTLC locks: hash-based, quantum-resistant Trifold signatures, not ECDSA.</li>
     <li>Opcode-free locks, AuxPoW merge-mined with Bitcoin. The fork split from Bitcoin at block 968,698.</li>
     <li>Only the first verified funding per lot is served. The secret is the same for everyone per lot, so the first funded HTLC wins and later fundings refund.</li>
@@ -71,6 +86,7 @@
   <footer>
     <p>Offer threads: <a href="https://github.com/Holedozer1229/excalibur-chain/issues/3">issue #3 (1 EXCAL)</a> &middot;
     <a href="https://github.com/Holedozer1229/excalibur-chain/issues/2">issue #2 (1,000 EXCAL)</a> &middot;
+    <a href="https://github.com/Holedozer1229/excalibur-chain/issues/4">issue #4 (0.001 EXCAL pilot)</a> &middot;
     <a href="https://github.com/Holedozer1229/excalibur-chain">excalibur-chain repo</a></p>
     <p>EXCAL is the coin of the Excalibur fork. No dollar amounts, no promises &mdash; the chain is the proof.</p>
   </footer>

@@ -1,6 +1,6 @@
-# 1,000 EXCAL and 1 EXCAL for BTC — self-serve atomic swaps (no messaging)
+# 1,000 EXCAL, 1 EXCAL and 0.001 EXCAL for BTC — self-serve atomic swaps (no messaging)
 
-**The offers:** 1,000 EXCAL for whatever BTC you offer — you name the price. 1 EXCAL for exactly 1 BTC (1:1). Two lots, same flow — pick one with `--lot 1k` (the default) or `--lot 1excal`.
+**The offers:** 1,000 EXCAL for whatever BTC you offer — you name the price. 1 EXCAL for exactly 1 BTC (1:1). 0.001 EXCAL for exactly 0.001 BTC (1:1) — the micro pilot. Three lots, same flow — pick one with `--lot 1k` (the default), `--lot 1excal`, or `--lot pilot001`.
 
 The 1,000 EXCAL lot is already committed: funding tx
 `4873ebb3a40b83f2401266587aba9f73bf837dd51349e07029b06819fcccfc95`
@@ -8,30 +8,33 @@ is **confirmed on the Excalibur fork in block 42899** — exactly 1,000
 EXCAL locked in a quantum-resistant QHTLC. The 1 EXCAL lot is committed
 too: funding tx `449fb35dafc7dc8f40faca892845730725961840b0fb945fa8b88b4e902287f1`
 is **confirmed on the Excalibur fork in block 42900** — exactly 1 EXCAL
-locked. You can verify either lock on the fork chain yourself before
+locked. The 0.001 EXCAL pilot lot is committed too: funding tx
+`6ee1f5da1aaa83c0652603a3f2f07018603b8d1d32b7fda26edfa500b0e1c439`
+is **confirmed on the Excalibur fork in block 43571** — exactly 0.001
+EXCAL locked. You can verify any lock on the fork chain yourself before
 you fund anything.
 
 EXCAL is the coin of the Excalibur fork — the first hard fork to rebuild Bitcoin’s locks from scratch: opcode-free and quantum-resistant.
 
-**You do not have to message anyone.** Pick your amount (any amount for the 1,000 EXCAL lot; exactly 1 BTC for the 1 EXCAL lot), build your funding
+**You do not have to message anyone.** Pick your amount (any amount for the 1,000 EXCAL lot; exactly 1 BTC for the 1 EXCAL lot; exactly 0.001 BTC for the pilot lot), build your funding
 transaction with the script below, sign it in your own wallet, broadcast
 it. The rest happens on-chain and in public. No DMs, no negotiation, no
 waiting on a reply.
 
 ## Public parameters (verify them yourself — do not trust this file alone)
 
-Per lot, in `lots/1k.json` and `lots/1excal.json` (the scripts read them):
+Per lot, in `lots/1k.json`, `lots/1excal.json` and `lots/pilot001.json` (the scripts read them):
 
-| Item | 1,000 EXCAL lot | 1 EXCAL lot |
-|---|---|---|
-| Funding txid | `4873ebb3…` (fork block 42899) | `449fb35d…` (fork block 42900) |
-| QHTLC lock | `04522033…` | `04584460…` |
-| Secret hash (SHA256) | `d1baf924…` | `95d706ed…` |
-| Claim root | `91f33e7f…` | `1f4a1780…` |
-| Refund root | `9471855e…` | `749c23e1…` |
-| EXCAL refund timeout | fork height 62898 | fork height 62899 |
-| OP_RETURN tag | `EXCAL1K` | `EXCAL1` |
-| GitHub issue | #2 | #3 |
+| Item | 1,000 EXCAL lot | 1 EXCAL lot | 0.001 EXCAL pilot lot |
+|---|---|---|---|
+| Funding txid | `4873ebb3…` (fork block 42899) | `449fb35d…` (fork block 42900) | `6ee1f5da…` (fork block 43571) |
+| QHTLC lock | `04522033…` | `04584460…` | `04e1f59c…` |
+| Secret hash (SHA256) | `d1baf924…` | `95d706ed…` | `59db7d74…` |
+| Claim root | `91f33e7f…` | `1f4a1780…` | `1efd23e3…` |
+| Refund root | `9471855e…` | `749c23e1…` | `66df77c5…` |
+| EXCAL refund timeout | fork height 62898 | fork height 62899 | fork height 63557 |
+| OP_RETURN tag | `EXCAL1K` | `EXCAL1` | `EXCALPILOT` |
+| GitHub issue | #2 | #3 | #4 |
 
 Shared: BTC claim key (Lux) `02e83113…`, BTC claim destination
 `bc1qj37xg5qmyedwfe70cz0f385cxmf6642kcznjdg`, signal output 1,000 sats,
@@ -42,16 +45,17 @@ BTC HTLC timeout = your funding height + 144 blocks (~24h).
 Get the kit: `git clone https://github.com/Holedozer1229/excalibur-chain.git`
 — everything below lives in `self-serve/`.
 
-**1. Fund your BTC HTLC — any amount.**
+**1. Fund your BTC HTLC — your lot's amount.**
 Run `taker_htlc.py` (stdlib only, no keys leave your machine):
 ```
 python3 taker_htlc.py --utxo TXID:VOUT --amount SATS \
     --refund-pubkey <your compressed pubkey hex> \
-    --change-address <your bc1q change address> [--lot 1excal]
+    --change-address <your bc1q change address> [--lot 1excal|pilot001]
 ```
 It builds an unsigned PSBT for a funding tx with 4 outputs: your HTLC
 (`amount` sats), an OP_RETURN carrying the lot's tag (`EXCAL1K` for the
-1,000 EXCAL lot, `EXCAL1` for the 1 EXCAL lot) + your fresh delivery
+1,000 EXCAL lot, `EXCAL1` for the 1 EXCAL lot, `EXCALPILOT` for the pilot
+lot) + your fresh delivery
 pubkey, the 1,000-sat signal, and your change. It also saves
 `delivery_key.txt` — **keep that file**: it is the only way to decrypt
 the claim seed. Sign the PSBT in your wallet (Sparrow / Electrum /
@@ -61,13 +65,16 @@ The script refuses to fund if a swap is already in progress (one lot,
 one taker — first funded HTLC wins).
 
 Then post your witness script hex (the script prints it) as a comment
-on the lot's GitHub issue (#2 for the 1,000 EXCAL lot), next to your
+on the lot's GitHub issue (#2 for the 1,000 EXCAL lot, #3 for 1 EXCAL,
+#4 for the pilot lot), next to your
 funding txid, so anyone can verify your HTLC. That is a public record,
 not a message to anyone.
 
 **2. The claim seed is delivered to you, encrypted.**
 The swap watcher sees the 1,000-sat signal, verifies your HTLC
-(maker key, secret hash, timeout), and publishes the EXCAL claim seed
+(maker key, secret hash, timeout, and amount — the 1 EXCAL lot takes
+exactly 1 BTC, the pilot exactly 0.001 BTC), and publishes the EXCAL
+claim seed
 **encrypted to your delivery pubkey** in `claim-seeds/<lot>-<funding_txid>.json`.
 Only you can decrypt it (see `decrypt_seed.py`). The raw seed is never
 published — that is what stops anyone front-running your claim after
@@ -94,7 +101,8 @@ an invalid claim. Use the legacy address for your key (same hash160 as
 a Bitcoin legacy address).
 `taker_claim.py` verifies the claim locally and refuses to print the hex
 unless it validates. Post the signed hex as a comment on the lot's
-GitHub issue (#2 for the 1,000 EXCAL lot) — the fork node broadcasts it
+GitHub issue (#2 for the 1,000 EXCAL lot, #3 for 1 EXCAL, #4 for the
+pilot lot) — the fork node broadcasts it
 and mines it into the next block. The EXCAL then lands at your
 destination address (minus a 10,000-sword fee).
 

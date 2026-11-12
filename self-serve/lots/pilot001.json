@@ -1,1 +1,18 @@
-{"claim_root":"1efd23e36b3fb58f00999b9e60eb9d6a91434f8b384263ff61ccbde95265f7fd","descriptor":"59db7d74824126b4a8d6e9290c3afa36ec6d230442658767187db487a1c776011efd23e36b3fb58f00999b9e60eb9d6a91434f8b384263ff61ccbde95265f7fd66df77c5745c22139e6efc8c15f17663fceb42d8dff7e8be96a5bfed4db3b5cc0000f845","funding_block":43571,"funding_txid":"6ee1f5da1aaa83c0652603a3f2f07018603b8d1d32b7fda26edfa500b0e1c439","issue":4,"label":"0.001 EXCAL pilot","lock":"04e1f59c409dbdf7aff0ded74513a608a7d1943b63","locked_excal":0.001,"locked_swords":100000,"lot":"pilot001","offer_dir":"excal-pilot-001-offer-2026-11-11","refund_root":"66df77c5745c22139e6efc8c15f17663fceb42d8dff7e8be96a5bfed4db3b5cc","secret_hash":"59db7d74824126b4a8d6e9290c3afa36ec6d230442658767187db487a1c77601","tag":"EXCALPILOT","timeout":63557}
+{
+ "ask_sats": 100000,
+ "claim_root": "1efd23e36b3fb58f00999b9e60eb9d6a91434f8b384263ff61ccbde95265f7fd",
+ "descriptor": "59db7d74824126b4a8d6e9290c3afa36ec6d230442658767187db487a1c776011efd23e36b3fb58f00999b9e60eb9d6a91434f8b384263ff61ccbde95265f7fd66df77c5745c22139e6efc8c15f17663fceb42d8dff7e8be96a5bfed4db3b5cc0000f845",
+ "funding_block": 43571,
+ "funding_txid": "6ee1f5da1aaa83c0652603a3f2f07018603b8d1d32b7fda26edfa500b0e1c439",
+ "issue": 4,
+ "label": "0.001 EXCAL pilot",
+ "lock": "04e1f59c409dbdf7aff0ded74513a608a7d1943b63",
+ "locked_excal": 0.001,
+ "locked_swords": 100000,
+ "lot": "pilot001",
+ "offer_dir": "excal-pilot-001-offer-2026-11-11",
+ "refund_root": "66df77c5745c22139e6efc8c15f17663fceb42d8dff7e8be96a5bfed4db3b5cc",
+ "secret_hash": "59db7d74824126b4a8d6e9290c3afa36ec6d230442658767187db487a1c77601",
+ "tag": "EXCALPILOT",
+ "timeout": 63557
+}

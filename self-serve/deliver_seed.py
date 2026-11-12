@@ -206,6 +206,9 @@ def verify_htlc(script_hex, htlc_value, lot):
     assert p["secret_hash"].hex() == lot["secret_hash"], "secret hash mismatch for this lot"
     assert p["timeout"] > 0, "bad timeout"
     assert htlc_value > 0, "HTLC value must be positive"
+    ask = lot.get("ask_sats")
+    assert ask is None or htlc_value == ask, \
+        f"HTLC value {htlc_value} sats does not match the {lot['label']} lot's ask of {ask} sats"
     return p
 
 def encrypt_seed(seed_hex, delivery_pub_hex):
