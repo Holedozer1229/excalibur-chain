@@ -43,6 +43,7 @@ one assumption forty years of trying has not dented.
 Pure stdlib. Test keys only. No network.
 """
 import hashlib
+import json
 import os
 import sys
 
@@ -96,9 +97,23 @@ def to_balanced_ternary(n: int) -> str:
 
 
 class TrifoldKey:
-    """Stateful. The counter climbs in trits and never rolls back."""
+    """Stateful. The counter climbs in trits and never rolls back.
 
-    def __init__(self, seed: bytes, height: int = 6):
+    One-time-leaf persistence: a Lamport leaf must never sign two
+    different messages. next_index lives in memory by default, so a
+    key rebuilt from the same seed after a restart would reuse leaf 0.
+    Pass state_path (a JSON file) or state_dir (a directory; the file
+    is named by this tree's root) to persist next_index across
+    restarts. The counter is reserved (incremented + saved) BEFORE
+    the signature is built, so a crash after signing cannot cause a
+    reuse — at worst a leaf is skipped, never repeated. The
+    spent-leaf registry is a second, independent guard at consensus
+    (validation rejects a spent leaf), but persistence is the guard
+    that stops the reuse from being signed in the first place.
+    """
+
+    def __init__(self, seed: bytes, height: int = 6,
+                 state_path: str = None, state_dir: str = None):
         self.seed = seed
         self.height = height
         self.capacity = 3 ** height
@@ -110,12 +125,58 @@ class TrifoldKey:
                      for j in range(0, len(level), 3)]
             self._tree.append(level)
         self.root = self._tree[-1][0]
+        self.state_path = state_path
+        if self.state_path is None and state_dir is not None:
+            self.state_path = os.path.join(
+                state_dir, "trifold_state_" + self.root.hex() + ".json")
+        self._load_state()
+
+    def _load_state(self):
+        """Load next_index from the state file, if one is configured
+        and present. A file for a different root is ignored (start at
+        0). A corrupt file fails closed — silently resetting to 0
+        could reuse a leaf."""
+        if not self.state_path or not os.path.exists(self.state_path):
+            return
+        with open(self.state_path) as f:
+            try:
+                st = json.load(f)
+            except Exception as e:
+                raise ValueError(
+                    f"corrupt Trifold state file {self.state_path}: {e}")
+        if st.get("root") != self.root.hex():
+            return
+        n = st.get("next_index")
+        if not isinstance(n, int) or isinstance(n, bool) \
+                or n < 0 or n > self.capacity:
+            raise ValueError(
+                f"corrupt Trifold state file {self.state_path}: "
+                f"bad next_index {n!r}")
+        self.next_index = n
+
+    def _save_state(self):
+        """Atomically persist next_index (tmp + fsync + replace)."""
+        if not self.state_path:
+            return
+        d = os.path.dirname(self.state_path)
+        if d:
+            os.makedirs(d, exist_ok=True)
+        tmp = self.state_path + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump({"root": self.root.hex(),
+                       "next_index": int(self.next_index)}, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, self.state_path)
 
     def sign(self, msg: bytes):
         idx = self.next_index
         if idx >= self.capacity:
             raise RuntimeError("tree exhausted — every leaf spent")
         self.next_index += 1
+        # Reserve the leaf BEFORE building the signature: a crash
+        # after this point skips the leaf, never reuses it.
+        self._save_state()
         digest = _h(msg)
         ots_sig, ots_pub = [], []
         for pos in range(256):

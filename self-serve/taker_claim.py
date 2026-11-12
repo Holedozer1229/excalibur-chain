@@ -118,6 +118,7 @@ def main():
     ap.add_argument("--descriptor", default=None, help="QHTLC descriptor hex (test override; default from the lot file)")
     ap.add_argument("--funding-txid", default=None, help="Funding txid, display order (test override; default from the lot file)")
     ap.add_argument("--locked-swords", type=int, default=None, help="Locked amount in swords (test override; default from the lot file)")
+    ap.add_argument("--state-file", default=None, help="Trifold one-time-leaf state file (default: trifold_state_<claim-root>.json in the current directory). The leaf counter is persisted here so a retry after a restart resumes at the next unused leaf instead of reusing leaf 0.")
     args = ap.parse_args()
     lot = load_lot(args.lot)
     lock_hex = args.lock or lot["lock"]
@@ -152,15 +153,21 @@ def main():
     d = parse_qhtlc_descriptor(desc)
 
     # Find the Trifold tree height whose root matches the descriptor's claim root.
-    key = None
-    for height in range(1, 11):
-        k = TrifoldKey(seed, height=height)
+    # Trial keys are throwaway (no state); the signing key is created once
+    # with a persisted leaf counter, so a retry after a restart resumes at
+    # the next unused leaf instead of reusing leaf 0.
+    height = None
+    for h in range(1, 11):
+        k = TrifoldKey(seed, height=h)
         if k.root == d["claim_root"]:
-            key = k
+            height = h
             print(f"claim tree height: {height} (root matches)")
             break
-    if key is None:
+    if height is None:
         sys.exit("claim seed does not reproduce the claim root at any height 1..10")
+    state_file = args.state_file or (
+        "trifold_state_" + d["claim_root"].hex() + ".json")
+    key = TrifoldKey(seed, height=height, state_path=state_file)
 
     dest = dest_script(args.destination)
     prev_wire = bytes.fromhex(funding_txid)[::-1]

@@ -1,4 +1,4 @@
-# 1,000 EXCAL, 1 EXCAL and 0.001 EXCAL for BTC — self-serve atomic swaps (no messaging)
+# 1,000 EXCAL, 1 EXCAL and 0.001 EXCAL for BTC — self-serve hash-locked swaps (no messaging)
 
 **The offers:** 1,000 EXCAL for whatever BTC you offer — you name the price. 1 EXCAL for exactly 1 BTC (1:1). 0.001 EXCAL for exactly 0.001 BTC (1:1) — the micro pilot. Three lots, same flow — pick one with `--lot 1k` (the default), `--lot 1excal`, or `--lot pilot001`.
 
@@ -21,6 +21,14 @@ transaction with the script below, sign it in your own wallet, broadcast
 it. The rest happens on-chain and in public. No DMs, no negotiation, no
 waiting on a reply.
 
+**Settlement model — read this first.** This is a hash-locked,
+counterparty-dependent exchange, not a trustless atomic swap. The maker
+claims your BTC first (which reveals the secret on-chain), and you must
+then claim the EXCAL yourself using that secret plus the delivered claim
+seed. If you never claim the EXCAL, your BTC is already gone and the
+EXCAL refunds to the maker at the fork timeout. Claim promptly once the
+secret appears.
+
 ## Public parameters (verify them yourself — do not trust this file alone)
 
 Per lot, in `lots/1k.json`, `lots/1excal.json` and `lots/pilot001.json` (the scripts read them):
@@ -38,7 +46,10 @@ Per lot, in `lots/1k.json`, `lots/1excal.json` and `lots/pilot001.json` (the scr
 
 Shared: BTC claim key (Lux) `02e83113…`, BTC claim destination
 `bc1qj37xg5qmyedwfe70cz0f385cxmf6642kcznjdg`, signal output 1,000 sats,
-BTC HTLC timeout = your funding height + 144 blocks (~24h).
+BTC HTLC timeout = the Bitcoin tip height when you build the funding
+transaction + 144 blocks (~24h). The watcher verifies the actual refund
+window against the confirmed funding height before delivering the claim
+seed.
 
 ## How it works (4 steps, zero messages)
 
@@ -71,14 +82,16 @@ funding txid, so anyone can verify your HTLC. That is a public record,
 not a message to anyone.
 
 **2. The claim seed is delivered to you, encrypted.**
-The swap watcher sees the 1,000-sat signal, verifies your HTLC
-(maker key, secret hash, timeout, and amount — the 1 EXCAL lot takes
-exactly 1 BTC, the pilot exactly 0.001 BTC), and publishes the EXCAL
-claim seed
-**encrypted to your delivery pubkey** in `claim-seeds/<lot>-<funding_txid>.json`.
-Only you can decrypt it (see `decrypt_seed.py`). The raw seed is never
-published — that is what stops anyone front-running your claim after
-the secret appears.
+The swap watcher sees the 1,000-sat signal and verifies your HTLC
+before delivering anything: the posted witness script must hash to the
+funded P2WSH output, the funding transaction must be confirmed (6+
+confirmations) with its txid matching, and the maker key, secret hash,
+timeout, and amount must match the lot (the 1 EXCAL lot takes exactly
+1 BTC, the pilot exactly 0.001 BTC). It then publishes the EXCAL claim
+seed **encrypted to your delivery pubkey** in
+`claim-seeds/<lot>-<funding_txid>.json`. Only you can decrypt it (see
+`decrypt_seed.py`). The raw seed is never published — that is what stops
+anyone front-running your claim after the secret appears.
 
 **3. Lux claims your BTC — the secret appears on-chain.**
 Lux spends your HTLC with the secret + his miner key. The secret is

@@ -12,8 +12,12 @@ What the funding transaction does (4 outputs):
   0. P2WSH HTLC locking <amount> sats.
      Claim (Lux): secret preimage + signature from Lux's miner key
      (02e8311342cb7accd4edef31462fcda1ef56bfbf7d4f03d3c8872dbec9a1bba1b3).
-     Refund (taker): after BTC height <funding height + 144>, signature
+     Refund (taker): after BTC height <timeout>, signature
      from the taker's refund pubkey (supplied with --refund-pubkey).
+     The timeout is the Bitcoin tip height when this PSBT is built +
+     144 blocks; the swap watcher verifies the actual refund window
+     against the confirmed funding height before delivering the
+     claim seed, so a late confirmation cannot silently shrink it.
      Secret hash is the published one: d1baf924... (same secret as the
      EXCAL lock, so one secret unlocks both legs).
   1. OP_RETURN carrying the tag EXCAL1K + the taker's fresh delivery

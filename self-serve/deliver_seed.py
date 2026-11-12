@@ -50,6 +50,9 @@ STATE_FILE = os.path.join(HERE, "watch_state.json")
 MAKER_PUB_HEX = "02e8311342cb7accd4edef31462fcda1ef56bfbf7d4f03d3c8872dbec9a1bba1b3"
 SIGNAL_ADDR = "bc1qj37xg5qmyedwfe70cz0f385cxmf6642kcznjdg"
 REPO = "Holedozer1229/excalibur-chain"
+# Production safeguard: require 6 BTC confirmations before delivering the
+# claim seed (reduces reorg exposure; does not eliminate it).
+MIN_BTC_CONFIRMATIONS = 6
 
 def load_lot(name):
     with open(os.path.join(HERE, "lots", name + ".json")) as f:
@@ -97,23 +100,67 @@ def load_state():
 
 def save_state(s):
     os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
-    with open(STATE_FILE, "w") as f:
+    tmp = STATE_FILE + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(s, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, STATE_FILE)
 
 def lot_state(state, lot_name):
     return state["lots"].setdefault(lot_name, {"seen": [], "delivered_txid": None})
 
 def bc_tx_to_mempool_shape(bc_tx):
     """Translate one BlockCypher tx into the mempool.space shape the
-    verifier expects: {"txid", "vout": [{"scriptpubkey", "value"}]}.
-    Only the discovery fetch differs; verification is unchanged."""
+    verifier expects, preserving confirmation metadata so both
+    providers expose the same status fields."""
+    confirmations = int(bc_tx.get("confirmations") or 0)
+    block_height = bc_tx.get("block_height")
     return {
         "txid": bc_tx.get("hash"),
         "vout": [
-            {"scriptpubkey": o.get("script", ""), "value": o.get("value", 0)}
+            {
+                "scriptpubkey": o.get("script", ""),
+                "value": o.get("value", 0)
+            }
             for o in bc_tx.get("outputs", [])
         ],
+        "status": {
+            "confirmed": confirmations > 0 and block_height is not None,
+            "block_height": block_height,
+            "confirmations": confirmations
+        }
     }
+
+def verify_confirmed_tx(tx, requested_txid, tip_height,
+                        min_confirmations=MIN_BTC_CONFIRMATIONS):
+    actual = str(tx.get("txid") or "").lower()
+    requested = str(requested_txid).lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", requested):
+        raise ValueError("requested funding txid is malformed")
+    if actual != requested:
+        raise ValueError("transaction provider returned a different txid")
+    status = tx.get("status") or {}
+    if status.get("confirmed") is not True:
+        raise ValueError("funding transaction is not confirmed")
+    block_height = status.get("block_height")
+    if not isinstance(block_height, int) or block_height <= 0:
+        raise ValueError("confirmed transaction has no valid block height")
+    if not isinstance(tip_height, int) or tip_height < block_height:
+        raise ValueError("invalid Bitcoin tip height")
+    confirmations = tip_height - block_height + 1
+    if confirmations < min_confirmations:
+        raise ValueError(
+            f"funding has {confirmations} confirmations; "
+            f"{min_confirmations} required"
+        )
+    return confirmations
+
+def fetch_btc_tip_height():
+    raw = curl("https://mempool.space/api/blocks/tip/height").strip()
+    if not raw.isdigit():
+        raise RuntimeError("Bitcoin tip-height response is invalid")
+    return int(raw)
 
 def signal_txs_blockcypher():
     """Fallback signal-address poll via BlockCypher (unauthenticated).
@@ -151,32 +198,54 @@ def signal_txs():
         print(f"warning: mempool.space unreachable ({str(e)[:120]}); falling back to BlockCypher")
         return signal_txs_blockcypher()
 
-def find_delivery_key(tx, lots):
-    """Find (lot, delivery_pubkey, htlc_vout, htlc_value) in a funding tx.
-
-    The OP_RETURN data must be exactly <tag> + 33-byte delivery pubkey;
-    the length check keeps EXCAL1 apart from EXCAL1K.
+def find_delivery_key(tx, lots, witness_script=None):
     """
-    htlc = None
+    Find (lot, delivery_pubkey, htlc_vout, htlc_value, script_pubkey).
+    If witness_script is supplied, only an output whose P2WSH
+    commitment matches that exact script can be selected.
+    """
+    expected_spk = None
+    if witness_script is not None:
+        expected_spk = b"\x00\x20" + hashlib.sha256(
+            witness_script
+        ).digest()
+    htlc_outputs = []
     for i, o in enumerate(tx.get("vout", [])):
-        spk = bytes.fromhex(o["scriptpubkey"])
-        if spk[:2] == b"\x00\x20":
-            htlc = (i, o["value"])
-    if htlc is None:
+        try:
+            spk = bytes.fromhex(o["scriptpubkey"])
+        except (ValueError, KeyError, TypeError):
+            continue
+        if len(spk) == 34 and spk[:2] == b"\x00\x20":
+            if expected_spk is None or spk == expected_spk:
+                htlc_outputs.append((i, o["value"], spk))
+    if not htlc_outputs:
         return None
+    # Do not silently choose between multiple matching HTLC outputs.
+    # Ambiguity is rejected only when a specific witness script is
+    # supplied; during discovery (no script) keep the old behavior of
+    # selecting the last P2WSH candidate.
+    if expected_spk is not None and len(htlc_outputs) != 1:
+        raise ValueError("funding transaction has ambiguous matching P2WSH outputs")
+    htlc_vout, htlc_value, htlc_spk = htlc_outputs[-1]
     for o in tx.get("vout", []):
-        spk = bytes.fromhex(o["scriptpubkey"])
+        try:
+            spk = bytes.fromhex(o["scriptpubkey"])
+        except (ValueError, KeyError, TypeError):
+            continue
         if spk[:1] != b"\x6a" or len(spk) < 2:
             continue
         # spk = OP_RETURN <push> <payload>; payload = <tag> + 33-byte pubkey.
         data = spk[1:]
-        if len(data) < 1 or data[0] != len(data) - 1:
+        if not data or data[0] != len(data) - 1:
             continue
         payload = data[1:]
         for lot in lots:
             tag = lot["tag"].encode()
             if len(payload) == len(tag) + 33 and payload[:len(tag)] == tag:
-                return lot, payload[len(tag):], htlc[0], htlc[1]
+                return (
+                    lot, payload[len(tag):], htlc_vout,
+                    htlc_value, htlc_spk
+                )
     return None
 
 def issue_witness_scripts(issue_no):
@@ -230,17 +299,41 @@ def deliver(funding_txid, witness_script_hex, lot):
     state = load_state()
     ls = lot_state(state, lot["lot"])
     if ls.get("delivered_txid"):
-        print(f"[{lot['lot']}] already delivered for {ls['delivered_txid']}; refusing a second delivery")
+        print(
+            f"[{lot['lot']}] already delivered for "
+            f"{ls['delivered_txid']}; refusing a second delivery"
+        )
         return False
+    try:
+        witness_script = bytes.fromhex(witness_script_hex)
+    except (TypeError, ValueError):
+        raise ValueError("witness script is not valid hexadecimal")
     tx = fetch_tx(funding_txid)
-    found = find_delivery_key(tx, [lot])
+    tip_height = fetch_btc_tip_height()
+    confirmations = verify_confirmed_tx(
+        tx, funding_txid, tip_height
+    )
+    found = find_delivery_key(
+        tx, [lot], witness_script=witness_script
+    )
     if not found:
-        print(f"[{lot['lot']}] funding tx has no {lot['tag']} OP_RETURN + P2WSH HTLC output; skipping")
+        print(
+            f"[{lot['lot']}] no P2WSH output commits to the "
+            "posted witness script; refusing delivery"
+        )
         return False
-    _lot, delivery_pub, htlc_vout, htlc_value = found
+    _lot, delivery_pub, htlc_vout, htlc_value, htlc_spk = found
+    expected_spk = b"\x00\x20" + hashlib.sha256(
+        witness_script
+    ).digest()
+    if htlc_spk != expected_spk:
+        raise ValueError("witness script does not match funded P2WSH output")
     p = verify_htlc(witness_script_hex, htlc_value, lot)
-    print(f"[{lot['lot']}] verified HTLC: {htlc_value} sats, timeout BTC height {p['timeout']}, "
-          f"taker refund pubkey {p['taker_pubkey'].hex()[:20]}...")
+    print(
+        f"[{lot['lot']}] verified HTLC: {htlc_value} sats, "
+        f"{confirmations} BTC confirmations, "
+        f"timeout {p['timeout']}"
+    )
     seed_hex = read_claim_seed_hex(lot)
     enc = encrypt_seed(seed_hex, delivery_pub.hex())
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -276,14 +369,10 @@ def check_once():
         found = find_delivery_key(tx, lots)
         if not found:
             continue
-        lot, _pub, _vout, _val = found
+        lot, _pub, _vout, _val, _spk = found
         ls = lot_state(state, lot["lot"])
         if ls.get("delivered_txid"):
             continue
-        if txid in ls.get("seen", []):
-            continue
-        ls.setdefault("seen", []).append(txid)
-        save_state(state)
         issue_no = lot.get("issue")
         if issue_no not in scripts_by_issue:
             scripts_by_issue[issue_no] = issue_witness_scripts(issue_no)
