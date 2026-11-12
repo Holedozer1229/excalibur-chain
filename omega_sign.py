@@ -25,7 +25,10 @@ omega_blob() never raises: on any error it returns None and the
 producer builds a plain block. Block production never depends on the
 signer being healthy.
 """
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows: no fcntl; omega file locking falls back to no-op
+    fcntl = None
 import hashlib
 import json
 import os
@@ -186,7 +189,8 @@ def omega_blob(parent_header):
             if len(blob) == BLOB_BYTES:
                 return blob
         with open(_path("omega.lock"), "a") as lockf:
-            fcntl.flock(lockf, fcntl.LOCK_EX)
+            if fcntl is not None:  # Windows fallback: no file locking
+                fcntl.flock(lockf, fcntl.LOCK_EX)
             if os.path.exists(cache):
                 with open(cache, "rb") as f:
                     blob = f.read()

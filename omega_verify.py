@@ -55,7 +55,8 @@ def coinbase_pushes(raw_cb):
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
     records = {}
-    with open(os.path.join(D, "chaindata_fork", "chain.jsonl")) as f:
+    chain_file = os.environ.get("EXCAL_CHAIN_FILE") or os.path.join(D, "chaindata_fork", "chain.jsonl")
+    with open(chain_file) as f:
         for line in f:
             line = line.strip()
             if line:
