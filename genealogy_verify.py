@@ -15,10 +15,12 @@ Independent implementation: consensus rules replicated from genesis_fork.py
 by reading the code, not by importing it. Stdlib only (curl subprocess for
 the public cross-check, per sandbox egress rules).
 """
-import hashlib, json, struct, subprocess, sys, time
+import hashlib, json, os, struct, subprocess, sys, time
 
 RPC_HOST, RPC_PORT = "127.0.0.1", 9432
-CHAIN_FILE = "/home/hatch/workspace/chaindata_fork/chain.jsonl"
+# Portable: override with EXCAL_CHAIN_FILE env or a CLI path argument;
+# default is the VM path where the live node writes the chain.
+CHAIN_FILE = os.environ.get("EXCAL_CHAIN_FILE") or (sys.argv[1] if len(sys.argv) > 1 else "/home/hatch/workspace/chaindata_fork/chain.jsonl")
 
 # --- consensus constants (genesis_fork.py, fork network) ---
 MIN_BITS = 0x1F000100
@@ -135,7 +137,14 @@ def main():
     with open(CHAIN_FILE) as f:
         for line in f:
             r = json.loads(line); byhash[r["hash"]] = r
-    tip_hash = rpc("getbestblockhash"); tip_height = rpc("getblockcount")
+    try:
+        tip_hash = rpc("getbestblockhash"); tip_height = rpc("getblockcount")
+    except Exception as e:
+        # No local fork node (e.g. a Windows checkout): walk from the
+        # highest-height record in the file instead of the live RPC tip.
+        print(f"live RPC tip unavailable ({e}); walking from the highest record in the file")
+        tip_rec = max(byhash.values(), key=lambda r: r["height"])
+        tip_hash, tip_height = tip_rec["hash"], tip_rec["height"]
     chain = []
     h = tip_hash
     while h in byhash:
@@ -219,9 +228,10 @@ def main():
         "counts": {"self_pow": n_self, "auxpow": n_aux, "bits_grace_path": n_grace},
         "verified_at_unix": int(time.time()),
     }
-    with open("/home/hatch/workspace/your_files/genealogy_checkpoint.json", "w") as f:
+    ckpt_path = os.environ.get("EXCAL_CHECKPOINT_FILE", "genealogy_checkpoint.json")
+    with open(ckpt_path, "w") as f:
         json.dump(ckpt, f, indent=2)
-    print("checkpoint written: genealogy_checkpoint.json")
+    print(f"checkpoint written: {ckpt_path}")
     return 0 if ok else 1
 
 if __name__ == "__main__":
