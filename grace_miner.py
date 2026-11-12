@@ -19,8 +19,11 @@ and the fork-native work-rate step change the bridge must re-base on.
 Read-only: nothing is mined or submitted here.
 """
 import json, os, sys
-_HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.environ.get("EXCAL_WORKSPACE", _HERE))
+# genealogy_verify.py lives next to this script; the script's own directory
+# is already on sys.path when run directly. Keep the VM path only as a
+# fallback for checkouts where the two files were separated.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, "/home/hatch/workspace/your_files")
 import genealogy_verify as gv
 
 def load_chain():
@@ -30,10 +33,12 @@ def load_chain():
             r = json.loads(line); byhash[r["hash"]] = r
     try:
         tip = gv.rpc("getbestblockhash")
-    except Exception:
-        # No local fork node: walk from the highest record in the file.
-        tip_rec = max(byhash.values(), key=lambda r: r["height"])
-        tip = tip_rec["hash"]
+    except Exception as e:
+        # No local fork node (e.g. node not started yet on a Windows
+        # checkout): walk from the highest-height record in the file,
+        # the same fallback genealogy_verify.py already uses.
+        print(f"live RPC tip unavailable ({e}); using highest record in the file")
+        tip = max(byhash.values(), key=lambda r: r["height"])["hash"]
     chain, h = [], tip
     while h in byhash:
         chain.append(byhash[h])

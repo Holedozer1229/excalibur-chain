@@ -43,6 +43,7 @@ import asyncio, http.client, json, os, struct, sys, time
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.environ.get("EXCAL_WORKSPACE", _HERE))
+sys.path.insert(0, "/home/hatch/workspace")  # VM fallback
 import genesis_fork as gf
 from genesis_fork import (sha256d, ser_header, bits_to_target,
                           target_to_bits, merkle_root, txid, subsidy,
