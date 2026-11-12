@@ -15,7 +15,7 @@ import os
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REGISTRY = "/home/hatch/workspace/stratum_shim/sponsors.json"
+REGISTRY = os.environ.get("SPONSORS_FILE", os.path.join(HERE, "sponsors.json"))
 PRICE_ORDINARY = 21_000
 PRICE_ROUND = 1_000_000
 PRICE_PREMIUM = {26_400: 5_000_000, 30_000: 5_000_000}

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Simulation harness for payment_watcher: synthetic mempool.space
 txs exercise the full classify path. No network, no real BTC."""
-import sys
-sys.path.insert(0, "/home/hatch/workspace/stratum_shim")
+import os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.environ.get("EXCAL_WORKSPACE", _HERE))
 import payment_watcher as pw
 
 ADDR = pw.ADDRESS

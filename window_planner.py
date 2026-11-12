@@ -20,8 +20,9 @@ This tool is read-only: it reports history (how much the grace path has
 already been used, and its local cost delta vs a strict-DAA
 counterfactual holding history fixed) and the current window card.
 """
-import json, sys
-sys.path.insert(0, "/home/hatch/workspace/your_files")
+import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.environ.get("EXCAL_WORKSPACE", _HERE))
 import genealogy_verify as gv
 
 def load_chain():
@@ -29,7 +30,12 @@ def load_chain():
     with open(gv.CHAIN_FILE) as f:
         for line in f:
             r = json.loads(line); byhash[r["hash"]] = r
-    tip = gv.rpc("getbestblockhash")
+    try:
+        tip = gv.rpc("getbestblockhash")
+    except Exception:
+        # No local fork node: walk from the highest record in the file.
+        tip_rec = max(byhash.values(), key=lambda r: r["height"])
+        tip = tip_rec["hash"]
     chain, h = [], tip
     while h in byhash:
         chain.append(byhash[h])

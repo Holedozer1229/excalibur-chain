@@ -1,0 +1,28 @@
+# IDE
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.egg-info
+.eggs
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Data files
+chain.jsonl
+chain.jsonl.gz
+
+# OS
+.DS_Store
+Thumbs.db

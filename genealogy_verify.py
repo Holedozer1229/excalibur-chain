@@ -19,8 +19,9 @@ import hashlib, json, os, struct, subprocess, sys, time
 
 RPC_HOST, RPC_PORT = "127.0.0.1", 9432
 # Portable: override with EXCAL_CHAIN_FILE env or a CLI path argument;
-# default is the VM path where the live node writes the chain.
-CHAIN_FILE = os.environ.get("EXCAL_CHAIN_FILE") or (sys.argv[1] if len(sys.argv) > 1 else "/home/hatch/workspace/chaindata_fork/chain.jsonl")
+# default is the project root chain.jsonl (works on any platform).
+_HERE = os.path.dirname(os.path.abspath(__file__))
+CHAIN_FILE = os.environ.get("EXCAL_CHAIN_FILE") or (sys.argv[1] if len(sys.argv) > 1 else os.path.join(_HERE, "chain.jsonl"))
 
 # --- consensus constants (genesis_fork.py, fork network) ---
 MIN_BITS = 0x1F000100

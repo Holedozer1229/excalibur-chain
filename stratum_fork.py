@@ -41,7 +41,8 @@ anyone can verify delivery with the genealogy verifier. Default off.
 """
 import asyncio, http.client, json, os, struct, sys, time
 
-sys.path.insert(0, "/home/hatch/workspace")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.environ.get("EXCAL_WORKSPACE", _HERE))
 import genesis_fork as gf
 from genesis_fork import (sha256d, ser_header, bits_to_target,
                           target_to_bits, merkle_root, txid, subsidy,
@@ -127,7 +128,7 @@ def sponsor_coinbase(height, bits, slot, lock, stag):
 
 
 SPONSORS_FILE = os.environ.get(
-    "SPONSORS_FILE", "/home/hatch/workspace/stratum_shim/sponsors.json")
+    "SPONSORS_FILE", os.path.join(_HERE, "sponsors.json"))
 
 
 def load_registry():

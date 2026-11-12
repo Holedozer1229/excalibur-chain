@@ -18,8 +18,9 @@ the strategy — windows to equilibrium, the now+7200 timestamp ceiling,
 and the fork-native work-rate step change the bridge must re-base on.
 Read-only: nothing is mined or submitted here.
 """
-import json, sys
-sys.path.insert(0, "/home/hatch/workspace/your_files")
+import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.environ.get("EXCAL_WORKSPACE", _HERE))
 import genealogy_verify as gv
 
 def load_chain():
@@ -27,7 +28,12 @@ def load_chain():
     with open(gv.CHAIN_FILE) as f:
         for line in f:
             r = json.loads(line); byhash[r["hash"]] = r
-    tip = gv.rpc("getbestblockhash")
+    try:
+        tip = gv.rpc("getbestblockhash")
+    except Exception:
+        # No local fork node: walk from the highest record in the file.
+        tip_rec = max(byhash.values(), key=lambda r: r["height"])
+        tip = tip_rec["hash"]
     chain, h = [], tip
     while h in byhash:
         chain.append(byhash[h])
