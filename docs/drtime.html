@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>DR. TIME — countersigned on three chains</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#0b0b0e;color:#e8e8ec;font-family:Georgia,serif;max-width:720px;margin:0 auto;padding:32px 20px;line-height:1.55}
+h1{font-size:32px;margin:0 0 4px}.sub{color:#9a9aa5;font-size:15px;margin-bottom:28px}
+h2{font-size:20px;margin:28px 0 8px;color:#f2b705}
+table{width:100%;border-collapse:collapse;margin:18px 0}
+td{padding:7px 4px;border-bottom:1px solid #22222a;vertical-align:top}
+td:first-child{color:#9a9aa5;width:38%}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all}
+a{color:#f2b705}
+.scope{border:1px solid #3a3a44;border-radius:8px;padding:14px 16px;color:#c9c9d2;font-size:14px}
+.note{color:#9a9aa5;font-size:13px;margin-top:24px}
+.tag{color:#f2b705}
+</style></head><body>
+<h1>DR. TIME</h1>
+<div class="sub">The 2010 overflow, answered. One Trifold countersignature, now living on three chains at once.</div>
+
+<p>On August 15, 2010, Bitcoin block 74,638 carried a transaction that created
+184,467,440,737.09551616 BTC out of nothing. Every node since v0.3.10 rejects it.
+On November 11, 2026, the Excalibur key countersigned that block&rsquo;s exact 80-byte
+header with a hash-only Trifold signature &mdash; and on November 12 it was sealed onto
+a second fork block and broadcast to Bitcoin testnet4, with a mainnet coinbase
+commitment armed behind it.</p>
+
+<table>
+<tr><td>Bad block</td><td>74,638 &mdash; <code>0000000000790ab3f22ec756ad43b6ab569abf0bddeb97c67a6f7b1470a7ec1c</code></td></tr>
+<tr><td>Overflow tx</td><td><code>1d5e512a9723cbef373b970eb52f1e9598ad67e7408077a82fdac194b65333c9</code><br><span style="color:#9a9aa5">184,467,440,737.09551616 BTC &mdash; never spendable, rejected by consensus</span></td></tr>
+<tr><td>Trifold root</td><td><code>7083fbebd6bfbd5f82fd40827cf36bc30da81524914011e69488b5a63e7bfe55</code></td></tr>
+<tr><td>Leaf</td><td>0 &mdash; spent once, never reused</td></tr>
+<tr><td>SHA-256 of the signature</td><td><code>1b1e6b7807f955af81008509ddb338f85d1d7fcba3a363cc34345ac3dcd7d501</code></td></tr>
+<tr><td>SHA-256 of the bundle</td><td><code>26eddfe315b11e5954b1e9a238d921f410f1299cc247fd65d2ebd9aaab6ee27a</code></td></tr>
+</table>
+
+<h2>Chain 1 &mdash; the EXCAL fork</h2>
+<table>
+<tr><td>Block 43,750</td><td>Sealed 2026-11-11 &mdash; <code>0000004c6c8e70e02b9a9090e8c6f64a25aab4e38e5d32dee5c0c15e38079af1</code><br><span class="tag">coinbase: &ldquo;OVERFLOW COUNTERSIGNED 7083fbeb - DR. TIME 2026-11-11&rdquo;</span></td></tr>
+<tr><td>Block 43,924</td><td>Sealed 2026-11-12 &mdash; <code>0000002dfa7e1f21fa04abbb8572ec61f8530fdabb43d99c004e32fc08a9a075</code><br><span class="tag">coinbase: &ldquo;DRTIME ON 3 CHAINS - T4 8f81d522 efbe4a1b - 2026-11-12&rdquo;</span><br><span style="color:#9a9aa5">Hand-mined in 38s (nonce 5,618,911). The coinbase commits the two testnet4 txids below &mdash; the fork block is the index for the other two chains.</span></td></tr>
+<!-- NEWBLOCK -->
+</table>
+
+<h2>Chain 2 &mdash; Bitcoin testnet4</h2>
+<p>Two standard OP_RETURN transactions, each <code>DRTIME/v1</code> + root + one hash (73 bytes).
+Both confirmed in mempool at broadcast; verify on any testnet4 explorer.</p>
+<table>
+<tr><td>Tx A &mdash; bundle hash</td><td><a href="https://blockstream.info/testnet4/tx/8f81d522eb823baed96b649059078b6add54608266992b0da1fb4a3170f00af3"><code>8f81d522eb823baed96b649059078b6add54608266992b0da1fb4a3170f00af3</code></a></td></tr>
+<tr><td>Tx B &mdash; signature hash</td><td><a href="https://blockstream.info/testnet4/tx/efbe4a1b39e6fa7793e53b0a1bd7c50a379b54f99d46815502c103fb208e889e"><code>efbe4a1b39e6fa7793e53b0a1bd7c50a379b54f99d46815502c103fb208e889e</code></a></td></tr>
+</table>
+
+<h2>Chain 3 &mdash; Bitcoin mainnet</h2>
+<p>Armed, not yet landed. The rolling sweep&rsquo;s coinbase carries Payload A
+(<code>DRTIME/v1</code> + root + bundle hash). The next mainnet block this rig finds puts
+the commitment on Bitcoin for free &mdash; no fee, no funding, just the block reward.
+Live status: <a href="oneshot.html">ONE SHOT tracker</a>. The odds are lottery;
+the commitment is real either way.</p>
+
+<div class="scope"><b>Scope, stated plainly.</b> This is a countersignature by the
+Excalibur key over a public header. It is NOT Satoshi signing, NOT proof of control
+of 1A1z, and NOT a claim on the overflow coins or on the 0.5 BTC at
+17TASsYPbdLrJo3UDxFfCMu5GXmxFwVZSW. The key that controls that 0.5 BTC is not held
+here. Verify, don&rsquo;t trust.</div>
+
+<h2>Verify it yourself</h2>
+<p>Full bundle (signature, authentication path, header fields):
+<a href="dr-time-overflow-countersignature.json">dr-time-overflow-countersignature.json</a>
+&middot; human-readable certificate:
+<a href="dr-time-overflow-countersignature.md">dr-time-overflow-countersignature.md</a>.
+Rebuild the bad-block header from the fields in the bundle, hash it twice with SHA-256,
+and check it against the known bad-block hash. Then verify the Trifold root from the
+leaf and path.</p>
+
+<p class="note">Published 2026-11-12. Every number on this page is from the live
+record &mdash; fork RPC, testnet4 explorers, and the signed bundle &mdash; no simulation.</p>
+</body></html>
