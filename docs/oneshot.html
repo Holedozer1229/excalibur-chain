@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>ONE SHOT — winner takes all</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#0b0b0e;color:#e8e8ec;font-family:Georgia,serif;max-width:720px;margin:0 auto;padding:32px 20px;line-height:1.55}
+h1{font-size:34px;margin:0 0 4px}.sub{color:#9a9aa5;font-size:15px;margin-bottom:28px}
+.prize{font-size:44px;color:#f2b705;margin:18px 0 4px}.prize small{font-size:18px;color:#e8e8ec}
+.bar{height:10px;background:#22222a;border-radius:5px;overflow:hidden;margin:14px 0 6px}
+.bar i{display:block;height:100%;background:#f2b705;width:7.10%}
+table{width:100%;border-collapse:collapse;margin:18px 0}
+td{padding:7px 4px;border-bottom:1px solid #22222a;vertical-align:top}
+td:first-child{color:#9a9aa5;width:38%}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all}
+.odds{border:1px solid #3a3a44;border-radius:8px;padding:14px 16px;color:#c9c9d2;font-size:14px}
+a{color:#f2b705}
+.note{color:#9a9aa5;font-size:13px;margin-top:24px}
+</style></head><body>
+<h1>ONE SHOT</h1>
+<div class="sub">Winner takes all. One template, one full sweep, no second chance on this block.</div>
+<div class="prize">3.125 BTC <small>to bc1qnfd75&hellip;</small></div>
+<div class="bar"><i></i></div>
+<div><span id="pct">7.10%</span> of the 2&sup3;&sup2; nonce space &middot; <span id="hashes">305M</span> hashes &middot; <span id="rate">0.84</span> MH/s &middot; ETA ~<span id="eta">79</span> min</div>
+<table>
+<tr><td>Block height</td><td id="height">975507</td></tr>
+<tr><td>Previous block (tip)</td><td><code id="tip">000000000000000000014dbf3c72cee92dd8d68c09b57897a9ccaee0cd91d5ca</code><br><span style="color:#9a9aa5">height 975506</span></td></tr>
+<tr><td>Bits / target</td><td><code>1701e5ac</code><br><code>00000000000000000001e5ac0000000000000000000000000000000000000000</code></td></tr>
+<tr><td>Coinbase txid</td><td><code>9cba4fb19511247b12013885f95b2e15a2d5057a81835d198cbf4d5c451eb4c1</code></td></tr>
+<tr><td>Best hash so far</td><td><code>0000000d2ba061a5d12f1c844cc9d85f75fddc6778ceaac76d98447dc98b511f</code><br><span style="color:#9a9aa5">28 leading zero bits, found by timestamp rolling on this template (time +6s, nonce 8207801). A block needs 79.</span></td></tr>
+<tr><td>Status</td><td id="status">RUNNING &middot; updated 2026-11-11 19:43:03 CST</td></tr>
+</table>
+<div class="odds">A full 2^32 sweep has about a 7 in 1,000,000,000,000,000 chance of a block. This is a lottery ticket, not a path. One shot, winner takes all.</div>
+<p class="note">The sweep grinds every nonce on this template. If one hash lands below target, the block is found and submitted, and the 3.125 BTC goes to the address above. Live numbers come from the running sweep log; this page refreshes when the sweep finishes. The first EXCAL sale lives at <a href="https://holedozer1229.github.io/excalibur-chain/">the offer page</a>.</p>
+<script>fetch('oneshot.json').then(r=>r.json()).then(d=>{
+document.getElementById('pct').textContent=d.percent.toFixed(2)+'%';
+document.getElementById('hashes').textContent=d.hashes_m+'M';
+document.getElementById('rate').textContent=d.rate_mhs.toFixed(2);
+document.getElementById('eta').textContent=d.eta_min;
+document.getElementById('status').textContent=d.status+' · updated '+d.updated;
+}).catch(()=>{});</script>
+</body></html>
