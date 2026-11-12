@@ -12,9 +12,12 @@ from genesis_fork import (sha256d, ser_varint, push, subsidy,
                           QDAY_ACTIVATION, qday_activation,
                           HTLC_ACTIVATION, htlc_activation,
                           QHTLC_ACTIVATION, qhtlc_activation,
-                          BRIDGE_ACTIVATION, bridge_activation)
+                          BRIDGE_ACTIVATION, bridge_activation,
+                          KNOT_ACTIVATION, knot_activation)
 from txpq import decode_witness, trifold_verify, encode_witness
 from txpq import FIXED as _TRIFOLD_FIXED
+from knot_math import (knot_point_bytes, knot_commitment,
+                       MAX_PQ as _KNOT_MAX_PQ, MAX_N as _KNOT_MAX_N)
 
 SIGHASH_ALL = 0x01
 COINBASE_MATURITY = 100
@@ -400,9 +403,11 @@ def lock_htlc_for_descriptor(descriptor: bytes) -> bytes:
 
 
 def lock_type(spk: bytes):
-    """'pkh' | 'open' | 'pqh' | 'htlc' | 'qhtlc' | 'bridge' | 'p2pk' (legacy) | 'anyone' | None."""
+    """'pkh' | 'open' | 'pqh' | 'htlc' | 'qhtlc' | 'bridge' | 'knot' | 'p2pk' (legacy) | 'anyone' | None."""
     if len(spk) == 33 and spk[0] == 0x05:
         return "bridge"
+    if len(spk) == 21 and spk[0] == 0x06:
+        return "knot"
     if len(spk) == 21 and spk[0] == 0x04:
         return "qhtlc"
     if len(spk) == 21 and spk[0] == 0x03:
@@ -439,6 +444,8 @@ def lock_quantum(spk: bytes) -> str:
         return "pq"
     if lt == "qhtlc":
         return "pq"  # hash-only Trifold claim/refund; no curve key anywhere
+    if lt == "knot":
+        return "pq"  # hash-only knot-point commitment; no curve key anywhere
     if lt == "bridge":
         return "exposed"  # x-coordinate reveals both candidate pubkeys
     return "none"
@@ -646,6 +653,144 @@ def sign_qhtlc_refund(t: dict, in_idx: int, lock: bytes, key,
     return _qhtlc_sign(t, in_idx, lock, key, None, descriptor,
                        QHTLC_REFUND, registry)
 
+# --- KNOT: Mobius torus-knot lock (activates at KNOT_ACTIVATION) ----------
+# BUILT 2026-11-11, STAGED at 100000, NOT deployed to the live fork.
+# A hash-based, opcode-free lock in the EXCAL spirit (like Trifold:
+# hash-only, quantum-resistant — there is no curve key anywhere in
+# this spend path). The lock commits to a POINT on a specific
+# Mobius-modulated (p, q) torus knot; the secret is the knot
+# parameter t_star that selects the point.
+#
+# Descriptor (40 bytes, exactly):
+#   p     1 byte   torus winding (around), 1..255
+#   q     1 byte   tube winding (through), 1..255; gcd(p, q) MUST be 1
+#                  (a knot, one strand — a common factor would make it
+#                  a multi-component link, not a knot; rejected)
+#   N     2 bytes  number of Mobius terms, big-endian, 1..1000
+#   eps   4 bytes  modulation depth, big-endian uint32;
+#                  eps = eps_u32 / 2**32, require 0 < eps_u32 < 2**32
+#                  (so eps in (0, 1) and the tube radius u = 1+eps*g
+#                  stays in (0, 2), hence the knot radius r stays > 0)
+#   H    32 bytes  SHA256 of (canonical 48-byte knot point at t_star
+#                  || the 16-byte t_star itself)
+#                  (knot_math.knot_commitment), i.e. the commitment.
+#                  t_star is hashed as well as the point because the
+#                  point is a Q64 quantisation: neighbouring t_star
+#                  values round to the same point, so a point-only
+#                  commitment would have a ~70-bit preimage space;
+#                  binding the exact t_star restores 128-bit security.
+# Lock: 0x06 + hash160(descriptor)  (21 bytes, like PKH/PQH/HTLC/QHTLC)
+#
+# Witness (scriptSig, 56 bytes, exactly):
+#   t_star    16 bytes  the secret knot parameter, big-endian uint128;
+#                       t = (t_star / 2**128) * 2*pi*p, in [0, 2*pi*p)
+#   descriptor 40 bytes  the descriptor above
+# No mode byte (single spend path, no refund): revealing t_star spends
+# the lock. Losing t_star burns the coins — there is no refund path,
+# exactly as a hash-lock with a lost preimage burns its coins.
+#
+# Validation recomputes the knot point at t_star with the descriptor's
+# (p, q, N, eps) using knot_math (deterministic fixed-point integer
+# arithmetic ONLY — no floats anywhere in this path) and accepts only
+# if SHA256(point bytes) == H. Security rests on SHA256 preimage
+# resistance over a 128-bit t_star space: finding a t_star that
+# yields a given H needs ~2**128 knot evaluations (each ~N sine
+# evaluations), and the point must lie on the committed knot — a
+# random point off the knot hashes to something else. The wallet
+# MUST generate t_star from a cryptographic RNG; a small or
+# guessable t_star (0, 1, a timestamp) is brute-forceable.
+KNOT_WITNESS_LEN = 56
+KNOT_DESCRIPTOR_LEN = 40
+
+
+def knot_descriptor(p: int, q: int, n_terms: int, eps_u32: int,
+                    commitment: bytes) -> bytes:
+    """Build a 40-byte KNOT descriptor. Validates ranges and
+    coprimality (raises ValueError); does NOT compute the point."""
+    import math as _math
+    if not (1 <= p <= _KNOT_MAX_PQ and 1 <= q <= _KNOT_MAX_PQ):
+        raise ValueError("KNOT p, q must be in 1..255")
+    if _math.gcd(p, q) != 1:
+        raise ValueError("KNOT p, q must be coprime (a knot, not a link)")
+    if not (1 <= n_terms <= _KNOT_MAX_N):
+        raise ValueError("KNOT N must be in 1..1000")
+    if not (0 < eps_u32 < (1 << 32)):
+        raise ValueError("KNOT eps_u32 must be in 1..2**32-1")
+    if len(commitment) != 32:
+        raise ValueError("KNOT commitment must be 32 bytes")
+    return (bytes([p, q]) + struct.pack(">H", n_terms)
+            + struct.pack(">I", eps_u32) + bytes(commitment))
+
+
+def parse_knot_descriptor(d: bytes) -> dict:
+    """Parse and validate a 40-byte KNOT descriptor. Returns
+    {p, q, n_terms, eps_u32, commitment}. Raises ValueError."""
+    import math as _math
+    if len(d) != KNOT_DESCRIPTOR_LEN:
+        raise ValueError("KNOT descriptor must be 40 bytes")
+    p, q = d[0], d[1]
+    n_terms = struct.unpack(">H", d[2:4])[0]
+    eps_u32 = struct.unpack(">I", d[4:8])[0]
+    commitment = d[8:40]
+    if not (1 <= p <= _KNOT_MAX_PQ and 1 <= q <= _KNOT_MAX_PQ):
+        raise ValueError("KNOT p, q must be in 1..255")
+    if _math.gcd(p, q) != 1:
+        raise ValueError("KNOT p, q must be coprime (a knot, not a link)")
+    if not (1 <= n_terms <= _KNOT_MAX_N):
+        raise ValueError("KNOT N must be in 1..1000")
+    if not (0 < eps_u32 < (1 << 32)):
+        raise ValueError("KNOT eps_u32 must be in 1..2**32-1")
+    return {"p": p, "q": q, "n_terms": n_terms, "eps_u32": eps_u32,
+            "commitment": commitment}
+
+
+def lock_knot(p: int, q: int, n_terms: int, eps_u32: int,
+              commitment: bytes) -> bytes:
+    """KNOT lock from parameters: 0x06 + hash160(descriptor)."""
+    return b"\x06" + hash160(
+        knot_descriptor(p, q, n_terms, eps_u32, commitment))
+
+
+def lock_knot_for_descriptor(descriptor: bytes) -> bytes:
+    parse_knot_descriptor(descriptor)  # validates shape
+    return b"\x06" + hash160(descriptor)
+
+
+def knot_lock_for_secret(p: int, q: int, n_terms: int, eps_u32: int,
+                         t_star: int):
+    """Wallet helper: given a secret t_star, compute the commitment
+    and return (lock, descriptor, commitment). The caller must keep
+    t_star secret (it is the key) and store it safely; the lock and
+    descriptor are public."""
+    h = knot_commitment(p, q, n_terms, eps_u32, t_star)
+    desc = knot_descriptor(p, q, n_terms, eps_u32, h)
+    return lock_knot_for_descriptor(desc), desc, h
+
+
+def parse_knot_witness(ss: bytes):
+    """Parse a 56-byte KNOT scriptSig. Returns (t_star, descriptor).
+    Raises ValueError on any malformation."""
+    if len(ss) != KNOT_WITNESS_LEN:
+        raise ValueError("KNOT witness must be 56 bytes")
+    t_star = int.from_bytes(ss[:16], "big")
+    desc = ss[16:]
+    parse_knot_descriptor(desc)  # validates ranges/coprimality
+    return t_star, desc
+
+
+def sign_knot_input(t: dict, in_idx: int, lock: bytes, t_star: int,
+                    descriptor: bytes) -> bytes:
+    """Witness for a KNOT input: t_star (16) | descriptor (40).
+    Validates that the descriptor matches the lock and that the
+    knot point at t_star hashes to the descriptor commitment, so
+    the wallet never produces a witness validation will reject."""
+    assert lock_type(lock) == "knot"
+    d = parse_knot_descriptor(descriptor)
+    assert lock_knot_for_descriptor(descriptor) == lock, "descriptor != lock"
+    h = knot_commitment(d["p"], d["q"], d["n_terms"], d["eps_u32"], t_star)
+    assert h == d["commitment"], "knot point does not match commitment"
+    return t_star.to_bytes(16, "big") + descriptor
+
 # ---------------------------------------------------------------- validation
 def _view_copy(utxo):
     """Private validation view of a UTXO set. UtxoSet.copy() is cheap (it
@@ -705,6 +850,7 @@ def validate_tx(tx: bytes, utxo: dict, height: int, view: dict = None,
     htlc_active = height >= htlc_activation()  # HTLC lock active?
     qhtlc_active = height >= qhtlc_activation()  # QHTLC lock active?
     bridge_active = height >= bridge_activation()  # Bridge lock active?
+    knot_active = height >= knot_activation()  # KNOT lock active?
     seen = set()
     pqh_pairs = []  # (root, index) pairs revealed by this tx, in order
     total_in = 0
@@ -725,6 +871,7 @@ def validate_tx(tx: bytes, utxo: dict, height: int, view: dict = None,
                 (lt == "pqh" and not qday) or \
                 (lt == "htlc" and not htlc_active) or \
                 (lt == "qhtlc" and not qhtlc_active) or \
+                (lt == "knot" and not knot_active) or \
                 (lt == "bridge" and not bridge_active):
             return False, f"input {i}: non-standard scriptPubKey", 0
         if lt in ("anyone", "open"):
@@ -905,6 +1052,34 @@ def validate_tx(tx: bytes, utxo: dict, height: int, view: dict = None,
                 return False, (f"input {i}: spent leaf already used: "
                                f"root={root.hex()} index={pair[1]}"), 0
             pqh_pairs.append(pair)
+        elif lt == "knot":
+            # KNOT spend. Hash-only end to end: the witness is the
+            # secret knot parameter t_star plus the descriptor. The
+            # descriptor is supplied by the spender and verified by
+            # hash against the lock, then the knot point at t_star is
+            # recomputed with deterministic fixed-point integer
+            # arithmetic (knot_math — no floats anywhere in this
+            # path) and its SHA256 must equal the descriptor
+            # commitment. Single path, no refund, no timeout: losing
+            # t_star burns the coins, exactly as a hash-lock with a
+            # lost preimage burns its coins.
+            try:
+                t_star, desc = parse_knot_witness(vin["script"])
+            except ValueError as e:
+                return False, f"input {i}: malformed KNOT witness: {e}", 0
+            try:
+                d = parse_knot_descriptor(desc)
+            except ValueError as e:
+                return False, f"input {i}: malformed KNOT descriptor: {e}", 0
+            if hash160(desc) != spk[1:]:
+                return False, f"input {i}: KNOT descriptor does not match lock", 0
+            try:
+                h = knot_commitment(d["p"], d["q"], d["n_terms"],
+                                    d["eps_u32"], t_star)
+            except ValueError as e:
+                return False, f"input {i}: KNOT point error: {e}", 0
+            if h != d["commitment"]:
+                return False, f"input {i}: KNOT point mismatch", 0
         else:  # legacy P2PK: grandfathered, spendable under old rules
             ss = vin["script"]
             if not (len(ss) == 66 and ss[0] == 65 and ss[-1] == SIGHASH_ALL):
@@ -923,6 +1098,7 @@ def validate_tx(tx: bytes, utxo: dict, height: int, view: dict = None,
                 (lt == "pqh" and not qday) or \
                 (lt == "htlc" and not htlc_active) or \
                 (lt == "qhtlc" and not qhtlc_active) or \
+                (lt == "knot" and not knot_active) or \
                 (lt == "bridge" and not bridge_active):
             return False, f"output {j}: non-standard scriptPubKey", 0
         if qlock and lt in ("p2pk", "anyone"):

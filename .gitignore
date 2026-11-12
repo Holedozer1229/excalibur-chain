@@ -1,28 +1,92 @@
+# ============================================================
+# AetherionEXCAL — .gitignore
+# ============================================================
+
 # IDE
 .idea/
 *.iml
+.vscode/
+*.swp
+*.swo
 
+# ============================================================
 # Python
+# ============================================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 *.egg
 *.egg-info/
-dist/
-build/
 *.egg-info
 .eggs
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
 
 # Virtual environments
 venv/
 env/
 .venv/
+ENV/
 
-# Data files
+# PyInstaller builds
+build/
+*.spec.bak
+
+# Dist (keep only release builds in tags)
+dist/
+
+# ============================================================
+# Node.js
+# ============================================================
+node_modules/
+gui/node_modules/
+gui/build/
+gui/.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================================
+# Data files (large — download via auto-deploy)
+# ============================================================
 chain.jsonl
 chain.jsonl.gz
+chaindata_fork/
+omega_epochs.json
+genealogy_checkpoint.json
 
+# ============================================================
+# Logs & temp files
+# ============================================================
+*.log
+logs/
+temp/
+tmp/
+
+# ============================================================
 # OS
+# ============================================================
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+# ============================================================
+# Environment secrets
+# ============================================================
+.env
+.env.local
+.env.production
+
+# ============================================================
+# SphinxOS
+# ============================================================
+sphinx_os/__pycache__/
+sphinx_os/nexus/__pycache__/
+
+# ============================================================
+# Junie (AI assistant)
+# ============================================================
+.junie/plans/

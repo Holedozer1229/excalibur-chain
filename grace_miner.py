@@ -23,7 +23,10 @@ import json, os, sys
 # is already on sys.path when run directly. Keep the VM path only as a
 # fallback for checkouts where the two files were separated.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, "/home/hatch/workspace/your_files")
+# Fallback workspace for checkouts where files are separated
+_ws = os.environ.get("EXCAL_WORKSPACE", "")
+if _ws:
+    sys.path.insert(0, _ws)
 import genealogy_verify as gv
 
 def load_chain():

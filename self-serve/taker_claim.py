@@ -28,9 +28,10 @@ import argparse, hashlib, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor"))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# Also allow running from the repo root (modules are repo siblings).
-for _p in (os.getcwd(), os.path.expanduser("~/workspace")):
-    if _p not in sys.path:
+# Also allow running from the repo root or a custom workspace.
+_ws = os.environ.get("EXCAL_WORKSPACE", "")
+for _p in (os.getcwd(), _ws):
+    if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
 # Real lock parameters (public; confirmed on the fork in block 42899).

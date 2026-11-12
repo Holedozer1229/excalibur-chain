@@ -1,11 +1,11 @@
-# Excalibur bootstrap (Windows) — clone/update the repo, fetch the chain snapshot, verify it.
+# Excalibur bootstrap (Windows) - clone/update the repo, fetch the chain snapshot, verify it.
 # Double-click bootstrap.bat, or run:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File bootstrap.ps1 [-InstallDir <path>] [-Force] [-SkipVerify]
 # What it does:
 #   1. clones https://github.com/Holedozer1229/excalibur-chain (or git-pulls if present)
 #   2. checks for Python 3.10+
 #   3. downloads the fork chain snapshot (chain.jsonl.gz, GitHub release) and decompresses it
-#   4. runs genealogy_verify.py — full-sync verification from the BTC-968698 anchor
+#   4. runs genealogy_verify.py - full-sync verification from the BTC-968698 anchor
 # Nothing is signed, spent, or broadcast. No keys are needed.
 param(
   [string]$InstallDir = "",
@@ -36,7 +36,7 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 
 # 3. clone or update
 if (Test-Path (Join-Path $InstallDir ".git")) {
-  Write-Host "repo present — pulling latest..."
+  Write-Host "repo present - pulling latest..."
   & git -C $InstallDir pull --ff-only
   if ($LASTEXITCODE -ne 0) { Write-Host "git pull failed (local changes?); continuing with the checkout as-is." -ForegroundColor Yellow }
 } else {
@@ -55,14 +55,26 @@ foreach ($cand in @(@("py", @("-3")), @("python", @()))) {
     }
   } catch {}
 }
+# Also check for a virtual environment in the project root
+if (-not $PyCmd) {
+  $VenvPy = Join-Path $InstallDir ".venv\Scripts\python.exe"
+  if (Test-Path $VenvPy) {
+    try {
+      $v = & $VenvPy --version 2>&1
+      if ($LASTEXITCODE -eq 0 -and $v -match "Python 3\.(\d+)") {
+        if ([int]$Matches[1] -ge 10) { $PyCmd = $VenvPy; $PyArgs = @() }
+      }
+    } catch {}
+  }
+}
 if (-not $PyCmd) { Fail "Python 3.10+ not found. Install from https://www.python.org/downloads/ (tick 'Add python to PATH') and re-run." }
 Write-Host "python: $PyCmd $(& $PyCmd @PyArgs --version)"
 
-# 5. chain snapshot — skip if already present (unless -Force)
+# 5. chain snapshot - skip if already present (unless -Force)
 $ChainGz = Join-Path $InstallDir "chain.jsonl.gz"
 $ChainFile = Join-Path $InstallDir "chain.jsonl"
 if ((Test-Path $ChainFile) -and -not $Force) {
-  Write-Host "chain.jsonl already present — skipping download (use -Force to re-fetch)."
+  Write-Host "chain.jsonl already present - skipping download (use -Force to re-fetch)."
 } else {
   Write-Host "downloading chain snapshot (several hundred MB; this takes a while)..."
   $downloaded = $false
@@ -81,7 +93,7 @@ if ((Test-Path $ChainFile) -and -not $Force) {
 $sizeMB = [math]::Round((Get-Item $ChainFile).Length / 1MB, 1)
 Write-Host "chain file: $ChainFile ($sizeMB MB)"
 
-# 6. verify — full-sync from the BTC-968698 anchor (takes a few minutes)
+# 6. verify - full-sync from the BTC-968698 anchor (takes a few minutes)
 if (-not $SkipVerify) {
   Write-Host "verifying the chain from the anchor..."
   $env:EXCAL_CHAIN_FILE = $ChainFile
@@ -90,5 +102,5 @@ if (-not $SkipVerify) {
   if ($LASTEXITCODE -ne 0) { Fail "genealogy_verify.py reported FAILED." }
 }
 
-Write-Host "BOOTSTRAP OK — repo at $InstallDir, chain verified." -ForegroundColor Green
+Write-Host "BOOTSTRAP OK - repo at $InstallDir, chain verified." -ForegroundColor Green
 Write-Host "Re-run the verifier any time: $PyCmd genealogy_verify.py"

@@ -42,9 +42,10 @@ import argparse, hashlib, json, os, re, subprocess, sys
 from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.expanduser("~/workspace"))
+_WS = os.environ.get("EXCAL_WORKSPACE", os.path.expanduser("~/workspace"))
+sys.path.insert(0, _WS)
 sys.path.insert(0, os.path.join(HERE, "vendor"))
-OFFER_ROOT = os.path.expanduser("~/workspace")
+OFFER_ROOT = _WS
 OUT_DIR = os.path.join(HERE, "claim-seeds")
 STATE_FILE = os.path.join(HERE, "watch_state.json")
 MAKER_PUB_HEX = "02e8311342cb7accd4edef31462fcda1ef56bfbf7d4f03d3c8872dbec9a1bba1b3"

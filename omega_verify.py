@@ -62,7 +62,14 @@ def main():
             if line:
                 r = json.loads(line)
                 records[r["hash"]] = r
-    tip_hash = rpc("getbestblockhash")
+    tip_hash = None
+    try:
+        tip_hash = rpc("getbestblockhash")
+    except Exception as e:
+        # No local fork node: use the highest-height record in the file,
+        # the same fallback grace_miner.py and genealogy_verify.py use.
+        print(f"live RPC tip unavailable ({e}); using highest record in the file")
+        tip_hash = max(records.values(), key=lambda r: r["height"])["hash"]
     chain = []
     h = tip_hash
     while len(chain) < n and h in records:
