@@ -1,0 +1,12 @@
+{
+  "networks": {
+    "mainnet": {
+      "data_directory": "./rosetta-cli/mainnet",
+      "online": false
+    },
+    "testnet": {
+      "data_directory": "./rosetta-cli/testnet",
+      "online": false
+    }
+  }
+}

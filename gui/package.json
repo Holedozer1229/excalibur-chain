@@ -1,0 +1,86 @@
+{
+  "name": "aetherionexcal-gui",
+  "version": "2.0.0",
+  "private": true,
+  "main": "electron/main.js",
+  "description": "AetherionEXCAL Dashboard — Real-time blockchain monitoring",
+  "author": "AetherionEXCAL Team",
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-scripts": "5.0.1"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0",
+    "concurrently": "^9.0.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "electron:dev": "concurrently \"react-scripts start\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "react-scripts build && electron-builder",
+    "electron:build:win": "react-scripts build && electron-builder --win --x64",
+    "electron:build:mac": "react-scripts build && electron-builder --mac --x64 --arm64",
+    "electron:build:linux": "react-scripts build && electron-builder --linux --x64"
+  },
+  "proxy": "http://localhost:9432",
+  "browserslist": {
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version"]
+  },
+  "build": {
+    "appId": "com.aetherionexcal.dashboard",
+    "productName": "AetherionEXCAL",
+    "directories": {
+      "output": "../dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "build/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../fork_node.py",
+        "to": "backend"
+      }
+    ],
+    "nodeGypRebuild": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/logo.png"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "public/logo.png",
+      "category": "public.app-category.finance"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/logo.png",
+      "category": "Finance"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

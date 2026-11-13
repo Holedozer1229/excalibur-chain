@@ -1,0 +1,162 @@
+{
+  "environment": "production",
+  "data_dir": "./data",
+  "version": "2.0.0",
+  "p2p": {
+    "listen_host": "0.0.0.0",
+    "listen_port": 9433,
+    "bitcoin_bridge_port": 8333,
+    "max_peers": 256,
+    "seed_peers": [],
+    "rate_limiting": true,
+    "reputation_scoring": true,
+    "atomic_swap_enabled": true,
+    "quantum_swap_enabled": true,
+    "erepr_enabled": true,
+    "compact_blocks": true,
+    "peer_diversity_scoring": true,
+    "bloom_filter_support": true,
+    "network_broadcast_radius": 3
+  },
+  "rpc": {
+    "listen_host": "0.0.0.0",
+    "listen_port": 9432,
+    "cors_enabled": false,
+    "max_request_size_mb": 10,
+    "rate_limit_rps": 100,
+    "auth_enabled": false,
+    "metrics_enabled": true
+  },
+  "stratum": {
+    "listen_host": "0.0.0.0",
+    "listen_port": 9434,
+    "share_multiplier": 1,
+    "max_miners": 512,
+    "connection_timeout": 300,
+    "share_rate_limit": 60,
+    "var_diff_enabled": true,
+    "var_diff_target_shares": 10,
+    "var_diff_max_diff": 4096
+  },
+  "mining": {
+    "enabled": true,
+    "threads": 4,
+    "difficulty_window": 60,
+    "target_spacing": 60,
+    "auxpow_enabled": true,
+    "coinbase_tag": "AETHERION-EXCAL",
+    "sponsored_blocks": true
+  },
+  "treasury": {
+    "annual_yield_rate": 0.05,
+    "deployment_threshold": 1000.0,
+    "reserve_percentage": 5.0,
+    "burn_percentage": 1.0
+  },
+  "governance": {
+    "enabled": true,
+    "voting_period_blocks": 10080,
+    "quorum_percentage": 20,
+    "proposal_threshold_swords": 10000000000,
+    "execution_delay_blocks": 1000,
+    "voting_power_source": "stake",
+    "proposal_types": ["parameter_change", "treasury_spend", "code_upgrade", "emergency"]
+  },
+  "staking": {
+    "enabled": true,
+    "minimum_stake_swords": 1000000000,
+    "unbonding_period_blocks": 10080,
+    "max_validator_count": 100,
+    "slashing_enabled": true,
+    "slashing_penalty_percentage": 5,
+    "reward_distribution": "proportional"
+  },
+  "smart_contracts": {
+    "enabled": true,
+    "opcode_limit": 200000,
+    "gas_limit": 30000000,
+    "max_contract_size": 50000,
+    "supported_languages": ["excal-script", "solidity-lite"],
+    "precompiled_contracts": ["ecrecover", "sha256", "ripemd160", "identity"]
+  },
+  "lightning": {
+    "enabled": true,
+    "channel_reserve_swords": 1000000,
+    "max_htlcs_per_channel": 483,
+    "csv_delay_blocks": 144,
+    "routing_fees": {
+      "base_fee_msat": 1,
+      "fee_rate_ppm": 1
+    }
+  },
+  "privacy": {
+    "confidential_transactions": false,
+    "ring_signatures": false,
+    "stealth_addresses": true,
+    "coinjoin_pool_size": 16
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "sphinx_os.log",
+    "max_size_mb": 100,
+    "backup_count": 5,
+    "structured_logging": true,
+    "metrics_export": true
+  },
+  "security": {
+    "max_reorg_depth": 100,
+    "timestamp_drift_seconds": 7200,
+    "coinbase_maturity": 100,
+    "dos_protection": true,
+    "ip_rate_limiting": true,
+    "message_size_limit": 4000000,
+    "script_enforcement": true,
+    "quantum_resistant": true
+  },
+  "monitoring": {
+    "enabled": true,
+    "health_check_port": 9435,
+    "prometheus_metrics": true,
+    "alerting": {
+      "block_stale_seconds": 300,
+      "mempool_full_percentage": 80,
+      "peer_count_minimum": 8
+    }
+  },
+  "camelot_game": {
+    "enabled": true,
+    "api_port": 9436,
+    "game_name": "Camelot Fair-Rise of Excalibur",
+    "gossip_enabled": true,
+    "max_event_history": 10000,
+    "item_registry": {
+      "enabled": true,
+      "max_items_per_player": 1000,
+      "rarity_levels": ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
+    },
+    "achievements": {
+      "enabled": true,
+      "leaderboard_sync": true
+    },
+    "guilds": {
+      "enabled": true,
+      "max_members": 100,
+      "max_guilds_per_player": 3
+    },
+    "quests": {
+      "enabled": true,
+      "max_concurrent_quests": 10
+    },
+    "webhooks": {
+      "enabled": true,
+      "timeout_seconds": 5,
+      "retry_count": 3,
+      "urls": []
+    },
+    "payments": {
+      "currency": "swords",
+      "min_purchase_amount": 1000000,
+      "confirmation_blocks": 1
+    }
+  }
+}

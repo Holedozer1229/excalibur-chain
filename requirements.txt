@@ -1,0 +1,36 @@
+# excalibur-chain dependencies
+#
+# Most modules use only the Python standard library.
+# This file lists the few external packages required by specific scripts.
+#
+# cryptography — required by self-serve/decrypt_seed.py and self-serve/deliver_seed.py
+#   for X25519 key exchange and AES-GCM encryption of claim seeds.
+#   Install: pip install cryptography
+#
+# numpy — required by sphinx_os/nexus/ (quantum_spacetime.py, orchestrator.py)
+#   and demo_nexus.py for quantum state simulation and matrix operations.
+#   Install: pip install numpy
+#
+# pyinstaller — required to build Holo-wallet.exe and EXCAL-Wallet.exe.
+#   Install: pip install pyinstaller
+#
+# customtkinter — required by excal_wallet.py for the GUI wallet.
+#   Install: pip install customtkinter
+#
+# prometheus-client — required by sphinx_os/prometheus_metrics.py for
+#   real-time P2P ledger observability (peer connections, transactions,
+#   gossip propagation, wallet operations).
+#   Install: pip install prometheus-client
+#
+# chainstate — required by lightledger_test_real.py only (full fork node ChainState).
+#   This is a custom module from the VM environment, not a PyPI package.
+#   The test skips gracefully when chainstate is unavailable.
+#
+# To install all available PyPI dependencies:
+#   pip install cryptography numpy pyinstaller customtkinter prometheus-client
+
+cryptography
+numpy
+pyinstaller
+customtkinter
+prometheus-client

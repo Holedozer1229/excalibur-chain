@@ -1,0 +1,37 @@
+{
+  "network": {
+    "blockchain": "excal",
+    "network": "mainnet"
+  },
+  "block_data": {
+    "block_identifier": {
+      "index": 0
+    },
+    "transactions": [
+      {
+        "transaction_identifier": {
+          "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "operations": [
+          {
+            "operation_identifier": {
+              "index": 0
+            },
+            "type": "coinbase",
+            "status": "success",
+            "account": {
+              "address": "00000000000000000000"
+            },
+            "amount": {
+              "value": "5000000000",
+              "currency": {
+                "symbol": "EXCAL",
+                "decimals": 8
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
