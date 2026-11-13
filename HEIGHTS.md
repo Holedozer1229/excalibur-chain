@@ -1,8 +1,8 @@
-# Sponsored Heights — Live Inventory
+# Sponsored Heights ï¿½ Live Inventory
 
-Fork tip **44454** · via checkpoint fallback · board generated 2026-11-12 19:16 UTC · refreshed hourly.
+Fork tip **44454** ï¿½ via checkpoint fallback ï¿½ board generated 2026-11-12 19:16 UTC ï¿½ refreshed hourly.
 
-Every height below is for sale at the price shown — the same
+Every height below is for sale at the price shown ï¿½ the same
 price the payment watcher enforces (see [SPONSOR.md](SPONSOR.md)
 for the exact OP_RETURN order format). Pay, wait one
 confirmation, and the height is registered to your lock and
@@ -137,7 +137,7 @@ Next round height: **45,000** (0.01 BTC). The named premium lots (26,400, 30,000
 Round heights (every 1,000th) are 0.01 BTC; all others
 0.00021 BTC.
 
-EXCAL has no market and no return is promised — a sponsored
+EXCAL has no market and no return is promised ï¿½ a sponsored
 height buys a permanent, self-verifiable place in this
 chain's history: your lock paid by the coinbase, your tag
 sealed in it, checkable by anyone with
