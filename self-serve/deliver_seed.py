@@ -128,6 +128,7 @@ def bc_tx_to_mempool_shape(bc_tx):
         "status": {
             "confirmed": confirmations > 0 and block_height is not None,
             "block_height": block_height,
+            "block_hash": bc_tx.get("block_hash"),
             "confirmations": confirmations
         }
     }
@@ -161,6 +162,30 @@ def fetch_btc_tip_height():
     if not raw.isdigit():
         raise RuntimeError("Bitcoin tip-height response is invalid")
     return int(raw)
+
+def fetch_canonical_block_hash(height):
+    """Fetch the active-chain block hash at height; fail closed if unavailable."""
+    block_hash = curl(
+        f"https://mempool.space/api/block-height/{int(height)}"
+    ).strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", block_hash):
+        raise RuntimeError(
+            f"canonical block-hash response for height {height} is invalid"
+        )
+    return block_hash
+
+def verify_canonical_block(tx, canonical_block_hash):
+    """Reject a confirmation tied to a block no longer on the active chain."""
+    status = tx.get("status") or {}
+    observed = str(status.get("block_hash") or "").lower()
+    expected = str(canonical_block_hash or "").lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", observed):
+        raise ValueError("transaction provider omitted confirmed block hash")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise ValueError("canonical block hash is unavailable or malformed")
+    if observed != expected:
+        raise ValueError("funding transaction block is not on the active chain")
+    return True
 
 def signal_txs_blockcypher():
     """Fallback signal-address poll via BlockCypher (unauthenticated).
@@ -313,6 +338,9 @@ def deliver(funding_txid, witness_script_hex, lot):
     confirmations = verify_confirmed_tx(
         tx, funding_txid, tip_height
     )
+    block_height = tx["status"]["block_height"]
+    canonical_hash = fetch_canonical_block_hash(block_height)
+    verify_canonical_block(tx, canonical_hash)
     found = find_delivery_key(
         tx, [lot], witness_script=witness_script
     )
