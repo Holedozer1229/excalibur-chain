@@ -47,9 +47,11 @@ Per lot, in `lots/1k.json`, `lots/1excal.json` and `lots/pilot001.json` (the scr
 Shared: BTC claim key (Lux) `02e83113…`, BTC claim destination
 `bc1qj37xg5qmyedwfe70cz0f385cxmf6642kcznjdg`, signal output 1,000 sats,
 BTC HTLC timeout = the Bitcoin tip height when you build the funding
-transaction + 144 blocks (~24h). The watcher verifies the actual refund
-window against the confirmed funding height before delivering the claim
-seed.
+transaction + 144 blocks (~24h). The watcher currently checks only that
+the parsed timeout is positive; it does NOT yet verify a minimum refund
+window relative to the funding confirmation height. Treat that as an
+open safety limitation and do not rely on the stated ~24h as a guaranteed
+post-confirmation refund window.
 
 ## How it works (4 steps, zero messages)
 
