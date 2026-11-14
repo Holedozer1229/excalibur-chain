@@ -12,7 +12,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: 'AetherionEXCAL Dashboard',
-    icon: path.join(__dirname, '../public/logo.png'),
+    icon: path.join(__dirname, '../build/logo.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -104,6 +104,35 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Keep dashboard network access in the main process so the renderer does not
+// need broad cross-origin access.
+const dashboardRpcMethods = new Set(['getmetrics', 'getnetworkinfo']);
+
+ipcMain.handle('dashboard:rpc', async (_event, method) => {
+  if (!dashboardRpcMethods.has(method)) {
+    throw new Error('This dashboard RPC method is not allowed.');
+  }
+
+  const response = await fetch('http://127.0.0.1:9432', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method, params: [], id: method }),
+    signal: AbortSignal.timeout(4000)
+  });
+  if (!response.ok) throw new Error(`Node returned HTTP ${response.status}`);
+  const payload = await response.json();
+  if (payload.error) throw new Error(payload.error.message || payload.error);
+  return payload.result;
+});
+
+ipcMain.handle('dashboard:game-stats', async () => {
+  const response = await fetch('http://127.0.0.1:9436/api/game/stats', {
+    signal: AbortSignal.timeout(4000)
+  });
+  if (!response.ok) throw new Error(`Game API returned HTTP ${response.status}`);
+  return response.json();
 });
 
 // IPC handlers for Electron

@@ -25,17 +25,40 @@ FIXED = 32 + 1 + 3 + 256 * 32 + 512 * 32  # everything except the path
 
 
 def encode_witness(root: bytes, sig: dict, height: int) -> bytes:
-    assert len(root) == 32
+    if not isinstance(root, bytes) or len(root) != 32:
+        raise ValueError("Trifold root must be 32 bytes")
+    if (not isinstance(height, int) or isinstance(height, bool)
+            or not 1 <= height <= 15):
+        raise ValueError("Trifold height must be between 1 and 15")
+    idx = sig.get("index") if isinstance(sig, dict) else None
+    if (not isinstance(idx, int) or isinstance(idx, bool)
+            or idx < 0 or idx >= min(3 ** height, 1 << 24)):
+        raise ValueError("Trifold index does not fit the witness")
+    ots_sig = sig.get("ots_sig")
+    ots_pub = sig.get("ots_pub")
+    path = sig.get("path")
+    if (not isinstance(ots_sig, (list, tuple)) or len(ots_sig) != 256
+            or any(not isinstance(x, bytes) or len(x) != 32 for x in ots_sig)):
+        raise ValueError("Trifold Lamport signature has an invalid shape")
+    if (not isinstance(ots_pub, (list, tuple)) or len(ots_pub) != 256
+            or any(not isinstance(pair, (list, tuple)) or len(pair) != 2
+                   or any(not isinstance(x, bytes) or len(x) != 32 for x in pair)
+                   for pair in ots_pub)):
+        raise ValueError("Trifold Lamport public key has an invalid shape")
+    if (not isinstance(path, (list, tuple)) or len(path) != height
+            or any(not isinstance(level, (list, tuple)) or len(level) != 2
+                   or any(not isinstance(x, bytes) or len(x) != 32 for x in level)
+                   for level in path)):
+        raise ValueError("Trifold authentication path has an invalid shape")
     out = bytearray()
     out += root
     out.append(height)
-    out += sig["index"].to_bytes(3, "big")
-    for x in sig["ots_sig"]:
+    out += idx.to_bytes(3, "big")
+    for x in ots_sig:
         out += x
-    for a, b in sig["ots_pub"]:
+    for a, b in ots_pub:
         out += a + b
-    for sibs in sig["path"]:
-        assert len(sibs) == 2
+    for sibs in path:
         for s in sibs:
             out += s
     return bytes(out)
@@ -43,11 +66,13 @@ def encode_witness(root: bytes, sig: dict, height: int) -> bytes:
 
 def decode_witness(b: bytes):
     """Strict decode. Returns (root, sig_dict) or raises ValueError."""
+    if not isinstance(b, bytes):
+        raise ValueError("witness must be bytes")
     if len(b) < FIXED + 64:
         raise ValueError("witness too short")
     root = b[:32]
     height = b[32]
-    if height == 0 or height > 16:
+    if height == 0 or height > 15:
         raise ValueError("bad tree height")
     expect = FIXED + 2 * height * 32
     if len(b) != expect:
@@ -77,15 +102,10 @@ def sign_pqh_input(key, sighash: bytes, registry=None) -> bytes:
     """Wallet side: sign a tx sighash with the next Trifold leaf and
     encode the witness. The key's state counter advances — never reuse.
 
-    Spent-leaf guard: before any signature is produced, the wallet
-    checks the persistent spent-leaf registry for (root, next_index).
-    If that pair is already spent, signing is refused with an explicit
-    reason naming the pair and its first spend — the counter is NOT
-    advanced and NO signature is produced, and the wallet does NOT
-    silently skip to the next leaf. If the pair is fresh, it is recorded
-    in the registry BEFORE the signature is returned, so a crash between
-    signing and recording cannot reuse the leaf (the leaf is burned if
-    signing itself then fails — the safe direction).
+    Spent-leaf guard: atomically reserve (root, next_index) in the
+    persistent registry, then persist the key counter before any secret
+    preimage is emitted. A failure after reservation burns that leaf.
+    Reused leaves fail without silently advancing to another index.
 
     registry: a SpentLeafRegistry, or None to use the chain-data
     registry (independent of any wallet file, so restoring a wallet
@@ -95,15 +115,14 @@ def sign_pqh_input(key, sighash: bytes, registry=None) -> bytes:
     from spent_leaf_registry import load_registry
     reg = registry if registry is not None else load_registry()
     idx = int(key.next_index)
-    if reg.is_spent(key.root, idx):
+    if not reg.reserve(key.root, idx, txid=None, height=None):
         first = reg.first_spend(key.root, idx)
         raise RuntimeError(
             f"spent leaf refused: root={key.root.hex()} index={idx} "
             f"already spent in tx {first.get('txid')} "
             f"at height {first.get('height')}")
-    # Record before signing: the leaf is spent from this moment on,
-    # even if this process dies before the witness is used.
-    reg.record(key.root, idx, txid=None, height=None)
-    sig = key.sign(sighash)
+    # The registry reservation and durable key counter both happen before
+    # any secret preimage is emitted. A crash burns the leaf safely.
+    sig = key.sign_reserved(sighash, idx)
     assert int(sig["index"]) == idx, "leaf advanced between check and sign"
     return encode_witness(key.root, sig, key.height)

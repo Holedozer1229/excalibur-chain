@@ -604,9 +604,9 @@ def _qhtlc_sign(t: dict, in_idx: int, lock: bytes, key, secret,
                 descriptor: bytes, mode: int, registry=None) -> bytes:
     """Sign a QHTLC input with a TrifoldKey. key.root must be the
     descriptor's claim root (mode 1) or refund root (mode 2).
-    registry, when given, is a SpentLeafRegistry checked and recorded
-    BEFORE signing, exactly as sign_pqh_input does; when None, only
-    consensus validation enforces one-time use. The helper does NOT
+    registry, when given, is a SpentLeafRegistry reserved BEFORE signing,
+    exactly as sign_pqh_input does. The chain-data registry is used by
+    default. The helper does NOT
     enforce the timeout — an early refund must be buildable so that
     validation can reject it."""
     assert lock_type(lock) == "qhtlc"
@@ -621,17 +621,17 @@ def _qhtlc_sign(t: dict, in_idx: int, lock: bytes, key, secret,
         assert len(secret) == 32, "secret must be 32 bytes"
         assert hashlib.sha256(secret).digest() == d["secret_hash"], \
             "secret does not match secret_hash"
-    if registry is not None:
-        idx = int(key.next_index)
-        if registry.is_spent(key.root, idx):
-            first = registry.first_spend(key.root, idx)
-            raise RuntimeError(
-                f"spent leaf refused: root={key.root.hex()} index={idx} "
-                f"already spent in tx {first.get('txid')} "
-                f"at height {first.get('height')}")
-        registry.record(key.root, idx, txid=None, height=None)
+    from spent_leaf_registry import load_registry
+    reg = registry if registry is not None else load_registry()
+    idx = int(key.next_index)
+    if not reg.reserve(key.root, idx, txid=None, height=None):
+        first = reg.first_spend(key.root, idx)
+        raise RuntimeError(
+            f"spent leaf refused: root={key.root.hex()} index={idx} "
+            f"already spent in tx {first.get('txid')} "
+            f"at height {first.get('height')}")
     h = sighash_all(t, in_idx, lock)
-    sig = key.sign(h)
+    sig = key.sign_reserved(h, idx)
     wit = encode_witness(key.root, sig, key.height)
     if mode == QHTLC_CLAIM:
         return bytes([QHTLC_CLAIM]) + wit + secret + descriptor
@@ -1141,15 +1141,16 @@ def validate_block_txs(txs: list, utxo: dict, height: int, subsidy: int,
     Returns (ok, reason, fees). Never mutates utxo.
     Height-50000 rule: block must contain a 1 EXCAL output locked to the
     fusion PQH lock above, else it is invalid. All other heights unaffected.
-    Spent-leaf guard: spent_pairs, when given, is the chain's spent set;
-    it is updated in place with this block's pairs on success (callers
-    needing atomicity pass a copy and discard it on failure). When it is
-    None, a fresh local set still rejects a pair reused twice inside
-    this block."""
+    Spent-leaf guard: spent_pairs is required and must be the chain-wide
+    set. It is updated in place as transactions validate; callers needing
+    atomicity pass a copy and discard it on failure. Omitting it rejects
+    the block instead of silently creating per-block state."""
+    if spent_pairs is None:
+        return False, "consensus spent-leaf state is required", 0
     if not txids_unique(txs):
         return False, "duplicate txid in block", 0
     view = _view_copy(utxo)
-    working = spent_pairs if spent_pairs is not None else set()
+    working = spent_pairs
     fees = 0
     for tx in txs[1:]:
         ok, reason, fee = validate_tx(tx, utxo, height, view=view,

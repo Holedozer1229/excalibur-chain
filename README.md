@@ -524,13 +524,10 @@ python deploy.py --skip-tests --skip-wallet --auto-start
 
 **Manual start:**
 ```
-# 1. Start the fork node (RPC server)
+# Start the fork node. It starts both the RPC server and the P2P listener.
 python fork_node.py
 
-# 2. Start the P2P layer (in another terminal)
-python p2p_layer.py --seed <peer:port>
-
-# 3. Start the stratum server (in another terminal)
+# Start the stratum server separately if mining is needed.
 python stratum_fork.py
 ```
 
@@ -542,6 +539,26 @@ python stratum_fork.py
 | Bitcoin Bridge | 8333 | Atomic/quantum swap bridge |
 | Stratum | 9434 | Mining protocol for GPU/CPU miners |
 | Health Check | 9435 | Network health and metrics endpoint |
+
+### P2P peer discovery and EREPR gossip
+
+The fork node owns the P2P listener on port 9433; do not start a second
+`p2p_layer.py` process on the same port. The default configuration has no
+bootstrap peers, so it listens for inbound peers until seeds are configured.
+Add seed addresses to `p2p.seed_peers` in `config.json`, for example:
+
+```json
+"seed_peers": ["seed.example.org:9433", "[2001:db8::10]:9433"]
+```
+
+Alternatively, set `FORK_P2P_SEEDS=host:port,host:port`. Configure
+`p2p.advertise_host` or `FORK_P2P_ADVERTISE_HOST` to the node's reachable IP
+so peers can discover it. Private and loopback addresses received through
+gossip are not dialed by default; set `p2p.allow_private_peers` to `true` (or
+`FORK_P2P_ALLOW_PRIVATE=1`) for a trusted LAN. After the version handshake,
+EREPR-capable peers exchange bounded peer lists and relay deduplicated gossip
+waves with decreasing amplitude. `getereprstats` reports peer and gossip
+counters.
 
 ## Run it
 
@@ -694,7 +711,9 @@ mechanism.
 See [TOKENOMICS.md](TOKENOMICS.md) for full details on the bonding curve
 mathematics and bridge flow.
 
-## EREPR — Entanglement-Resonance Echo Peer Routing (Q-Day Protocol)
+## EREPR - Entanglement-Resonance Echo Peer Routing
+
+> **Transport status:** The active `fork_node.py` TCP path uses bounded peer-address exchange and deduplicated resonance gossip. The `EREPRProtocol` engine described below is separate and is not wired to the TCP transport. Its phase and amplitude fields do not authenticate peers or encrypt messages. See [P2P EREPR operation](docs/P2P-EREPR.md) for the live node configuration.
 
 **Welcome to Q-Day!** EREPR is a novel P2P discovery and gossip protocol
 that replaces traditional flooding/DHT with quantum-inspired resonance matching.

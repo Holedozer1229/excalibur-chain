@@ -11,6 +11,7 @@ Each record: {"root": "<hex>", "index": <int>, "txid": "<hex>|null",
 import json
 import os
 import sys
+from file_locks import exclusive_file_lock, fsync_directory
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -28,53 +29,103 @@ class SpentLeafRegistry:
     """Thread-safe spent-leaf registry backed by a JSONL file."""
 
     def __init__(self, path: str):
-        self.path = path
+        self.path = os.path.normcase(os.path.abspath(path))
         self._cache: dict[tuple[str, int], dict] = {}
         self._load()
 
     def _load(self):
         """Load existing records from disk into the in-memory cache."""
-        if not os.path.exists(self.path):
-            return
-        with open(self.path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    record = json.loads(line)
-                    key = (record["root"], record["index"])
-                    self._cache[key] = record
-                except (json.JSONDecodeError, KeyError):
-                    # Skip malformed lines; registry is best-effort.
-                    pass
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+
+    def _refresh_locked(self):
+        """Reload under the process lock; malformed history fails closed."""
+        cache = {}
+        if os.path.exists(self.path):
+            with open(self.path, "r", encoding="utf-8") as f:
+                for line_number, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        record = json.loads(line)
+                        root = record["root"]
+                        index = record["index"]
+                        if (not isinstance(root, str) or len(root) != 64
+                                or not isinstance(index, int)
+                                or isinstance(index, bool) or index < 0):
+                            raise ValueError("invalid root or index")
+                        decoded_root = bytes.fromhex(root)
+                        if len(decoded_root) != 32:
+                            raise ValueError("root must decode to 32 bytes")
+                        root = decoded_root.hex()
+                    except (json.JSONDecodeError, KeyError, TypeError,
+                            ValueError) as exc:
+                        raise ValueError(
+                            f"corrupt spent-leaf registry at line "
+                            f"{line_number}: {exc}") from exc
+                    record["root"] = root
+                    cache.setdefault((root, index), record)
+        self._cache = cache
 
     def is_spent(self, root: bytes, index: int) -> bool:
         """Check whether (root, index) is already recorded as spent."""
-        key = (root.hex(), index)
-        return key in self._cache
+        self._validate_pair(root, index)
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+            return (root.hex(), index) in self._cache
 
     def first_spend(self, root: bytes, index: int) -> dict | None:
         """Return the first spend record for (root, index), or None."""
+        self._validate_pair(root, index)
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+            return self._cache.get((root.hex(), index))
+
+    def as_set(self):
+        """Snapshot all reserved pairs in validate_tx's byte-tuple format."""
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+            return {(bytes.fromhex(root), index)
+                    for root, index in self._cache}
+
+    @staticmethod
+    def _validate_pair(root, index):
+        if not isinstance(root, bytes) or len(root) != 32:
+            raise ValueError("Trifold root must be 32 bytes")
+        if not isinstance(index, int) or isinstance(index, bool) or index < 0:
+            raise ValueError("Trifold leaf index must be a non-negative integer")
+
+    def reserve(self, root: bytes, index: int, txid: str | None = None,
+                height: int | None = None) -> bool:
+        """Atomically reserve a leaf across threads and wallet processes.
+
+        Returns False when another operation already reserved this pair.
+        A corrupt registry or an I/O failure raises, so callers never sign
+        when they cannot establish that the leaf is fresh.
+        """
+        self._validate_pair(root, index)
         key = (root.hex(), index)
-        return self._cache.get(key)
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+            if key in self._cache:
+                return False
+            record = {"root": key[0], "index": index,
+                      "txid": txid, "height": height}
+            directory = os.path.dirname(os.path.abspath(self.path))
+            os.makedirs(directory, exist_ok=True)
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            fsync_directory(directory)
+            self._cache[key] = record
+            return True
 
     def record(self, root: bytes, index: int, txid: str | None = None,
                height: int | None = None):
-        """Record (root, index) as spent. Appends to the JSONL file."""
-        key = (root.hex(), index)
-        if key in self._cache:
-            return  # Already recorded; idempotent.
-        record = {
-            "root": key[0],
-            "index": index,
-            "txid": txid,
-            "height": height,
-        }
-        self._cache[key] = record
-        # Append to file for persistence.
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record) + "\n")
+        """Idempotently record a pair; use reserve() when signing."""
+        self.reserve(root, index, txid=txid, height=height)
 
 
 def load_registry(path: str | None = None) -> SpentLeafRegistry:

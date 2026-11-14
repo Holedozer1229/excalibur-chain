@@ -97,6 +97,13 @@ a = Analysis(
         'subprocess',
         # Transaction script
         'txscript',
+        # Stateful post-quantum wallet signing and cross-process state
+        'wallet_transactions',
+        'txpq',
+        'trifold_lockbox',
+        'file_locks',
+        'spent_leaf_registry',
+        'messerene_operator',
     ],
     hookspath=[],
     hooksconfig={},

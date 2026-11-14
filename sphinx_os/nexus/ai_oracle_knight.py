@@ -60,7 +60,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .musig2 import MuSig2, MuSig2KeyPair
 from .knights_round_table import (
@@ -71,6 +71,7 @@ from .knights_round_table import (
     GovernanceProposal,
     PartialSignature,
 )
+from .deutsch_ctc_oracle import SphinxQOracle, DeutschCTCResult
 
 
 # ---------------------------------------------------------------------------
@@ -513,8 +514,60 @@ class AIOracleKnight:
             "total": len(self.analysis_history),
             "avg_risk_score": sum(risk_scores) / len(risk_scores),
             "approval_rate": sum(recommendations) / len(recommendations),
-            "last_analysis": self.analysis_history[-1].__dict__ if self.analysis_history else None,
         }
+
+    # ------------------------------------------------------------------
+    # Deutsch CTC Oracle Integration
+    # ------------------------------------------------------------------
+    def analyze_with_ctc(
+        self,
+        proposal: GovernanceProposal,
+        ctc_verify: Optional[Callable[[str, GovernanceProposal], bool]] = None,
+    ) -> DeutschCTCResult:
+        """Analyze a proposal using Deutsch CTC distribution for consensus.
+
+        This method combines the standard risk analysis with the Deutsch CTC
+        oracle to find stationary fixed points among candidate decisions.
+        The CTC oracle generates candidate outcomes (APPROVE, REJECT, AMEND,
+        DEFER) and verifies them against the proposal's risk profile.
+
+        Args:
+            proposal: The governance proposal to analyze.
+            ctc_verify: Optional custom verifier for CTC candidates. If not
+                provided, uses the standard risk threshold as the validity rule.
+
+        Returns:
+            DeutschCTCResult with the stationary distribution over valid
+            fixed points.
+        """
+        # Run standard analysis first
+        analysis = self.analyze_proposal(proposal)
+
+        # Default verifier: use risk threshold to determine validity
+        if ctc_verify is None:
+            def default_verify(candidate: str, prop: GovernanceProposal) -> bool:
+                """Verify candidate based on standard analysis result."""
+                if candidate == "APPROVE":
+                    return analysis.recommendation  # Only approve if risk is low
+                elif candidate == "REJECT":
+                    return not analysis.recommendation  # Only reject if risk is high
+                elif candidate == "AMEND":
+                    # Amend is valid when risk is moderate (between thresholds)
+                    return 0.3 <= analysis.risk_score <= 0.7
+                elif candidate == "DEFER":
+                    # Defer is always a valid fallback
+                    return True
+                return False
+            ctc_verify = default_verify
+
+        # Create SphinxQ oracle with the verifier
+        oracle = SphinxQOracle(
+            name=f"{self.name}-CTC",
+            default_verify=ctc_verify,
+        )
+
+        # Use the proposal dict as the query
+        return oracle.respond(proposal.__dict__ if hasattr(proposal, '__dict__') else proposal, ctc_verify)
 
 
 # ---------------------------------------------------------------------------

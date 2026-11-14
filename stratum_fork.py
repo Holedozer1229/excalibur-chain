@@ -74,7 +74,7 @@ import genesis_fork as gf
 from genesis_fork import (sha256d, ser_header, bits_to_target,
                           target_to_bits, merkle_root, txid, subsidy,
                           push, ser_varint)
-from txscript import make_coinbase_v2, lock_pkh
+from txscript import make_coinbase_v2, lock_pkh, lock_type
 
 gf.use_network("fork")
 P = gf.network()
@@ -186,7 +186,11 @@ SPONSORS_FILE = os.environ.get(
 
 def load_registry():
     """{height: (lock_bytes, tag_bytes)} from the sponsors registry —
-    the land registry for sold blocks. Reloaded per job; {} on error."""
+    the land registry for sold blocks. Reloaded per job; {} on error.
+
+    Each lock is validated against the known scriptPubKey types.  A
+    malformed lock is skipped with a warning so that a bad sponsors file
+    cannot cause the stratum server to produce invalid coinbases."""
     try:
         with open(SPONSORS_FILE) as f:
             raw = json.load(f)
@@ -194,8 +198,18 @@ def load_registry():
         for h, e in raw.items():
             lk = e["lock"].strip().lower()
             if lk.startswith("0x"): lk = lk[2:]
-            lock = (bytes.fromhex(lk) if len(lk) == 42
-                    else lock_pkh(bytes.fromhex(lk)))
+            try:
+                lock = (bytes.fromhex(lk) if len(lk) == 42
+                        else lock_pkh(bytes.fromhex(lk)))
+            except (ValueError, AssertionError) as exc:
+                log(f"sponsor height {h}: skipping invalid lock hex: {exc}")
+                continue
+            # Validate the lock is a recognized scriptPubKey type.
+            # A malformed lock would produce an invalid coinbase output.
+            if lock_type(lock) is None:
+                log(f"sponsor height {h}: skipping unknown lock type "
+                    f"(length {len(lock)}, first byte 0x{lock[0]:02x})")
+                continue
             out[int(h)] = (lock, e.get("tag", "").encode())
         return out
     except Exception:

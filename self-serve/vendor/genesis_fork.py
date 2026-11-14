@@ -583,7 +583,8 @@ def validate_block(blk, prev, height, chain, utxo=None, skip_pow=False,
 
     blk: {"version","prev","merkle","time","bits","nonce","txs":[raw..]}
     prev: parent header-dict. chain: ancestor header-dicts (for retarget).
-    utxo: if given, txs are fully validated against it at `height`.
+    utxo: if given, txs are fully validated against it at `height`; callers
+    must also supply the chain-wide `spent_pairs` state for block validation.
     skip_pow: omit the block's own proof-of-work check. Only the AuxPoW
     path (validate_auxpow) passes this, after substituting the parent
     block's work; every other caller gets the full check as before.

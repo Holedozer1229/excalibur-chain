@@ -14,6 +14,9 @@ root is not on `sys.path`.
 | `genesis_fork.py` | Root `genesis_fork.py` | `txscript.py` |
 | `messerene_operator.py` | Root `messerene_operator.py` | (standalone) |
 | `txpq.py` | Root `txpq.py` | (standalone) |
+| `trifold_lockbox.py` | Root `trifold_lockbox.py` | `txpq.py` |
+| `spent_leaf_registry.py` | Root `spent_leaf_registry.py` | PQH/QHTLC signing |
+| `file_locks.py` | Root `file_locks.py` | Persistent signer state |
 | `ripemd160_pure.py` | Original (not in root) | `txscript.py` |
 
 ## Syncing
@@ -33,6 +36,9 @@ cp txscript.py self-serve/vendor/txscript.py
 cp genesis_fork.py self-serve/vendor/genesis_fork.py
 cp messerene_operator.py self-serve/vendor/messerene_operator.py
 cp txpq.py self-serve/vendor/txpq.py
+cp trifold_lockbox.py self-serve/vendor/trifold_lockbox.py
+cp spent_leaf_registry.py self-serve/vendor/spent_leaf_registry.py
+cp file_locks.py self-serve/vendor/file_locks.py
 ```
 
 ## Note on Duplication

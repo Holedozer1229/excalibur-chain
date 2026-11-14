@@ -5,6 +5,7 @@
   "main": "electron/main.js",
   "description": "AetherionEXCAL Dashboard — Real-time blockchain monitoring",
   "author": "AetherionEXCAL Team",
+  "homepage": "./",
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -20,7 +21,7 @@
     "build": "react-scripts build",
     "electron:dev": "concurrently \"react-scripts start\" \"wait-on http://localhost:3000 && electron .\"",
     "electron:build": "react-scripts build && electron-builder",
-    "electron:build:win": "react-scripts build && electron-builder --win --x64",
+    "electron:build:win": "react-scripts build && electron-builder --win --x64 --config.win.signAndEditExecutable=false",
     "electron:build:mac": "react-scripts build && electron-builder --mac --x64 --arm64",
     "electron:build:linux": "react-scripts build && electron-builder --linux --x64"
   },
@@ -39,12 +40,6 @@
     "files": [
       "build/**/*",
       "electron/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "../fork_node.py",
-        "to": "backend"
-      }
     ],
     "nodeGypRebuild": false,
     "win": {

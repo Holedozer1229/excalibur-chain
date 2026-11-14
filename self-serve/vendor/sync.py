@@ -21,6 +21,9 @@ SYNC_FILES = [
     "genesis_fork.py",
     "messerene_operator.py",
     "txpq.py",
+    "file_locks.py",
+    "spent_leaf_registry.py",
+    "trifold_lockbox.py",
 ]
 
 

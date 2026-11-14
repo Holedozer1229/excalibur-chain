@@ -20,7 +20,10 @@ from knot_math import (knot_point_bytes, knot_commitment,
                        MAX_PQ as _KNOT_MAX_PQ, MAX_N as _KNOT_MAX_N)
 
 SIGHASH_ALL = 0x01
+SIGHASH_NONE = 0x02
+SIGHASH_SINGLE = 0x03
 COINBASE_MATURITY = 100
+DUST_THRESHOLD = 546  # ~3 sat/byte for a standard P2PKH spend
 
 # ---------------------------------------------------------------- wire parse
 def _read_varint(b: bytes, p: int):
@@ -143,22 +146,43 @@ def make_coinbase_v2(height: int, bits: int, tag: bytes, fees: int = 0,
     return tx
 
 # ---------------------------------------------------------------- sighash
-def sighash_all(t: dict, in_idx: int, script_code: bytes) -> bytes:
-    """Legacy SIGHASH_ALL sighash for input in_idx."""
+def _sighash(t: dict, in_idx: int, script_code: bytes, sighash_type: int) -> bytes:
+    """Legacy sighash for input in_idx with the given sighash type."""
+    flag = sighash_type & 0x1f
     out = struct.pack("<I", t["version"])
     out += ser_varint(len(t["vin"]))
     for i, v in enumerate(t["vin"]):
         out += v["prev"] + struct.pack("<I", v["idx"])
         sc = script_code if i == in_idx else b""
         out += ser_varint(len(sc)) + sc
-        out += struct.pack("<I", v["seq"])
-    out += ser_varint(len(t["vout"]))
-    for v in t["vout"]:
+        if flag in (SIGHASH_NONE, SIGHASH_SINGLE):
+            out += struct.pack("<I", 0)  # zero seq for non-ALL
+        else:
+            out += struct.pack("<I", v["seq"])
+    if flag == SIGHASH_NONE:
+        out += ser_varint(0)  # no outputs
+    elif flag == SIGHASH_SINGLE:
+        if in_idx >= len(t["vout"]):
+            raise ValueError("SIGHASH_SINGLE: in_idx out of range")
+        out += ser_varint(in_idx + 1)
+        for j in range(in_idx):
+            out += b"\x00" * 32  # dummy null values for prior outputs
+        v = t["vout"][in_idx]
         out += struct.pack("<Q", v["value"])
         out += ser_varint(len(v["script"])) + v["script"]
+    else:
+        out += ser_varint(len(t["vout"]))
+        for v in t["vout"]:
+            out += struct.pack("<Q", v["value"])
+            out += ser_varint(len(v["script"])) + v["script"]
     out += struct.pack("<I", t["locktime"])
-    out += struct.pack("<I", SIGHASH_ALL)
+    out += struct.pack("<I", sighash_type)
     return sha256d(out)
+
+
+def sighash_all(t: dict, in_idx: int, script_code: bytes) -> bytes:
+    """Legacy SIGHASH_ALL sighash for input in_idx."""
+    return _sighash(t, in_idx, script_code, SIGHASH_ALL)
 
 # ---------------------------------------------------------------- script
 def _parse_script(script: bytes):
@@ -171,10 +195,30 @@ def _parse_script(script: bytes):
                 raise ValueError("push past end")
             ops.append(script[i + 1:i + 1 + op])
             i += 1 + op
-        elif op == 76:  # PUSHDATA1 (accepted, non-standard)
+        elif op == 76:  # PUSHDATA1
+            if i + 2 > len(script):
+                raise ValueError("push past end")
             n = script[i + 1]
+            if i + 2 + n > len(script):
+                raise ValueError("push past end")
             ops.append(script[i + 2:i + 2 + n])
             i += 2 + n
+        elif op == 77:  # PUSHDATA2
+            if i + 3 > len(script):
+                raise ValueError("push past end")
+            n = struct.unpack_from("<H", script, i + 1)[0]
+            if i + 3 + n > len(script):
+                raise ValueError("push past end")
+            ops.append(script[i + 3:i + 3 + n])
+            i += 3 + n
+        elif op == 78:  # PUSHDATA4
+            if i + 5 > len(script):
+                raise ValueError("push past end")
+            n = struct.unpack_from("<I", script, i + 1)[0]
+            if i + 5 + n > len(script):
+                raise ValueError("push past end")
+            ops.append(script[i + 5:i + 5 + n])
+            i += 5 + n
         else:
             ops.append(op)
             i += 1
@@ -203,13 +247,27 @@ def _eval(script_sig: bytes, script_pubkey: bytes, sighash_fn) -> bool:
             pub = stack.pop()
             sig = stack.pop()
             ok = False
-            if len(pub) == 33 and len(sig) == 65 and sig[-1] == SIGHASH_ALL:
-                try:
-                    pt = secp.decompress(pub)
-                except Exception:
-                    pt = None
-                if pt is not None:
-                    ok = secp.verify(pt, sig[:-1], sighash_fn())
+            # Accept both compressed (33) and uncompressed (65) pubkeys.
+            # Legacy P2PK scripts use uncompressed keys; rejecting them
+            # would break those spends.
+            if len(sig) == 65 and sig[-1] == SIGHASH_ALL:
+                if len(pub) == 33:
+                    try:
+                        pt = secp.decompress(pub)
+                        if pt is not None:
+                            ok = secp.verify(pt, sig[:-1], sighash_fn())
+                    except Exception:
+                        pass
+                elif len(pub) == 65 and pub[0] == 4:
+                    # Uncompressed: convert to compressed for verification
+                    try:
+                        pt = (int.from_bytes(pub[1:33], "big"),
+                              int.from_bytes(pub[33:65], "big"))
+                        compressed = bytes([0x02 | (pub[64] & 1)]) + pub[1:33]
+                        if secp.decompress(compressed) == pt:
+                            ok = secp.verify(compressed, sig[:-1], sighash_fn())
+                    except Exception:
+                        pass
             stack.append(b"\x01" if ok else b"")
         else:
             return False  # unknown opcode: fail closed
@@ -322,7 +380,8 @@ def sign_bridge_input(t: dict, in_idx: int, lock: bytes, priv: int,
         pub = secp.compress(pt)
     else:
         pub = b"\x04" + pt[0].to_bytes(32, "big") + pt[1].to_bytes(32, "big")
-    assert lock_bridge_for_pubkey(pub) == lock, "key does not match bridge lock"
+    if lock_bridge_for_pubkey(pub) != lock:
+        raise ValueError("key does not match bridge lock")
     return pub + sig + bytes([SIGHASH_ALL])
 
 
@@ -604,9 +663,9 @@ def _qhtlc_sign(t: dict, in_idx: int, lock: bytes, key, secret,
                 descriptor: bytes, mode: int, registry=None) -> bytes:
     """Sign a QHTLC input with a TrifoldKey. key.root must be the
     descriptor's claim root (mode 1) or refund root (mode 2).
-    registry, when given, is a SpentLeafRegistry checked and recorded
-    BEFORE signing, exactly as sign_pqh_input does; when None, only
-    consensus validation enforces one-time use. The helper does NOT
+    registry, when given, is a SpentLeafRegistry reserved BEFORE signing,
+    exactly as sign_pqh_input does. The chain-data registry is used by
+    default. The helper does NOT
     enforce the timeout — an early refund must be buildable so that
     validation can reject it."""
     assert lock_type(lock) == "qhtlc"
@@ -621,17 +680,17 @@ def _qhtlc_sign(t: dict, in_idx: int, lock: bytes, key, secret,
         assert len(secret) == 32, "secret must be 32 bytes"
         assert hashlib.sha256(secret).digest() == d["secret_hash"], \
             "secret does not match secret_hash"
-    if registry is not None:
-        idx = int(key.next_index)
-        if registry.is_spent(key.root, idx):
-            first = registry.first_spend(key.root, idx)
-            raise RuntimeError(
-                f"spent leaf refused: root={key.root.hex()} index={idx} "
-                f"already spent in tx {first.get('txid')} "
-                f"at height {first.get('height')}")
-        registry.record(key.root, idx, txid=None, height=None)
+    from spent_leaf_registry import load_registry
+    reg = registry if registry is not None else load_registry()
+    idx = int(key.next_index)
+    if not reg.reserve(key.root, idx, txid=None, height=None):
+        first = reg.first_spend(key.root, idx)
+        raise RuntimeError(
+            f"spent leaf refused: root={key.root.hex()} index={idx} "
+            f"already spent in tx {first.get('txid')} "
+            f"at height {first.get('height')}")
     h = sighash_all(t, in_idx, lock)
-    sig = key.sign(h)
+    sig = key.sign_reserved(h, idx)
     wit = encode_witness(key.root, sig, key.height)
     if mode == QHTLC_CLAIM:
         return bytes([QHTLC_CLAIM]) + wit + secret + descriptor
@@ -794,9 +853,10 @@ def sign_knot_input(t: dict, in_idx: int, lock: bytes, t_star: int,
 # ---------------------------------------------------------------- validation
 def _view_copy(utxo):
     """Private validation view of a UTXO set. UtxoSet.copy() is cheap (it
-    shares the immutable snapshot); plain dicts get the legacy full copy
-    (dict.copy() would be shallow and let spends mutate the caller's
-    entry lists)."""
+    shares the immutable snapshot); plain dicts get a deep copy so that
+    neither the entry lists nor the tuples inside can mutate the caller's
+    data."""
+    import copy as _copy
     if isinstance(utxo, dict):
         return {k: list(v) for k, v in utxo.items()}
     if hasattr(utxo, "copy"):
@@ -864,7 +924,7 @@ def validate_tx(tx: bytes, utxo: dict, height: int, view: dict = None,
         if not entries:
             return False, f"input {i}: missing UTXO", 0
         value, spk, is_cb, cb_h = entries[0]  # oldest-first
-        if is_cb and height - cb_h < COINBASE_MATURITY:
+        if is_cb and (height < cb_h or height - cb_h < COINBASE_MATURITY):
             return False, f"input {i}: coinbase immature", 0
         lt = lock_type(spk)
         if lt is None or (not qlock and lt in ("pkh", "open")) or \
@@ -1093,6 +1153,9 @@ def validate_tx(tx: bytes, utxo: dict, height: int, view: dict = None,
     for j, vout in enumerate(t["vout"]):
         if vout["value"] > 21_000_000 * 100_000_000:
             return False, f"output {j}: value too large", 0
+        # Reject dust outputs to prevent UTXO set bloat
+        if vout["value"] < DUST_THRESHOLD and not is_anyone(vout["script"]):
+            return False, f"output {j}: dust", 0
         lt = lock_type(vout["script"])
         if lt is None or (not qlock and lt in ("pkh", "open")) or \
                 (lt == "pqh" and not qday) or \
@@ -1141,15 +1204,16 @@ def validate_block_txs(txs: list, utxo: dict, height: int, subsidy: int,
     Returns (ok, reason, fees). Never mutates utxo.
     Height-50000 rule: block must contain a 1 EXCAL output locked to the
     fusion PQH lock above, else it is invalid. All other heights unaffected.
-    Spent-leaf guard: spent_pairs, when given, is the chain's spent set;
-    it is updated in place with this block's pairs on success (callers
-    needing atomicity pass a copy and discard it on failure). When it is
-    None, a fresh local set still rejects a pair reused twice inside
-    this block."""
+    Spent-leaf guard: spent_pairs is required and must be the chain-wide
+    set. It is updated in place as transactions validate; callers needing
+    atomicity pass a copy and discard it on failure. Omitting it rejects
+    the block instead of silently creating per-block state."""
+    if spent_pairs is None:
+        return False, "consensus spent-leaf state is required", 0
     if not txids_unique(txs):
         return False, "duplicate txid in block", 0
     view = _view_copy(utxo)
-    working = spent_pairs if spent_pairs is not None else set()
+    working = spent_pairs
     fees = 0
     for tx in txs[1:]:
         ok, reason, fee = validate_tx(tx, utxo, height, view=view,
@@ -1158,7 +1222,8 @@ def validate_block_txs(txs: list, utxo: dict, height: int, subsidy: int,
             return False, f"tx {txid_display(tx)[:16]}: {reason}", 0
         fees += fee
     from genesis_fork import coinbase_value
-    if coinbase_value(txs[0]) != subsidy + fees:
+    cb_val = coinbase_value(txs[0])
+    if cb_val is None or cb_val != subsidy + fees:
         return False, "coinbase value != subsidy + fees", 0
     if height == FUSION_HEIGHT:
         want = fusion_pqh_lock()

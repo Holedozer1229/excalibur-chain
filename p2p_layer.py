@@ -29,10 +29,9 @@ Bitcoin problems solved:
    branch that would unwind more than 100 blocks is rejected.
 
 AetherionEXCAL Features:
-7. EREPR (Entanglement-Resonance Echo Peer Routing) — Quantum-inspired
-   P2P gossip protocol. Nodes discover each other through resonance matching
-   on a toroidal manifold, forming entanglement bonds for authenticated
-   gossip wave propagation.
+7. EREPR (Entanglement-Resonance Echo Peer Routing) - bounded peer discovery
+   and gossip. Peers exchange resonance announcements and known addresses
+   after the version handshake.
 
 8. Atomic & Quantum Swaps — Cross-chain atomic swaps with Bitcoin via
    bridge port 8333, plus quantum-resistant swap protocols.
@@ -78,8 +77,10 @@ Pure Python, stdlib only. Uses asyncio for non-blocking I/O.
 """
 import asyncio
 import hashlib
+import ipaddress
 import json
 import logging
+import math
 import os
 import queue
 import socket
@@ -105,14 +106,81 @@ NODE_STRATUM = 0x08
 NODE_EREPR = 0x10
 NODE_SWAP = 0x20
 NODE_GAME = 0x40  # Camelot game gossip support
+NODE_EREPR_V2 = 0x80  # EREPR envelope with origin, expiry, and hop limit
 
 # Message limits
 MAX_INV_SIZE = 50000
 MAX_BLOCK_SIZE = 4_000_000
 MAX_TX_SIZE = 1_000_000
 MAX_ADDR_SIZE = 1000
+MAX_MESSAGE_SIZE = 4_000_000
 MAX_PEERS = 128
 IDEAL_PEERS = 8
+EREPR_MAX_ADDRESSES = 64
+EREPR_ADDRESS_SIZE = 18
+EREPR_SEEN_TTL = 900
+EREPR_ANNOUNCE_INTERVAL = 120
+EREPR_MESSAGE_TTL = 300
+EREPR_MAX_HOPS = 12
+EREPR_WAVE_DECAY = 0.85
+EREPR_MIN_AMPLITUDE = 0.1
+EREPR_EXTENSION_MAGIC = b"ER2!"
+EREPR_EXTENSION_VERSION = 1
+EREPR_EXTENSION = struct.Struct("<4sB32sQQB")
+
+
+def parse_peer_address(value, default_port=P2P_PORT):
+    """Parse a configured peer as host:port, [IPv6]:port, or a pair/map."""
+    if isinstance(value, dict):
+        host = value.get("host")
+        port = value.get("port", default_port)
+    elif isinstance(value, (tuple, list)) and len(value) == 2:
+        host, port = value
+    elif isinstance(value, str):
+        value = value.strip()
+        if value.startswith("["):
+            end = value.find("]")
+            if end < 0:
+                raise ValueError(f"invalid bracketed peer address: {value}")
+            host = value[1:end]
+            suffix = value[end + 1:]
+            port = suffix[1:] if suffix.startswith(":") else default_port
+            if suffix and not suffix.startswith(":"):
+                raise ValueError(f"invalid peer address suffix: {value}")
+        elif value.count(":") == 1:
+            host, port = value.rsplit(":", 1)
+        else:
+            host, port = value, default_port
+    else:
+        raise ValueError(f"invalid peer address: {value!r}")
+
+    host = str(host).strip().strip("[]") if host is not None else ""
+    port = int(port)
+    if not host or not 0 < port <= 65535:
+        raise ValueError(f"invalid peer address: {value!r}")
+    return host, port
+
+
+def parse_seed_peers(values, default_port=P2P_PORT):
+    if values is None:
+        values = []
+    elif isinstance(values, (str, dict)):
+        values = [values]
+    try:
+        values = list(values)
+    except TypeError:
+        logger.warning("Ignoring invalid P2P seed list: %r", values)
+        return []
+    peers = []
+    for value in values or []:
+        try:
+            peer = parse_peer_address(value, default_port)
+        except (TypeError, ValueError) as exc:
+            logger.warning("Ignoring invalid P2P seed %r: %s", value, exc)
+            continue
+        if peer not in peers:
+            peers.append(peer)
+    return peers
 
 # Rate limits (messages per minute per peer)
 RATE_LIMIT = {
@@ -185,7 +253,7 @@ def wire_checksum(payload_with_header: bytes) -> bytes:
 
 def encode_message(cmd: str, payload: bytes) -> bytes:
     """Encode a p2p message: magic + command + length + payload + checksum."""
-    cmd_bytes = cmd.encode("ascii").ljust(CMD_LEN)[:CMD_LEN]
+    cmd_bytes = cmd.encode("ascii").ljust(CMD_LEN, b"\x00")[:CMD_LEN]
     length = struct.pack("<I", len(payload))
     header = MAGIC_BYTES + cmd_bytes + length
     checksum = wire_checksum(header + payload)
@@ -200,8 +268,10 @@ def decode_message(raw: bytes):
     magic = struct.unpack("<I", raw[:4])[0]
     if magic != MAGIC:
         raise ValueError(f"bad magic 0x{magic:08x}, expected 0x{MAGIC:08x}")
-    cmd = raw[4:4 + CMD_LEN].rstrip(b"\x00").decode("ascii")
+    cmd = raw[4:4 + CMD_LEN].rstrip(b"\x00 ").decode("ascii")
     length = struct.unpack("<I", raw[4 + CMD_LEN:4 + CMD_LEN + 4])[0]
+    if length > MAX_MESSAGE_SIZE:
+        raise ValueError(f"message too large: {length} bytes")
     total = header_len + length + CHECKSUM_LEN
     if len(raw) < total:
         return None, 0
@@ -306,10 +376,15 @@ class PeerHandler:
         self.node = node
         self.score = PeerScore()
         self.buf = b""
-        self.nonce = os.urandom(8)
+        # Use a per-process nonce so a node recognizes its own connection even
+        # when it reaches itself through a relayed public address.
+        self.nonce = node._node_id[:8]
         self.remote_addr = None
+        self.advertised_addr = None
         self._pong_time = None
         self._task = None
+        self._version_received = False
+        self.target_addr = None
 
     async def handshake(self):
         """Send our version and wait for verack."""
@@ -321,19 +396,23 @@ class PeerHandler:
 
     def _build_version(self):
         version = struct.pack("<i", 70016)  # protocol version
-        services = struct.pack("<Q", NODE_NETWORK | NODE_P2P_V2)
+        services = struct.pack(
+            "<Q", NODE_NETWORK | NODE_P2P_V2 | NODE_EREPR | NODE_SWAP
+            | NODE_GAME | NODE_EREPR_V2
+        )
         timestamp = struct.pack("<q", int(time.time()))
-        # Local address (our address for the peer to advertise)
-        addr_recv = b"\x00" * 26  # reserved
-        addr_recv += socket.inet_aton("127.0.0.1")
-        addr_recv += b"\x00" * 6  # IPv4 padding
-        addr_recv += struct.pack(">H", self.node.rpc_port)  # our RPC port
-        addr_recv += struct.pack(">H", 0)  # peer's port (unknown)
+        ip = self.node._pack_ip(self.node.advertise_host)
+        addr_recv = b"\x00" * 8 + b"\x00" * 16 + struct.pack(">H", 0)
+        addr_from = services + ip + struct.pack(">H", self.node.listen_port)
         nonce = self.nonce
         user_agent = b"/ExcaliburFork:1.0/"
+        user_agent = bytes([len(user_agent)]) + user_agent
         start_height = struct.pack("<i", self.node.chain_store.getblockcount())
         relay = struct.pack("?", True)
-        return version + services + timestamp + addr_recv + nonce + user_agent + start_height + relay
+        return (
+            version + services + timestamp + addr_recv + addr_from
+            + nonce + user_agent + start_height + relay
+        )
 
     async def read_loop(self):
         """Read messages from the peer."""
@@ -344,6 +423,8 @@ class PeerHandler:
                     logger.info(f"[{self.peer_id}] connection closed")
                     break
                 self.buf += data
+                if len(self.buf) > MAX_MESSAGE_SIZE + 24:
+                    raise ValueError("receive buffer exceeds maximum message size")
                 while self.buf:
                     cmd, payload = decode_message(self.buf)
                     if cmd is None:
@@ -397,16 +478,29 @@ class PeerHandler:
             logger.warning(f"[{self.peer_id}] unknown message: {cmd}")
 
     async def _on_version(self, payload: bytes):
-        if len(payload) < 26:
-            return
+        if len(payload) < 85:
+            raise ValueError("truncated version message")
         version = struct.unpack("<i", payload[:4])[0]
         services = struct.unpack("<Q", payload[4:12])[0]
-        timestamp = struct.unpack("<q", payload[12:20])[0]
-        nonce = payload[29:37]
-        user_agent = payload[37:-9]  # before start_height and relay
+        nonce = payload[72:80]
+        if nonce == self.nonce:
+            raise ValueError("self-connection detected")
+        user_agent_length = payload[80]
+        user_agent_end = 81 + user_agent_length
+        if user_agent_end + 5 > len(payload):
+            raise ValueError("malformed user agent in version message")
+        user_agent = payload[81:user_agent_end]
         self.score.version = version
         self.score.services = services
         self.score.user_agent = user_agent.decode("utf-8", errors="replace")
+        self._version_received = True
+        remote_ip = self.node._unpack_ip(payload[54:70])
+        remote_port = struct.unpack(">H", payload[70:72])[0]
+        if remote_ip is None and self.remote_addr:
+            remote_ip = self.remote_addr[0]
+        if remote_ip and remote_port:
+            self.advertised_addr = (remote_ip, remote_port)
+            self.node._remember_address(remote_ip, remote_port)
         logger.info(f"[{self.peer_id}] version: {self.score.user_agent} services=0x{services:02x}")
 
         # Send verack
@@ -414,6 +508,8 @@ class PeerHandler:
         self.score.reward("handshake", 10)
 
     async def _on_verack(self, payload: bytes):
+        if not self._version_received:
+            raise ValueError("verack received before version")
         logger.info(f"[{self.peer_id}] verack received")
         self.node._on_peer_ready(self.peer_id)
 
@@ -502,48 +598,81 @@ class PeerHandler:
         - amplitude (8 bytes, float64): Signal amplitude for bond strength
         - peer_count (4 bytes, uint32): Number of peers in the resonance group
         - peer_list (variable): List of peer addresses in the resonance group
+        - v2_extension (optional): origin ID, sequence, issue time, and hop count
         """
-        if len(payload) < 48:
+        if not (self.score.services & NODE_EREPR):
+            self.score.penalize("erepr_from_unsupported_peer", REP_PENALTY_STALE)
+            logger.warning(f"[{self.peer_id}] EREPR from non-EREPR peer, ignoring")
+            return
+        if len(payload) < 52:
+            self.score.penalize("malformed_erepr", REP_PENALTY_INVALID)
             logger.warning(f"[{self.peer_id}] EREPR: payload too short")
             return
-        
+
         resonance_id = payload[:32].hex()
         phase = struct.unpack("<d", payload[32:40])[0]
         amplitude = struct.unpack("<d", payload[40:48])[0]
         peer_count = struct.unpack("<I", payload[48:52])[0]
-        
+        base_length = 52 + peer_count * EREPR_ADDRESS_SIZE
+        if peer_count > EREPR_MAX_ADDRESSES or len(payload) not in (
+                base_length, base_length + EREPR_EXTENSION.size):
+            self.score.penalize("malformed_erepr", REP_PENALTY_INVALID)
+            logger.warning(f"[{self.peer_id}] EREPR: invalid peer list length")
+            return
+        if (not math.isfinite(phase) or not 0.0 <= phase < 2 * math.pi
+                or not math.isfinite(amplitude)
+                or not EREPR_MIN_AMPLITUDE < amplitude <= 1.0):
+            self.score.penalize("malformed_erepr", REP_PENALTY_INVALID)
+            logger.warning(f"[{self.peer_id}] EREPR: invalid phase or amplitude")
+            return
+
+        addresses = []
+        offset = 52
+        for _ in range(peer_count):
+            raw_ip = payload[offset:offset + 16]
+            port = struct.unpack(">H", payload[offset + 16:offset + 18])[0]
+            offset += EREPR_ADDRESS_SIZE
+            address = ipaddress.ip_address(raw_ip)
+            if address.ipv4_mapped:
+                address = address.ipv4_mapped
+            if port and not (address.is_unspecified or address.is_multicast):
+                addresses.append((str(address), port))
+
+        origin_node_id = None
+        sequence = None
+        issued_at = None
+        hops = 0
+        if len(payload) == base_length + EREPR_EXTENSION.size:
+            (magic, version, origin_node_id, sequence, issued_at,
+             hops) = EREPR_EXTENSION.unpack_from(payload, base_length)
+            now = int(time.time())
+            expected_id = (
+                hashlib.sha256(
+                    origin_node_id + struct.pack("<Q", sequence)
+                ).digest()
+                if sequence else b""
+            )
+            if (magic != EREPR_EXTENSION_MAGIC
+                    or version != EREPR_EXTENSION_VERSION
+                    or sequence == 0
+                    or expected_id != payload[:32]
+                    or issued_at > now + 30
+                    or now - issued_at > EREPR_MESSAGE_TTL
+                    or hops > EREPR_MAX_HOPS):
+                self.score.penalize("malformed_erepr_extension", REP_PENALTY_INVALID)
+                logger.warning(f"[{self.peer_id}] EREPR: invalid or expired v2 envelope")
+                return
+
         logger.info(
             f"[{self.peer_id}] EREPR resonance: id={resonance_id[:16]}... "
             f"phase={phase:.2f} amplitude={amplitude:.2f} peers={peer_count}"
         )
-        
-        # Check if peer supports EREPR
-        if not (self.score.services & NODE_EREPR):
-            logger.warning(f"[{self.peer_id}] EREPR from non-EREPR peer, ignoring")
-            return
-        
-        # Process resonance and update peer discovery
-        self.node._on_erepr_resonance(self.peer_id, resonance_id, phase, amplitude)
-        
-        # Respond with our resonance data
-        await self._send_erepr_response(resonance_id)
 
-    async def _send_erepr_response(self, resonance_id: str):
-        """Send EREPR response with our resonance data."""
-        import math
-        # Generate our resonance data
-        our_resonance = hashlib.sha256(
-            f"{self.peer_id}-{resonance_id}-{time.time()}".encode()
-        ).digest()
-        phase = math.pi * (hash(self.peer_id) % 1000) / 1000.0
-        amplitude = 0.5 + 0.5 * math.sin(phase)
-        
-        payload = our_resonance
-        payload += struct.pack("<d", phase)
-        payload += struct.pack("<d", amplitude)
-        payload += struct.pack("<I", 0)  # peer count (simplified)
-        
-        await self._send("erepr", payload)
+        self.node._on_erepr_resonance(
+            self.peer_id, resonance_id, phase, amplitude, addresses,
+            origin_node_id=origin_node_id, sequence=sequence,
+            issued_at=issued_at, hops=hops,
+        )
 
     async def _on_swap(self, payload: bytes):
         """Handle atomic/quantum swap proposal.
@@ -588,6 +717,9 @@ class PeerHandler:
             self.peer_id, swap_type, chain_id, amount, lock_hash, expiry
         )
 
+    async def _on_camelot(self, payload: bytes):
+        await self.node._on_camelot(self.peer_id, payload)
+
     async def _send(self, cmd: str, payload: bytes):
         """Send a message to this peer."""
         try:
@@ -600,10 +732,12 @@ class PeerHandler:
 
     def _close(self):
         """Close the connection."""
+        if self.writer.is_closing():
+            return
         try:
             self.writer.close()
-        except Exception:
-            pass
+        except OSError as exc:
+            logger.debug("[%s] close failed: %s", self.peer_id, exc)
         self.score.penalize("disconnect", REP_DISCONNECT)
         self.node._on_peer_disconnected(self.peer_id)
 
@@ -619,37 +753,215 @@ class P2PNode:
     peer discovery. Designed to be started alongside fork_node.py.
     """
 
-    def __init__(self, chain_store, rpc_port=9432, seed_peers=None, listen_host="0.0.0.0", listen_port=None):
+    def __init__(self, chain_store, rpc_port=9432, seed_peers=None,
+                 listen_host="0.0.0.0", listen_port=None,
+                 advertise_host=None, allow_private_peers=None):
         self.chain_store = chain_store
         self.rpc_port = rpc_port
         self.listen_host = listen_host
-        self.listen_port = listen_port or P2P_PORT
-        self.seed_peers = seed_peers or []
+        self.listen_port = P2P_PORT if listen_port is None else listen_port
+        self.advertise_host = advertise_host or os.environ.get("FORK_P2P_ADVERTISE_HOST")
+        self.allow_private_peers = (
+            os.environ.get("FORK_P2P_ALLOW_PRIVATE", "0").lower() in {"1", "true", "yes"}
+            if allow_private_peers is None else allow_private_peers
+        )
+        self.seed_peers = [
+            (str(host), int(port)) for host, port in (seed_peers or [])
+            if host and 0 < int(port) <= 65535
+        ]
         self.peers = {}  # {peer_id: PeerHandler}
         self.known_addrs = []  # [(addr, port, timestamp)]
+        for host, port in self.seed_peers:
+            self._remember_address(host, port)
         self.mempool = {}  # {txid_hex: tx_bytes}
+        self._seen_headers = set()
         self._peer_counter = 0
         self._server = None
         self._loop = None
         self._running = False
         self._my_address = None  # Set when we know our external address
+        self._node_id = os.urandom(32)
+        self._erepr_sequence = 0
+        self._seen_resonances = {}
+        self._erepr_gossip_sent = 0
+        self._erepr_gossip_received = 0
+        self._last_erepr_announcement = 0.0
+        self._connecting = set()
+        self._stop_event = None
+        self._ready = threading.Event()
+        self._startup_error = None
+        self._thread = None
+
+    @staticmethod
+    def _pack_ip(host):
+        if not host:
+            return b"\x00" * 16
+        try:
+            address = ipaddress.ip_address(host)
+        except ValueError:
+            return b"\x00" * 16
+        if address.is_unspecified or address.is_multicast:
+            return b"\x00" * 16
+        if address.version == 4:
+            return b"\x00" * 10 + b"\xff\xff" + address.packed
+        return address.packed
+
+    @staticmethod
+    def _unpack_ip(packed):
+        if len(packed) != 16:
+            return None
+        address = ipaddress.ip_address(packed)
+        if address.ipv4_mapped:
+            address = address.ipv4_mapped
+        return None if address.is_unspecified or address.is_multicast else str(address)
+
+    def _remember_address(self, host, port):
+        try:
+            port = int(port)
+            host = str(host).strip().strip("[]")
+        except (TypeError, ValueError):
+            return False
+        if not host or not 0 < port <= 65535:
+            return False
+        try:
+            address = ipaddress.ip_address(host)
+            if address.is_unspecified or address.is_multicast:
+                return False
+            host = str(address)
+        except ValueError:
+            # DNS names are accepted only for explicitly configured seeds;
+            # peer gossip is encoded as binary IP addresses.
+            host = host.lower()
+        now = int(time.time())
+        for index, (known_host, known_port, _timestamp) in enumerate(self.known_addrs):
+            if (known_host, known_port) == (host, port):
+                self.known_addrs[index] = (host, port, now)
+                return False
+        self.known_addrs.append((host, port, now))
+        if len(self.known_addrs) > MAX_ADDR_SIZE:
+            self.known_addrs = self.known_addrs[-MAX_ADDR_SIZE:]
+        return True
+
+    def _erepr_addresses(self):
+        addresses = []
+        if self.advertise_host:
+            self._remember_address(self.advertise_host, self.listen_port)
+        for host, port, _timestamp in reversed(self.known_addrs):
+            packed = self._pack_ip(host)
+            if packed == b"\x00" * 16:
+                continue
+            item = (host, port, packed)
+            if all((host, port) != (entry[0], entry[1]) for entry in addresses):
+                addresses.append(item)
+            if len(addresses) >= EREPR_MAX_ADDRESSES:
+                break
+        return addresses
+
+    @staticmethod
+    def _encode_erepr(resonance_id, phase, amplitude, addresses,
+                      origin_node_id=None, sequence=None, issued_at=None,
+                      hops=0):
+        payload = bytearray(resonance_id)
+        payload.extend(struct.pack("<d", phase))
+        payload.extend(struct.pack("<d", amplitude))
+        payload.extend(struct.pack("<I", len(addresses)))
+        for _host, port, packed_ip in addresses:
+            payload.extend(packed_ip)
+            payload.extend(struct.pack(">H", port))
+        if origin_node_id is not None:
+            payload.extend(EREPR_EXTENSION.pack(
+                EREPR_EXTENSION_MAGIC,
+                EREPR_EXTENSION_VERSION,
+                origin_node_id,
+                sequence,
+                issued_at,
+                hops,
+            ))
+        return bytes(payload)
+
+    def _new_erepr_payload(self, extended=True):
+        self._erepr_sequence += 1
+        issued_at = int(time.time())
+        resonance_id = hashlib.sha256(
+            self._node_id + struct.pack("<Q", self._erepr_sequence)
+        ).digest()
+        phase = time.time() % (2 * math.pi)
+        return self._encode_erepr(
+            resonance_id, phase, 1.0, self._erepr_addresses(),
+            origin_node_id=self._node_id if extended else None,
+            sequence=self._erepr_sequence if extended else None,
+            issued_at=issued_at if extended else None,
+        )
+
+    def _send_erepr_to(self, peer_id, payload):
+        peer = self.peers.get(peer_id)
+        if peer and peer.score.services & NODE_EREPR and self._loop and self._loop.is_running():
+            self._erepr_gossip_sent += 1
+            self._loop.call_soon_threadsafe(
+                lambda p=peer, msg=payload: self._loop.create_task(p._send("erepr", msg))
+            )
+
+    def _has_connection_to(self, address):
+        return address in self._connecting or any(
+            peer.target_addr == address or peer.advertised_addr == address
+            for peer in self.peers.values()
+        )
+
+    def _may_dial_advertised(self, host, port):
+        if port == self.listen_port and (
+            host == self.advertise_host
+            or host == self.listen_host
+            or (self.listen_host in ("0.0.0.0", "::") and host in ("127.0.0.1", "::1"))
+        ):
+            return False
+        try:
+            address = ipaddress.ip_address(host)
+        except ValueError:
+            return False
+        return self.allow_private_peers or address.is_global
 
     def start(self):
         """Start the P2P node in a background thread."""
         self._loop = asyncio.new_event_loop()
         self._running = True
-        t = threading.Thread(target=self._run_loop, daemon=True)
-        t.start()
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
+        if not self._ready.wait(timeout=5):
+            raise TimeoutError("P2P listener did not become ready within 5 seconds")
+        if self._startup_error:
+            raise RuntimeError(f"P2P listener failed to start: {self._startup_error}")
         logger.info(f"P2P node listening on {self.listen_host}:{self.listen_port}")
 
     def stop(self):
         """Stop the P2P node."""
         self._running = False
         if self._loop and self._loop.is_running():
-            self._loop.call_soon_threadsafe(self._loop.stop)
+            if self._stop_event is not None:
+                self._loop.call_soon_threadsafe(self._stop_event.set)
+        if self._thread and self._thread is not threading.current_thread():
+            self._thread.join(timeout=5)
 
     def _run_loop(self):
-        self._loop.run_until_complete(self._run_async())
+        try:
+            self._loop.run_until_complete(self._run_async())
+        except OSError as exc:
+            self._startup_error = exc
+            self._ready.set()
+            logger.error("P2P listener failed on %s:%s: %s",
+                         self.listen_host, self.listen_port, exc)
+        except Exception:
+            self._startup_error = "unexpected event-loop failure"
+            self._ready.set()
+            logger.exception("P2P event loop failed")
+        finally:
+            pending = asyncio.all_tasks(self._loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                self._loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            self._loop.close()
 
     async def _run_async(self):
         """Main async event loop."""
@@ -659,18 +971,34 @@ class P2PNode:
             self.listen_host,
             self.listen_port
         )
+        self.listen_port = self._server.sockets[0].getsockname()[1]
+        self._ready.set()
         async with self._server:
             # Connect to seed peers
             for seed in self.seed_peers:
                 asyncio.create_task(self._connect_to(seed))
 
             # Periodic tasks
+            self._stop_event = asyncio.Event()
+            if not self._running:
+                self._stop_event.set()
             while self._running:
-                await asyncio.sleep(30)
-                await self._periodic_tasks()
+                try:
+                    await asyncio.wait_for(self._stop_event.wait(), timeout=30)
+                    break
+                except asyncio.TimeoutError:
+                    await self._periodic_tasks()
+            self._server.close()
+            await self._server.wait_closed()
+            for peer in list(self.peers.values()):
+                peer._close()
 
     async def _accept_connection(self, reader, writer):
         """Accept an incoming peer connection."""
+        if len(self.peers) >= MAX_PEERS:
+            writer.close()
+            await writer.wait_closed()
+            return
         self._peer_counter += 1
         peer_id = f"peer-{self._peer_counter}"
         addr = writer.get_extra_info("peername")
@@ -680,28 +1008,39 @@ class P2PNode:
         peer.score.ip_prefix = addr[0] if addr else None
         peer.remote_addr = addr
         self.peers[peer_id] = peer
-
-        # Read their version first, then respond
+        await peer.handshake()
         asyncio.create_task(peer.read_loop())
 
     async def _connect_to(self, addr_port):
         """Outgoing connection to a seed peer."""
         host, port = addr_port
+        target = (str(host).strip().strip("[]"), int(port))
+        if not target[0] or not 0 < target[1] <= 65535:
+            logger.warning("Ignoring invalid P2P peer address: %r", addr_port)
+            return
+        if len(self.peers) >= MAX_PEERS or self._has_connection_to(target):
+            return
+        self._connecting.add(target)
         try:
-            reader, writer = await asyncio.open_connection(host, port)
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(*target), timeout=10
+            )
             self._peer_counter += 1
             peer_id = f"peer-{self._peer_counter}"
-            logger.info(f"[{peer_id}] connecting to {host}:{port}")
+            logger.info(f"[{peer_id}] connecting to {target[0]}:{target[1]}")
 
             peer = PeerHandler(peer_id, reader, writer, self)
-            peer.remote_addr = (host, port)
-            peer.score.ip_prefix = host
+            peer.remote_addr = target
+            peer.target_addr = target
+            peer.score.ip_prefix = target[0]
             self.peers[peer_id] = peer
 
             await peer.handshake()
             asyncio.create_task(peer.read_loop())
-        except (ConnectionRefusedError, OSError) as e:
-            logger.warning(f"Failed to connect to {host}:{port}: {e}")
+        except (asyncio.TimeoutError, ConnectionRefusedError, OSError, ValueError) as e:
+            logger.warning(f"Failed to connect to {target[0]}:{target[1]}: {e}")
+        finally:
+            self._connecting.discard(target)
 
     async def _periodic_tasks(self):
         """Run periodic maintenance tasks."""
@@ -717,11 +1056,33 @@ class P2PNode:
                 logger.info(f"[{peer_id}] banned (reputation {peer.score.reputation})")
                 peer._close()
 
-        # Maintain peer count — connect to more seeds if needed
-        active = sum(1 for p in self.peers.values() if not p.score.is_banned)
-        if active < IDEAL_PEERS and self.seed_peers:
-            seed = self.seed_peers[active % len(self.seed_peers)]
-            self._loop.create_task(self._connect_to(seed))
+        # Retry every configured seed and dial newly gossiped addresses until
+        # the target peer count is reached. A failed first seed must not starve
+        # all later seeds.
+        candidates = list(self.seed_peers)
+        candidates.extend((host, port) for host, port, _ in reversed(self.known_addrs))
+        active = sum(1 for peer in self.peers.values() if not peer.score.is_banned)
+        slots = max(0, min(IDEAL_PEERS, MAX_PEERS) - active)
+        scheduled = 0
+        for address in dict.fromkeys(candidates):
+            if scheduled >= slots:
+                break
+            if self._has_connection_to(address):
+                continue
+            if address not in self.seed_peers and not self._may_dial_advertised(*address):
+                continue
+            self._loop.create_task(self._connect_to(address))
+            scheduled += 1
+
+        now = time.time()
+        if (self.peers and
+                now - self._last_erepr_announcement >= EREPR_ANNOUNCE_INTERVAL):
+            for peer_id, peer in list(self.peers.items()):
+                payload = self._new_erepr_payload(
+                    extended=bool(peer.score.services & NODE_EREPR_V2)
+                )
+                self._send_erepr_to(peer_id, payload)
+            self._last_erepr_announcement = now
 
         # Log peer stats
         active = len([p for p in self.peers.values()])
@@ -737,6 +1098,13 @@ class P2PNode:
         if peer:
             # Send our current tip header
             self._send_headers_to(peer_id)
+            # Start EREPR discovery as soon as the protocol handshake completes.
+            self._send_erepr_to(
+                peer_id,
+                self._new_erepr_payload(
+                    extended=bool(peer.score.services & NODE_EREPR_V2)
+                ),
+            )
 
     def _on_peer_disconnected(self, peer_id):
         """Peer disconnected."""
@@ -745,47 +1113,69 @@ class P2PNode:
 
     # --- AetherionEXCAL: EREPR and Swap node-level handlers ---
 
-    def _on_erepr_resonance(self, peer_id, resonance_id, phase, amplitude):
+    def _on_erepr_resonance(self, peer_id, resonance_id, phase, amplitude,
+                            addresses=(), origin_node_id=None, sequence=None,
+                            issued_at=None, hops=0):
         """Handle EREPR resonance from a peer.
         
         Updates our resonance state and broadcasts to other EREPR-capable peers.
         """
+        now = time.time()
+        expired = [
+            seen_id for seen_id, seen_at in self._seen_resonances.items()
+            if now - seen_at > EREPR_SEEN_TTL
+        ]
+        for seen_id in expired:
+            del self._seen_resonances[seen_id]
+
+        discovered = []
+        for host, port in addresses:
+            if self._remember_address(host, port):
+                address = (host, port)
+                discovered.append(address)
+                if (len(self.peers) < IDEAL_PEERS
+                        and self._may_dial_advertised(host, port)
+                        and not self._has_connection_to(address)):
+                    asyncio.create_task(self._connect_to(address))
+
+        if resonance_id in self._seen_resonances:
+            return
+        self._seen_resonances[resonance_id] = now
+        if len(self._seen_resonances) > 10_000:
+            oldest = min(self._seen_resonances, key=self._seen_resonances.get)
+            del self._seen_resonances[oldest]
+        self._erepr_gossip_received += 1
+
         logger.info(
             f"EREPR resonance from {peer_id}: id={resonance_id[:16]}... "
-            f"phase={phase:.2f} amplitude={amplitude:.2f}"
+            f"phase={phase:.2f} amplitude={amplitude:.2f} "
+            f"new_peers={len(discovered)}"
         )
         
-        # Broadcast resonance to other EREPR-capable peers
+        # Relay the same wave with decayed amplitude. Keeping the ID unchanged
+        # lets each node suppress loops while forwarding the address set.
+        next_amplitude = amplitude * EREPR_WAVE_DECAY
+        if (next_amplitude <= EREPR_MIN_AMPLITUDE
+                or hops >= EREPR_MAX_HOPS):
+            return
+        try:
+            message_id = bytes.fromhex(resonance_id)
+        except ValueError:
+            return
         for pid, peer in self.peers.items():
             if pid != peer_id and (peer.score.services & NODE_EREPR):
-                asyncio.run_coroutine_threadsafe(
-                    self._broadcast_erepr_to(pid, resonance_id), self._loop
+                extended = bool(
+                    origin_node_id is not None
+                    and peer.score.services & NODE_EREPR_V2
                 )
-
-    async def _broadcast_erepr_to(self, peer_id, resonance_id):
-        """Broadcast EREPR resonance to a specific peer."""
-        peer = self.peers.get(peer_id)
-        if not peer:
-            return
-        
-        import math
-        our_resonance = hashlib.sha256(
-            f"{peer_id}-{resonance_id}-{time.time()}".encode()
-        ).digest()
-        phase = math.pi * (hash(peer_id) % 1000) / 1000.0
-        amplitude = 0.5 + 0.5 * math.sin(phase)
-        
-        payload = our_resonance
-        payload += struct.pack("<d", phase)
-        payload += struct.pack("<d", amplitude)
-        payload += struct.pack("<I", 0)  # peer count (simplified)
-        
-        try:
-            msg = encode_message("erepr", payload)
-            peer.writer.write(msg)
-            await peer.writer.drain()
-        except (ConnectionResetError, OSError) as e:
-            logger.warning(f"[{peer_id}] EREPR broadcast failed: {e}")
+                payload = self._encode_erepr(
+                    message_id, phase, next_amplitude, self._erepr_addresses(),
+                    origin_node_id=origin_node_id if extended else None,
+                    sequence=sequence if extended else None,
+                    issued_at=issued_at if extended else None,
+                    hops=hops + 1 if extended else 0,
+                )
+                self._send_erepr_to(pid, payload)
 
     def _on_swap_proposal(self, peer_id, swap_type, chain_id, amount, lock_hash, expiry):
         """Handle swap proposal from a peer.
@@ -851,7 +1241,7 @@ class P2PNode:
 
     # --- Camelot Game Gossip handler ---
 
-    async def _on_camelot(self, payload: bytes):
+    async def _on_camelot(self, peer_id: str, payload: bytes):
         """Handle Camelot game gossip message.
         
         Forwards to camelot_api module for processing game events
@@ -859,11 +1249,9 @@ class P2PNode:
         """
         try:
             from camelot_api import handle_camelot_gossip
-            await handle_camelot_gossip(self, self._current_peer_id, payload)
+            await handle_camelot_gossip(self, peer_id, payload)
         except ImportError:
             logger.warning("camelot_api module not available, ignoring game gossip")
-        except Exception as e:
-            logger.warning(f"[{self._current_peer_id}] Camelot gossip error: {e}")
 
     def _on_new_header(self, peer_id, header_bytes):
         """Peer announced a new block header (compact pre-announce)."""
@@ -879,8 +1267,9 @@ class P2PNode:
         # Compute block hash
         block_hash = sha256d(header_bytes).hex()
 
-        # Check if we already have this block
-        if self.chain_store.getblock(block_hash):
+        # Header announcements do not carry transactions, so they cannot
+        # advance ChainStore's validated active chain or its UTXO state.
+        if self.chain_store.getblock(block_hash) or block_hash in self._seen_headers:
             return
 
         # Check if parent exists
@@ -898,41 +1287,25 @@ class P2PNode:
             self.peers[peer_id].score.penalize("invalid_pow", REP_PENALTY_INVALID)
             return
 
-        # Accept the block header — build a minimal record
-        new_height = parent["height"] + 1
-        new_rec = {
-            "height": new_height,
-            "version": version,
-            "prev": prev_hex,
-            "merkle": merkle.hex(),
-            "time": timestamp,
-            "bits": bits,
-            "nonce": nonce,
-            "hash": block_hash,
-            "txs": [],  # No txs yet — compact block
-        }
-
-        # Append to chain
-        with self.chain_store.lock:
-            self.chain_store.by_hash[block_hash] = new_rec
-            self.chain_store.by_height[new_height] = new_rec
-            self.chain_store.tip_height = new_height
-            self.chain_store.tip_hash = block_hash
-
-        # Persist
-        line = json.dumps(new_rec) + "\n"
-        with open(self.chain_store.path, "a") as f:
-            f.write(line)
-
-        logger.info(f"Block received from {peer_id}: height {new_height}, hash {block_hash[:16]}...")
-
-        # Relay to other peers
-        self._relay_header(header_bytes)
+        self._seen_headers.add(block_hash)
+        logger.info("Header announced by %s: %s...", peer_id, block_hash[:16])
+        # Headers are announcements only. Ask for the body and let the
+        # validated ChainStore decide whether it can advance the tip.
+        self._request_block(peer_id, block_hash)
 
     def _on_new_tx(self, peer_id, tx_bytes):
         """Peer relayed a new transaction."""
         txid = gf.txid(tx_bytes).hex()
         if txid in self.mempool:
+            return
+        try:
+            self.chain_store.sendrawtransaction(tx_bytes.hex(), relay=False)
+        except (RuntimeError, TypeError, ValueError) as exc:
+            peer = self.peers.get(peer_id)
+            if peer:
+                peer.score.penalize("invalid_transaction", REP_PENALTY_INVALID)
+            logger.warning("[%s] rejected relayed transaction %s: %s",
+                           peer_id, txid[:16], exc)
             return
         self.mempool[txid] = tx_bytes
         # Relay to other peers
@@ -940,9 +1313,54 @@ class P2PNode:
 
     def _on_new_block(self, peer_id, payload):
         """Peer sent a full block."""
-        # Parse and validate via chain_store.submitblock
-        # For now, just log
-        logger.info(f"[{peer_id}] received full block ({len(payload)} bytes)")
+        peer = self.peers.get(peer_id)
+        try:
+            if not isinstance(payload, bytes) or not 80 <= len(payload) <= MAX_BLOCK_SIZE:
+                raise ValueError("invalid block payload size")
+            header = payload[:80]
+            version = struct.unpack_from("<I", header, 0)[0]
+            prev = header[4:36]
+            merkle = header[36:68]
+            timestamp, bits, nonce = struct.unpack_from("<III", header, 68)
+            txs = []
+            offset = 80
+            while offset < len(payload):
+                if offset + 4 > len(payload):
+                    raise ValueError("truncated transaction length")
+                tx_size = struct.unpack_from("<I", payload, offset)[0]
+                offset += 4
+                if tx_size == 0 or tx_size > MAX_TX_SIZE or offset + tx_size > len(payload):
+                    raise ValueError("invalid or truncated transaction")
+                txs.append(payload[offset:offset + tx_size])
+                offset += tx_size
+            if not txs:
+                raise ValueError("block has no transactions")
+            block = {
+                "version": version, "prev": prev.hex(),
+                "merkle": merkle.hex(), "time": timestamp,
+                "bits": bits, "nonce": nonce, "txs": txs,
+            }
+            result, error = self.chain_store.submitblock(block)
+            if error:
+                self._seen_headers.discard(sha256d(header).hex())
+                logger.warning("[%s] rejected block: %s", peer_id, error)
+                if peer and "must extend the validated active-chain tip" not in error:
+                    peer.score.penalize("invalid_block", REP_PENALTY_INVALID)
+                return
+            if peer:
+                peer.score.blocks_received += 1
+                peer.score.reward("valid_block", REP_REWARD_BLOCK)
+            logger.info("[%s] accepted block %s at height %s", peer_id,
+                        result["hash"][:16], result["height"])
+            self.mempool.clear()
+            self._relay_header(header)
+        except (KeyError, TypeError, ValueError, struct.error) as exc:
+            if peer:
+                peer.score.penalize("malformed_block", REP_PENALTY_INVALID)
+            logger.warning("[%s] malformed block (%d bytes): %s",
+                           peer_id, len(payload) if isinstance(payload, bytes) else 0, exc)
+            if isinstance(payload, bytes) and len(payload) >= 80:
+                self._seen_headers.discard(sha256d(payload[:80]).hex())
 
     def _on_new_addrs(self, peer_id, payload):
         """Peer announced known addresses."""
@@ -996,10 +1414,10 @@ class P2PNode:
         # Build header bytes
         header = gf.ser_header(
             tip["version"],
-            tip["prev"],
-            tip["merkle"],
+            bytes.fromhex(tip["prev"]) if isinstance(tip["prev"], str) else tip["prev"],
+            bytes.fromhex(tip["merkle"]) if isinstance(tip["merkle"], str) else tip["merkle"],
             tip["time"],
-            tip["bits"],
+            int(tip["bits"], 16) if isinstance(tip["bits"], str) else tip["bits"],
             tip["nonce"]
         )
         # Prepend count
@@ -1031,8 +1449,12 @@ class P2PNode:
         if peer and block.get("txs"):
             # Serialize block as header + txs
             header = gf.ser_header(
-                block["version"], block["prev"], block["merkle"],
-                block["time"], block["bits"], block["nonce"]
+                block["version"],
+                bytes.fromhex(block["prev"]) if isinstance(block["prev"], str) else block["prev"],
+                bytes.fromhex(block["merkle"]) if isinstance(block["merkle"], str) else block["merkle"],
+                block["time"],
+                int(block["bits"], 16) if isinstance(block["bits"], str) else block["bits"],
+                block["nonce"]
             )
             payload = header
             for tx_hex in block["txs"]:
@@ -1131,6 +1553,16 @@ class P2PNode:
             "chain_height": self.chain_store.getblockcount(),
             "chain_hash": self.chain_store.getbestblockhash(),
             "erepr_enabled": True,
+            "erepr_peers": sum(
+                bool(p.score.services & NODE_EREPR) for p in self.peers.values()
+            ),
+            "erepr_v2_peers": sum(
+                bool(p.score.services & NODE_EREPR_V2)
+                for p in self.peers.values()
+            ),
+            "erepr_gossip_sent": self._erepr_gossip_sent,
+            "erepr_gossip_received": self._erepr_gossip_received,
+            "known_peer_addresses": len(self.known_addrs),
             "atomic_swap_enabled": True,
             "quantum_swap_enabled": True,
             "compact_blocks": True,
@@ -1139,13 +1571,21 @@ class P2PNode:
     
     def get_erepr_stats(self):
         """Return EREPR protocol statistics."""
+        erepr_peers = sum(
+            bool(peer.score.services & NODE_EREPR) for peer in self.peers.values()
+        )
         return {
             "enabled": True,
-            "resonance_bonds": len(self.peers),
-            "gossip_waves_sent": 0,
-            "gossip_waves_received": 0,
-            "toroidal_manifold_dimension": 3,
-            "quantum_entanglement_pairs": len(self.peers) // 2
+            "connected_erepr_peers": erepr_peers,
+            "connected_erepr_v2_peers": sum(
+                bool(peer.score.services & NODE_EREPR_V2)
+                for peer in self.peers.values()
+            ),
+            "gossip_waves_sent": self._erepr_gossip_sent,
+            "gossip_waves_received": self._erepr_gossip_received,
+            "known_peer_addresses": len(self.known_addrs),
+            "seen_resonances": len(self._seen_resonances),
+            "configured_seed_peers": len(self.seed_peers),
         }
 
 
@@ -1178,14 +1618,13 @@ def main():
     from fork_node import ChainStore, CHAIN_FILE
 
     store = ChainStore(CHAIN_FILE)
-    seed_peers = [s.split(":") for s in args.seed]
-    for i, sp in enumerate(seed_peers):
-        if len(sp) == 1:
-            sp.append(str(P2P_PORT))
-        seed_peers[i] = (sp[0], int(sp[1]))
+    seed_values = args.seed or os.environ.get("FORK_P2P_SEEDS", "").split(",")
+    seed_peers = parse_seed_peers(seed_values)
 
     p2p = P2PNode(store, rpc_port=args.rpc_port, seed_peers=seed_peers,
-                  listen_port=args.p2p_port)
+                  listen_host=os.environ.get("FORK_P2P_HOST", "0.0.0.0"),
+                  listen_port=args.p2p_port,
+                  advertise_host=os.environ.get("FORK_P2P_ADVERTISE_HOST"))
     p2p.start()
 
     print(f"P2P node running on port {args.p2p_port}, "

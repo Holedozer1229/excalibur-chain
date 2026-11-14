@@ -96,7 +96,6 @@ class NexusOrchestrator:
         # Subsystems
         self.fabric = QuantumSpacetimeFabric(
             num_qubits=self.config.num_qubits,
-            grid_size=self.config.grid_size,
             wormhole_threshold=self.config.wormhole_threshold,
         )
         self.consensus = ConsciousConsensusEngine()

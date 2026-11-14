@@ -5,8 +5,10 @@
   "p2p": {
     "listen_host": "0.0.0.0",
     "listen_port": 9433,
+    "advertise_host": "",
+    "allow_private_peers": false,
     "bitcoin_bridge_port": 8333,
-    "max_peers": 256,
+    "max_peers": 128,
     "seed_peers": [],
     "rate_limiting": true,
     "reputation_scoring": true,

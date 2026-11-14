@@ -397,9 +397,11 @@ def make_checkpoint_fields(manifest, prev_checkpoint_hash=None,
 
 # ------------------------------------------------------------ auditor key
 def make_auditor_key(path, state_path=None, height=6):
-    """Generate the QAI auditor's Trifold key. The seed is written 0600
-    and NEVER printed; the root is the auditor's public identity.
+    """Generate the QAI auditor's Trifold key and persistent leaf state.
+    The seed is written 0600 and NEVER printed; the root is public.
     Returns (key, root_hex)."""
+    if state_path is None:
+        state_path = path + ".trifold-state.json"
     seed = secrets.token_bytes(32)
     key = TrifoldKey(seed, height=height, state_path=state_path)
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
@@ -412,10 +414,15 @@ def make_auditor_key(path, state_path=None, height=6):
 
 def load_auditor_key(path, state_path=None):
     """Load the auditor key (seed never leaves this function)."""
+    if state_path is None:
+        state_path = path + ".trifold-state.json"
     with open(path) as f:
         d = json.load(f)
-    return TrifoldKey(bytes.fromhex(d["seed"]), height=d.get("height", 6),
-                      state_path=state_path)
+    key = TrifoldKey(bytes.fromhex(d["seed"]), height=d.get("height", 6),
+                     state_path=state_path)
+    if d.get("root") != key.root.hex():
+        raise ValueError("auditor key seed does not match its recorded root")
+    return key
 
 
 # ------------------------------------------------------------ fraud proofs

@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""AetherionEXCAL: The Grand Unified Quantum Blockchain Wallet.
+"""Experimental EXCAL desktop wallet.
 
-The official GUI wallet for the Excalibur Chain, powered by Aetherion Oracle.
-Deep space aesthetics, electric purple/cyan gradients, glassmorphism cards,
-and animated glow effects — inspired by www.aetherion-oracle.com.
+This GUI wallet is not production-ready: its Trifold PQH signature scheme
+has not been independently audited, and the bundled node may not have a
+complete validated UTXO set. Do not use it to custody valuable funds.
 
 Features:
 - Aetherion-themed CustomTkinter UI with gradient accents and animations
-- Encrypted key storage (AES-256-GCM + scrypt KDF) — no plaintext keys
-- Real-time balance display and transaction history
-- Send/receive SKYNT with address validation
-- P2P network status and peer management
-- Gossip protocol broadcasting with Dijkstra routing
-- Encrypted messaging between peers (AES-256-GCM)
+- Encrypted key storage (AES-256-GCM + scrypt KDF)
+- On-chain balance and transaction submission through the local node RPC
+- Experimental PQH send/receive support
+- Peer count reported by the connected node
 - Multi-wallet profiles with cinematic login
 - Prometheus metrics on port 9435
 - Onboarding wizard for new users
@@ -27,8 +25,6 @@ Build (Windows):
 Build (Mac):
     ./build_aetherion.sh
 
-Website:
-    https://www.aetherion-oracle.com
 """
 
 import sys
@@ -40,6 +36,9 @@ import secrets
 import threading
 import math
 import subprocess
+import http.client
+import logging
+from decimal import Decimal
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
@@ -62,6 +61,15 @@ from sphinx_os.nexus import (
 )
 from sphinx_os.secure_store import KeyStore
 from sphinx_os.prometheus_metrics import get_metrics, start_http_server
+from genesis_fork import SWORD
+from wallet_transactions import (
+    address_lock,
+    amount_to_swords,
+    build_pqh_transaction,
+    create_pqh_key,
+)
+
+logger = logging.getLogger("excal_wallet")
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +88,8 @@ class NodeManager:
     def __init__(self):
         self.process = None
         self.running = False
+        self.server = None
+        self.p2p_node = None
         self._stop_event = threading.Event()
         self._health_check_thread = None
         self.chain_file = Path(os.path.dirname(os.path.abspath(__file__))) / "chain.jsonl"
@@ -158,15 +168,33 @@ class NodeManager:
                 
                 store = fork_node.ChainStore(str(self.chain_file))
                 fork_node.ForkRPCHandler.store = store
-                
-                server = fork_node.ThreadedHTTPServer(
+                p2p_layer, p2p_host, p2p_port, seed_peers, advertise_host, allow_private = (
+                    fork_node._load_p2p_settings()
+                )
+                p2p_layer.setup_logging()
+                self.p2p_node = p2p_layer.P2PNode(
+                    store,
+                    seed_peers=seed_peers,
+                    listen_host=p2p_host,
+                    listen_port=p2p_port,
+                    advertise_host=advertise_host,
+                    allow_private_peers=allow_private,
+                )
+                self.p2p_node.start()
+                fork_node.ForkRPCHandler.p2p_node = self.p2p_node
+                self.server = fork_node.ThreadedHTTPServer(
                     ("127.0.0.1", self.RPC_PORT), fork_node.ForkRPCHandler
                 )
-                
-                while not self._stop_event.is_set():
-                    server.handle_request()
+                self.server.serve_forever(poll_interval=0.25)
             except Exception:
-                pass
+                logger.exception("Failed to run the local EXCAL node")
+            finally:
+                if self.server:
+                    self.server.server_close()
+                    self.server = None
+                if self.p2p_node:
+                    self.p2p_node.stop()
+                    self.p2p_node = None
         
         self.process = threading.Thread(target=run_node, daemon=True)
         self.process.start()
@@ -175,6 +203,8 @@ class NodeManager:
         """Stop the fork node RPC server."""
         self._stop_event.set()
         self.running = False
+        if self.server:
+            self.server.shutdown()
         
         if self.process:
             if isinstance(self.process, subprocess.Popen):
@@ -278,7 +308,7 @@ GRADIENT_GOLD_END = "#FF8C00"
 WALLET_DIR = Path(os.path.expanduser("~/.excal_wallet"))
 KEYSTORE_FILE = WALLET_DIR / "keystore.json"
 APP_VERSION = "2.1.0"
-APP_NAME = "AetherionEXCAL"
+APP_NAME = "EXCAL Wallet (Experimental)"
 
 # Support multiple wallet profiles
 WALLET_PROFILES_DIR = WALLET_DIR / "profiles"
@@ -294,41 +324,39 @@ def sha256_hex(data: str) -> str:
 
 
 def generate_address(seed: str) -> str:
-    """Generate a wallet address from a seed string."""
-    return sha256_hex(seed)[:20].upper()
+    """Derive the fork-chain PQH address for a 32-byte seed."""
+    try:
+        seed_bytes = bytes.fromhex(seed)
+    except ValueError as exc:
+        raise ValueError("wallet seed must be hexadecimal") from exc
+    return create_pqh_key(seed_bytes)["address"]
 
 
 def validate_address(addr: str) -> bool:
     """Validate an EXCAL wallet address.
     
-    A valid address is exactly 20 uppercase hexadecimal characters.
+    A valid address is exactly 40 uppercase hexadecimal characters and
+    represents the hash160 committed by a fork-chain PQH lock.
     """
-    if not addr or len(addr) != 20:
+    if not addr or len(addr) != 40:
         return False
     try:
-        int(addr, 16)
-        return addr == addr.upper()
-    except ValueError:
+        address_lock(addr)
+        return True
+    except (ValueError, TypeError):
         return False
 
 
 def generate_keypair() -> Dict[str, str]:
-    """Generate a new key pair."""
-    private_key = secrets.token_hex(32)
-    public_key = sha256_hex(private_key)
-    address = generate_address(private_key)
-    return {
-        "private_key": private_key,
-        "public_key": public_key,
-        "address": address,
-    }
+    """Generate a PQH key rooted in the chain's Trifold spend format."""
+    return create_pqh_key()
 
 
 def sign_transaction(private_key: str, tx_data: Dict[str, Any]) -> str:
-    """Sign a transaction with the private key (hash-only, post-quantum style)."""
-    tx_hash = sha256_hex(json.dumps(tx_data, sort_keys=True))
-    signature = sha256_hex(private_key + tx_hash)
-    return signature
+    raise RuntimeError(
+        "Signing arbitrary JSON is not a consensus transaction. "
+        "Use WalletBackend.send_transaction."
+    )
 
 
 def format_address(addr: str) -> str:
@@ -338,9 +366,9 @@ def format_address(addr: str) -> str:
     return addr[:6] + "..." + addr[-4:]
 
 
-def format_balance(balance: float) -> str:
-    """Format balance with commas and 4 decimal places."""
-    return f"{balance:,.4f}"
+def format_balance(balance: Any) -> str:
+    """Format an EXCAL amount to sword precision (8 decimal places)."""
+    return f"{Decimal(str(balance)):,.8f}"
 
 
 # ---------------------------------------------------------------------------
@@ -488,13 +516,19 @@ class WalletBackend:
         self.keystore: Optional[KeyStore] = None
         self._passphrase: Optional[str] = None
         self._initialized = False
-        self.p2p: Optional[HolographicP2PLayer] = None
-        self.erepr: Optional[EREPRProtocol] = None
+        self.p2p = None
+        self.erepr = None
 
         # Determine keystore path
         if profile == "default":
             self.keystore_path = KEYSTORE_FILE
         else:
+            if (not profile or profile in (".", "..")
+                    or any(char not in
+                           "abcdefghijklmnopqrstuvwxyz"
+                           "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                           "0123456789_-" for char in profile)):
+                raise ValueError("Invalid wallet profile name")
             self.keystore_path = WALLET_PROFILES_DIR / f"{profile}.json"
 
     @staticmethod
@@ -517,6 +551,11 @@ class WalletBackend:
 
     def create_wallet(self, passphrase: str):
         """Create a new wallet."""
+        if self.wallet_exists():
+            raise FileExistsError(
+                f"Wallet already exists at {self.keystore_path}; "
+                "unlock it or choose another profile"
+            )
         self.keystore_path.parent.mkdir(parents=True, exist_ok=True)
         self.keystore = KeyStore.create(passphrase, str(self.keystore_path))
         self._passphrase = passphrase
@@ -540,11 +579,75 @@ class WalletBackend:
             return None
         return self.keystore.keys[0].address
 
-    def get_balance(self) -> float:
-        """Get current balance."""
+    def _wallet_utxos(self) -> List[Dict[str, Any]]:
         if not self.keystore:
-            return 0.0
-        return self.keystore.get_balance()
+            raise RuntimeError("Wallet not unlocked")
+        addresses = [key.address for key in self.keystore.keys]
+        if not addresses:
+            raise RuntimeError("No keys available")
+        if any(not validate_address(address) for address in addresses):
+            raise RuntimeError(
+                "This wallet contains demo-format keys that are not valid "
+                "EXCAL addresses. Create a new EXCAL wallet; simulated "
+                "balances and transactions cannot be migrated."
+            )
+        response = self._rpc("getwalletutxos", [addresses])
+        if not isinstance(response, dict) or response.get("complete") is not True:
+            raise RuntimeError(response.get(
+                "error", "Node has no complete validated UTXO state"
+            ) if isinstance(response, dict) else
+                "Node returned an invalid wallet UTXO response")
+        utxos = response.get("utxos")
+        if not isinstance(utxos, list):
+            raise RuntimeError("Node returned an invalid wallet UTXO list")
+        owned_locks = {address_lock(address) for address in addresses}
+        for item in utxos:
+            if not isinstance(item, dict):
+                raise RuntimeError("Node returned a malformed wallet UTXO")
+            try:
+                lock = bytes.fromhex(item["script"])
+                value = item["value"]
+                txid = bytes.fromhex(item["txid"])
+                vout = item["vout"]
+                height = item["height"]
+                tip_height = item["tip_height"]
+                coinbase = item["coinbase"]
+                mature = item["mature"]
+                pending_spend = item["pending_spend"]
+                spendable = item["spendable"]
+                if (lock not in owned_locks or not isinstance(value, int)
+                        or isinstance(value, bool) or value < 0
+                        or len(txid) != 32
+                        or not isinstance(vout, int)
+                        or isinstance(vout, bool) or vout < 0
+                        or not isinstance(height, int)
+                        or isinstance(height, bool) or height < 0
+                        or not isinstance(tip_height, int)
+                        or isinstance(tip_height, bool)
+                        or tip_height < height
+                        or not isinstance(coinbase, bool)
+                        or not isinstance(mature, bool)
+                        or not isinstance(pending_spend, bool)
+                        or not isinstance(spendable, bool)):
+                    raise ValueError
+                import txscript
+                expected_mature = (
+                    not coinbase
+                    or tip_height + 1 - height >= txscript.COINBASE_MATURITY
+                )
+                if (mature != expected_mature
+                        or spendable != (mature and not pending_spend)):
+                    raise ValueError
+            except (KeyError, TypeError, ValueError) as exc:
+                raise RuntimeError(
+                    "Node returned a malformed or unowned wallet UTXO"
+                ) from exc
+        return utxos
+
+    def get_balance(self) -> Decimal:
+        """Return the confirmed on-chain balance for all wallet keys."""
+        swords = sum(item["value"] for item in self._wallet_utxos())
+        return Decimal(swords) / Decimal(SWORD)
 
     def get_keys(self) -> List[Dict[str, str]]:
         """Get all key entries."""
@@ -561,59 +664,106 @@ class WalletBackend:
         self.keystore.save(str(self.keystore_path))
         return {"address": entry.address, "public_key": entry.public_key, "label": entry.label}
 
-    def send_transaction(self, to_address: str, amount: float) -> Dict[str, Any]:
-        """Create and send a transaction."""
+    def send_transaction(self, to_address: str, amount: Any) -> Dict[str, Any]:
+        """Build, sign, and broadcast a consensus-format PQH transaction."""
         if not self.keystore or not self._passphrase:
             raise RuntimeError("Wallet not unlocked")
         if not self.keystore.keys:
             raise RuntimeError("No keys available")
-        
-        # Validate recipient address
         if not validate_address(to_address):
-            raise ValueError(f"Invalid address: {to_address}. Must be 20 uppercase hex characters.")
-        
-        # Validate amount
-        if amount <= 0:
-            raise ValueError("Amount must be positive")
-        if amount > 21_000_000:
-            raise ValueError("Amount exceeds max supply")
-
-        balance = self.keystore.get_balance()
-        if amount > balance:
-            raise ValueError(f"Insufficient balance: {balance:.4f} SKYNT")
-
-        from_addr = self.keystore.keys[0].address
+            raise ValueError(
+                "Invalid address: expected 40 uppercase hexadecimal characters"
+            )
+        amount_swords = amount_to_swords(amount)
+        keys = []
+        for entry in self.keystore.keys:
+            private_key = self.keystore.get_key(
+                entry.address, self._passphrase)
+            if not private_key:
+                raise RuntimeError(
+                    f"Unable to unlock the private key for {entry.address}")
+            try:
+                seed = bytes.fromhex(private_key)
+            except ValueError as exc:
+                raise RuntimeError(
+                    "This key is not a supported PQH wallet key; "
+                    "import it into a compatible wallet before spending"
+                ) from exc
+            keys.append({"seed": seed, "address": entry.address})
+        from_addr = keys[0]["address"]
+        tx_bytes = build_pqh_transaction(
+            seed=None,
+            address=None,
+            utxos=self._wallet_utxos(),
+            recipient=to_address,
+            amount=amount,
+            state_dir=str(self.keystore_path.parent / "trifold"),
+            registry_path=str(self.keystore_path.parent / "spent_leaves.jsonl"),
+            keys=keys,
+        )
+        txid = self._rpc("sendrawtransaction", [tx_bytes.hex()])
+        import txscript
+        expected_txid = txscript.txid_display(tx_bytes)
+        if txid != expected_txid:
+            raise RuntimeError(
+                "Node broadcast outcome is uncertain: returned txid does "
+                "not match the locally built transaction"
+            )
         tx_data = {
+            "tx_id": txid,
             "from": from_addr,
             "to": to_address,
-            "amount": amount,
+            "amount": format(Decimal(amount_swords) / Decimal(SWORD), "f"),
+            "status": "node_accepted_unconfirmed",
             "timestamp": time.time(),
-            "type": "transfer",
         }
-        # Sign with first key's private key (decrypt it)
-        private_key = self.keystore.get_key(from_addr, self._passphrase)
-        tx_data["signature"] = sign_transaction(private_key, tx_data)
-        tx_data["tx_id"] = sha256_hex(json.dumps(tx_data, sort_keys=True))[:16]
-
-        # Deduct balance
-        self.keystore.set_balance(balance - amount)
         self.keystore.add_transaction(tx_data)
         self.keystore.save(str(self.keystore_path))
-
-        # Broadcast
-        self._broadcast_transaction(tx_data)
-
-        # Update Prometheus metrics
-        try:
-            metrics = get_metrics()
-            metrics.transactions_total.labels(type="transfer", status="success").inc()
-            metrics.transaction_amount.observe(amount)
-            metrics.wallet_balance.set(self.keystore.get_balance())
-            metrics.wallet_keys.set(len(self.keystore.keys))
-        except Exception:
-            pass
-
         return tx_data
+
+    @staticmethod
+    def _rpc(method: str, params=None):
+        """Call the local node RPC and surface connection and node errors."""
+        host = os.environ.get("EXCAL_RPC_HOST", "127.0.0.1")
+        try:
+            port = int(os.environ.get("EXCAL_RPC_PORT", "9432"))
+        except ValueError as exc:
+            raise ValueError("EXCAL_RPC_PORT must be a valid TCP port") from exc
+        if not 1 <= port <= 65535:
+            raise ValueError("EXCAL_RPC_PORT must be between 1 and 65535")
+        connection = http.client.HTTPConnection(host, port, timeout=10)
+        try:
+            body = json.dumps({
+                "jsonrpc": "2.0",
+                "method": method,
+                "params": params or [],
+                "id": 1,
+            })
+            connection.request(
+                "POST", "/", body,
+                {"Content-Type": "application/json"},
+            )
+            response = connection.getresponse()
+            raw_payload = response.read()
+            try:
+                payload = json.loads(raw_payload)
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise RuntimeError("Node RPC returned invalid JSON") from exc
+            if not isinstance(payload, dict):
+                raise RuntimeError("Node RPC returned an invalid response")
+            if response.status != 200 or payload.get("error"):
+                raise RuntimeError(
+                    payload.get("error") or f"RPC returned HTTP {response.status}"
+                )
+            if "result" not in payload:
+                raise RuntimeError("Node RPC response is missing its result")
+            return payload.get("result")
+        except (OSError, http.client.HTTPException) as exc:
+            raise ConnectionError(
+                f"Unable to reach the EXCAL node RPC at {host}:{port}: {exc}"
+            ) from exc
+        finally:
+            connection.close()
 
     def get_transactions(self) -> List[Dict[str, Any]]:
         """Get transaction history."""
@@ -622,187 +772,40 @@ class WalletBackend:
         return self.keystore.get_transactions()
 
     def initialize_p2p(self, num_peers: int = 6):
-        """Initialize the P2P network with Holographic P2P + EREPR gossip."""
-        self.p2p = HolographicP2PLayer(gossip_k=3, default_ttl=60.0)
-
-        # Add local wallet peer
-        addr = self.get_address() or "local"
-        self.p2p.add_peer(
-            name=f"wallet_{addr[:8]}",
-            host="127.0.0.1",
-            port=9433,
-            services=0x03,
-            user_agent="EXCAL-Wallet/2.0",
-        )
-        self.p2p.connect_peer(f"wallet_{addr[:8]}")
-
-        # Add simulated peers
-        for i in range(num_peers):
-            peer_name = f"peer_{i}"
-            self.p2p.add_peer(
-                name=peer_name,
-                host=f"192.168.1.{i + 1}",
-                port=8080 + i,
-                services=0x01,
-                user_agent=f"ExcalNode/{i}.0",
-            )
-            self.p2p.connect_peer(peer_name)
-
-        self.p2p.set_encryption_key()
-
-        # Initialize EREPR protocol for quantum-inspired P2P gossip
-        node_id = f"wallet_{addr[:8]}"
-        self.erepr = EREPRProtocol(node_id=node_id, secret=secrets.token_bytes(32))
-        self.erepr.initialize()
-        
-        # Create EREPR peers for simulated nodes
-        for i in range(num_peers):
-            peer_node = EREPRProtocol(
-                node_id=f"peer_{i}",
-                secret=f"peer_secret_{i}".encode(),
-            )
-            peer_node.initialize()
-            # Simulate echo exchange to form bonds
-            echo = EchoMessage(
-                sig=peer_node.signature,
-                services=0x01,
-                user_agent=f"ExcalNode/{i}.0",
-            )
-            self.erepr.receive_echo(echo)
-
-        # Update Prometheus metrics
-        try:
-            metrics = get_metrics()
-            metrics.peers_connected.set(num_peers + 1)
-            metrics.peers_total.inc(num_peers + 1)
-            metrics.node_info.info({
-                'version': APP_VERSION,
-                'profile': self.profile,
-                'address': addr,
-            })
-        except Exception:
-            pass
+        """Networking is provided by the real connected node, not fake peers."""
+        self.p2p = None
+        self.erepr = None
 
     def get_network_status(self) -> Dict[str, Any]:
-        """Get the current network status including EREPR metrics."""
-        if self.p2p is None:
-            self.initialize_p2p()
-        status = self.p2p.get_network_state()
-        
-        # Add EREPR metrics
-        if self.erepr:
-            erepr_health = self.erepr.health_report()
-            status["erepr_active_bonds"] = erepr_health.get("active_bonds", 0)
-            status["erepr_avg_bond_strength"] = erepr_health.get("avg_bond_strength", 0.0)
-            status["erepr_known_peers"] = erepr_health.get("known_peers", 0)
-        
+        """Return peer count from the connected node's live RPC."""
+        status = self._rpc("getnetworkinfo")
+        if not isinstance(status, dict):
+            raise RuntimeError("Node returned an invalid network status")
+        status["active_peers"] = int(status.get("connections", 0))
         return status
     
     def get_erepr_peers(self) -> List[Dict[str, Any]]:
-        """Get list of EREPR bonded peers."""
-        if self.erepr is None:
-            self.initialize_p2p()
-        peers = []
-        for peer_id, bond in self.erepr.bonds.items():
-            peer_info = self.erepr.known_peers.get(peer_id, {})
-            peers.append({
-                "name": peer_id,
-                "bond_strength": bond.bond_strength,
-                "resonance": bond.resonance_score,
-                "echo_count": bond.echo_count,
-                "is_alive": bond.is_alive(),
-                "services": peer_info.get("services", 0),
-                "user_agent": peer_info.get("user_agent", ""),
-            })
-        return peers
+        return self._rpc("getpeerinfo")
     
     def broadcast_erepr_gossip(self, payload: Dict[str, Any]) -> str:
-        """Broadcast a message via EREPR gossip protocol."""
-        if self.erepr is None:
-            self.initialize_p2p()
-        wave = self.erepr.create_gossip_wave(payload)
-        self.erepr.gossip_queue.append(wave)
-        return wave.msg_id
+        raise RuntimeError("EREPR wallet gossip RPC is not implemented by this node")
 
     def get_peers(self) -> List[Dict[str, Any]]:
-        """Get list of connected peers."""
-        if self.p2p is None:
-            self.initialize_p2p()
-        peers = []
-        for name in self.p2p.get_active_peers():
-            info = self.p2p.get_peer_info(name)
-            if info:
-                peers.append(info)
-        return peers
+        return self._rpc("getpeerinfo")
 
     def broadcast_gossip(self, message: str) -> bool:
-        """Broadcast a message via gossip protocol."""
-        if self.p2p is None:
-            self.initialize_p2p()
-
-        addr = self.get_address() or "local"
-        peer_name = f"wallet_{addr[:8]}"
-
-        msg_id = self.p2p.send_message(
-            source=peer_name,
-            msg_type="gossip",
-            payload={"message": message},
-            priority=MessagePriority.LOW,
-            gossip=True,
-            encrypt=True,
-        )
-
-        # Update Prometheus metrics
-        try:
-            metrics = get_metrics()
-            metrics.gossip_messages_sent.inc()
-            metrics.messages_encrypted.inc()
-        except Exception:
-            pass
-
-        return msg_id is not None
+        raise RuntimeError("Arbitrary wallet gossip is not supported by the node")
 
     def send_encrypted_message(self, to_peer: str, message: str) -> bool:
-        """Send an encrypted message to a peer."""
-        if self.p2p is None:
-            self.initialize_p2p()
-
-        addr = self.get_address() or "local"
-        peer_name = f"wallet_{addr[:8]}"
-
-        msg_id = self.p2p.send_message(
-            source=peer_name,
-            msg_type="encrypted_message",
-            payload={"message": message},
-            destination=to_peer,
-            priority=MessagePriority.NORMAL,
-            encrypt=True,
-        )
-        return msg_id is not None
+        raise RuntimeError("Encrypted peer messaging is not implemented by the node")
 
     def _broadcast_transaction(self, tx: Dict[str, Any]):
-        """Broadcast a transaction through the P2P network."""
-        if self.p2p is None:
-            return
-
-        addr = self.get_address() or "local"
-        peer_name = f"wallet_{addr[:8]}"
-
-        self.p2p.send_message(
-            source=peer_name,
-            msg_type="tx",
-            payload=tx,
-            priority=MessagePriority.HIGH,
-            encrypt=True,
-            gossip=True,
-        )
+        raise RuntimeError("Broadcast transactions with the node sendrawtransaction RPC")
 
     def deposit(self, amount: float):
-        """Deposit SKYNT (for simulation/testing)."""
-        if self.keystore is None:
-            return
-        self.keystore.set_balance(self.keystore.get_balance() + amount)
-        self.keystore.save(str(self.keystore_path))
+        raise RuntimeError(
+            "Wallet balances can only change through confirmed chain transactions"
+        )
 
     def close(self):
         """Close the wallet (clear passphrase from memory)."""
@@ -826,10 +829,9 @@ class OnboardingWizard(ctk.CTkToplevel):
             "icon": "⚔",
             "title": "Welcome to EXCALibur",
             "body": (
-                "You're about to join the Excalibur Chain — a quantum blockchain "
-                "powered by the Aetherion Oracle. Your wallet uses AES-256-GCM "
-                "encryption to keep your keys safe, and connects to a holographic "
-                "P2P network for fast, secure transactions."
+                "This experimental wallet creates EXCAL PQH addresses and uses "
+                "an encrypted local keystore. Verify the node and chain status "
+                "before relying on any displayed balance."
             ),
         },
         {
@@ -843,20 +845,22 @@ class OnboardingWizard(ctk.CTkToplevel):
         },
         {
             "icon": "🌐",
-            "title": "Holographic P2P Network",
+            "title": "Node Connection",
             "body": (
-                "EXCALibur connects to a decentralized P2P network using gossip protocol "
-                "for O(log N) message dissemination. Transactions are encrypted end-to-end "
-                "and routed through maximum-entanglement paths for optimal delivery."
+                "Wallet balances and transaction submission use the configured "
+                "EXCAL node RPC. Peer counts are reported by that node; this "
+                "wallet does not simulate peers or encrypt node RPC traffic."
             ),
         },
         {
             "icon": "💰",
-            "title": "Send & Receive SKYNT",
+            "title": "Send & Receive EXCAL",
             "body": (
-                "Use the Send/Receive tab to transfer SKYNT tokens. Each transaction is "
-                "signed with a post-quantum hash-only signature and broadcast through the "
-                "P2P network. Your balance updates in real-time on the Dashboard."
+                "Transactions are built and validated locally, then submitted "
+                "to the node. EXCAL is the chain's native token and is measured "
+                "in swords (100,000,000 swords = 1 EXCAL). URUU on zkSync Era "
+                "and SKYNT BRC-20 are separate assets and are not supported here. "
+                "The Trifold signature scheme is experimental and unaudited."
             ),
         },
         {
@@ -1045,19 +1049,20 @@ class HelpPanel(ctk.CTkToplevel):
 
         sections = [
             ("Getting Started", [
-                ("Create a wallet", "Choose a profile name and strong passphrase. Your keys are encrypted with AES-256-GCM."),
-                ("Deposit funds", "Use the Deposit button on the Dashboard to add SKYNT for testing."),
-                ("Generate keys", "Create additional key pairs from the Dashboard or Settings tab."),
+                ("Create a wallet", "Choose a profile name and strong passphrase. Keys are encrypted with AES-256-GCM."),
+                ("Receive funds", "Use the receive address and verify the node reports a complete validated UTXO set."),
+                ("Generate keys", "Create additional experimental PQH keys from the Dashboard or Settings tab."),
+                ("Token support", "This wallet handles native EXCAL only (1 EXCAL = 100,000,000 swords). URUU on zkSync Era and SKYNT BRC-20 are separate assets and are not supported here."),
             ]),
             ("Sending Transactions", [
                 ("Go to Send/Receive", "Enter the recipient's address and amount, then click Send Transaction."),
-                ("Signatures", "Every transaction is signed with SHA-256 hash-only post-quantum signatures."),
-                ("Broadcast", "Transactions are automatically broadcast via the gossip P2P protocol."),
+                ("Signatures", "PQH transactions use the experimental Trifold hash-based signature scheme; it has not been independently audited."),
+                ("Broadcast", "Transactions are submitted to the configured EXCAL node. A successful response means node acceptance, not confirmation."),
             ]),
             ("P2P Network", [
                 ("Peers tab", "View connected peers, network coherence, and message statistics."),
-                ("Encrypted messages", "Send AES-256-GCM encrypted messages directly to peers."),
-                ("Gossip protocol", "Messages propagate with O(log N) dissemination time."),
+                ("Node status", "Peer counts come from the connected node. Arbitrary wallet gossip and encrypted peer messaging are not implemented."),
+                ("RPC security", "Use only a trusted local node; this wallet's JSON-RPC connection is not encrypted or authenticated."),
             ]),
             ("Security", [
                 ("Encryption", "All private keys are encrypted at rest using scrypt KDF + AES-256-GCM."),
@@ -1169,7 +1174,7 @@ class LoginWindow(ctk.CTkToplevel):
 
         subtitle = ctk.CTkLabel(
             main_frame,
-            text="Aetherion Oracle • Quantum Blockchain",
+            text="EXCAL Chain • Experimental Wallet",
             font=("Segoe UI", 11),
             text_color=COLOR_CYAN,
         )
@@ -1304,7 +1309,7 @@ class LoginWindow(ctk.CTkToplevel):
         # Version
         ctk.CTkLabel(
             main_frame,
-            text=f"v{APP_VERSION} • AES-256-GCM Encrypted",
+            text=f"v{APP_VERSION} • Experimental — unaudited signatures",
             font=("Segoe UI", 9),
             text_color=COLOR_TEXT_MUTED,
         ).pack(pady=(5, 0))
@@ -1356,7 +1361,7 @@ class LoginWindow(ctk.CTkToplevel):
             new_backend.open_wallet(passphrase)
             self.parent.switch_wallet(profile, new_backend)
             self.destroy()
-        except RuntimeError as e:
+        except (RuntimeError, ValueError, OSError) as e:
             self.error_label.configure(text=str(e))
 
     def _create(self):
@@ -1374,7 +1379,7 @@ class LoginWindow(ctk.CTkToplevel):
             new_backend.create_wallet(passphrase)
             self.parent.switch_wallet(profile, new_backend)
             self.destroy()
-        except RuntimeError as e:
+        except (RuntimeError, ValueError, OSError) as e:
             self.error_label.configure(text=str(e))
 
 
@@ -1422,7 +1427,7 @@ class DashboardTab(ctk.CTkFrame):
 
         self.balance_currency = ctk.CTkLabel(
             hero_frame,
-            text="SKYNT",
+            text="EXCAL",
             font=("Segoe UI", 16, "bold"),
             text_color=COLOR_CYAN,
         )
@@ -1480,21 +1485,6 @@ class DashboardTab(ctk.CTkFrame):
         act_row = ctk.CTkFrame(actions_frame, fg_color="transparent")
         act_row.pack(fill="x")
 
-        self.btn_deposit = ctk.CTkButton(
-            act_row,
-            text="💰 Deposit",
-            command=self._deposit,
-            fg_color=COLOR_CARD,
-            hover_color=COLOR_CARD_HOVER,
-            border_width=1,
-            border_color=COLOR_SUCCESS,
-            text_color=COLOR_SUCCESS,
-            font=("Segoe UI", 12),
-            corner_radius=10,
-            height=38,
-        )
-        self.btn_deposit.pack(side="left", fill="x", expand=True, padx=(0, 8))
-
         self.btn_generate = ctk.CTkButton(
             act_row,
             text="🔑 New Key",
@@ -1512,7 +1502,7 @@ class DashboardTab(ctk.CTkFrame):
 
         self.btn_broadcast = ctk.CTkButton(
             act_row,
-            text="📡 Broadcast",
+            text="📡 Node Peers",
             command=self._broadcast,
             fg_color=COLOR_CARD,
             hover_color=COLOR_CARD_HOVER,
@@ -1540,14 +1530,11 @@ class DashboardTab(ctk.CTkFrame):
         return card, val_label
 
     def _deposit(self):
-        try:
-            from tkinter import simpledialog
-            amount = simpledialog.askfloat("Deposit", "Amount (SKYNT):", parent=self)
-            if amount and amount > 0:
-                self.backend.deposit(amount)
-                self.refresh()
-        except Exception:
-            pass
+        messagebox.showerror(
+            "Unavailable",
+            "Wallet balances are read from the node and cannot be credited locally.",
+            parent=self,
+        )
 
     def _generate_key(self):
         try:
@@ -1559,13 +1546,14 @@ class DashboardTab(ctk.CTkFrame):
 
     def _broadcast(self):
         try:
-            from tkinter import simpledialog
-            msg = simpledialog.askstring("Broadcast", "Message to broadcast:")
-            if msg:
-                self.backend.broadcast_gossip(msg)
-                messagebox.showinfo("Broadcast", "Message sent via gossip protocol.", parent=self)
-        except Exception:
-            pass
+            peers = self.backend.get_peers()
+            messagebox.showinfo(
+                "Connected Node Peers",
+                f"Node reports {len(peers)} peer(s).",
+                parent=self,
+            )
+        except Exception as e:
+            messagebox.showerror("Unavailable", str(e), parent=self)
 
     def refresh(self):
         """Refresh dashboard data."""
@@ -1587,14 +1575,14 @@ class DashboardTab(ctk.CTkFrame):
             self.peers_card[1].configure(text=str(net.get("active_peers", 0)))
 
             status_lines = [
-                f"Active Peers: {net.get('active_peers', 0)}",
-                f"Coherence: {net.get('network_coherence', 0):.4f}",
-                f"Encryption: {'AES-256-GCM' if net.get('encryption_enabled') else 'Disabled'}",
-                f"Messages: {net.get('messages_sent', 0)}",
+                f"Chain height: {net.get('blocks', 'unknown')}",
+                f"Active peers: {net.get('active_peers', 0)}",
+                f"Network active: {'yes' if net.get('network_active') else 'no'}",
             ]
             self.net_status_text.configure(text="\n".join(status_lines))
-        except Exception:
-            pass
+        except Exception as e:
+            self.balance_value.configure(text="Unavailable")
+            self.net_status_text.configure(text=f"Node unavailable: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -1602,7 +1590,7 @@ class DashboardTab(ctk.CTkFrame):
 # ---------------------------------------------------------------------------
 
 class SendReceiveTab(ctk.CTkFrame):
-    """Send and receive SKYNT with Aetherion styling."""
+    """Send and receive native EXCAL with Aetherion styling."""
 
     def __init__(self, parent: "EXCALWallet", backend: WalletBackend):
         super().__init__(parent, fg_color=COLOR_BG)
@@ -1616,7 +1604,7 @@ class SendReceiveTab(ctk.CTkFrame):
 
         ctk.CTkLabel(
             send_frame,
-            text="⚡ SEND SKYNT",
+            text="⚡ SEND EXCAL",
             font=("Segoe UI", 14, "bold"),
             text_color=COLOR_CYAN,
         ).pack(pady=(12, 15), padx=20)
@@ -1633,10 +1621,10 @@ class SendReceiveTab(ctk.CTkFrame):
         self.to_entry.pack(fill="x", padx=20, pady=(5, 10))
 
         # Amount
-        ctk.CTkLabel(send_frame, text="Amount (SKYNT)", font=("Segoe UI", 11),
+        ctk.CTkLabel(send_frame, text="Amount (EXCAL)", font=("Segoe UI", 11),
                       text_color=COLOR_TEXT_DIM).pack(anchor="w", padx=20)
         self.amount_entry = ctk.CTkEntry(
-            send_frame, placeholder_text="0.0000", height=38,
+            send_frame, placeholder_text="0.00000000", height=38,
             font=("Segoe UI", 12), fg_color=COLOR_CARD_LIGHT,
             border_color=COLOR_GOLD_DARK, placeholder_text_color=COLOR_TEXT_MUTED,
             text_color=COLOR_TEXT,
@@ -1645,7 +1633,7 @@ class SendReceiveTab(ctk.CTkFrame):
 
         # Balance info
         self.send_balance_label = ctk.CTkLabel(
-            send_frame, text="Balance: 0.0000 SKYNT", font=("Segoe UI", 11),
+            send_frame, text="Balance: 0.00000000 EXCAL", font=("Segoe UI", 11),
             text_color=COLOR_TEXT_MUTED,
         )
         self.send_balance_label.pack(anchor="w", padx=20, pady=(0, 10))
@@ -1668,7 +1656,7 @@ class SendReceiveTab(ctk.CTkFrame):
 
         ctk.CTkLabel(
             recv_frame,
-            text="📥 RECEIVE SKYNT",
+            text="📥 RECEIVE EXCAL",
             font=("Segoe UI", 14, "bold"),
             text_color=COLOR_GOLD,
         ).pack(pady=(12, 10), padx=20)
@@ -1688,21 +1676,20 @@ class SendReceiveTab(ctk.CTkFrame):
         ).pack(pady=(0, 15))
 
     def _send(self):
-        to = self.to_entry.get().strip().upper()
-        try:
-            amount = float(self.amount_entry.get())
-        except ValueError:
-            self.send_result.configure(text="Invalid amount", text_color=COLOR_ERROR)
+        to = self.to_entry.get().strip()
+        amount = self.amount_entry.get().strip()
+
+        if not amount:
+            self.send_result.configure(text="Enter an amount", text_color=COLOR_ERROR)
             return
 
         if not to:
             self.send_result.configure(text="Enter recipient address", text_color=COLOR_ERROR)
             return
 
-        # Validate address format before sending
         if not validate_address(to):
             self.send_result.configure(
-                text=f"Invalid address: must be 20 hex chars (e.g. A1B2C3D4E5F6A7B2C3D4)",
+                text="Invalid address: expected 40 uppercase hexadecimal characters",
                 text_color=COLOR_ERROR,
             )
             return
@@ -1710,7 +1697,7 @@ class SendReceiveTab(ctk.CTkFrame):
         try:
             tx = self.backend.send_transaction(to, amount)
             self.send_result.configure(
-                text=f"✓ TX sent: {tx['tx_id']}",
+                text=f"Accepted by node (unconfirmed): {tx['tx_id']}",
                 text_color=COLOR_SUCCESS,
             )
             self.to_entry.delete(0, "end")
@@ -1728,12 +1715,13 @@ class SendReceiveTab(ctk.CTkFrame):
     def refresh(self):
         try:
             balance = self.backend.get_balance()
-            self.send_balance_label.configure(text=f"Balance: {format_balance(balance)} SKYNT")
+            self.send_balance_label.configure(
+                text=f"Balance: {format_balance(balance)} EXCAL")
             addr = self.backend.get_address()
             if addr:
                 self.receive_addr.configure(text=addr)
-        except Exception:
-            pass
+        except Exception as e:
+            self.send_balance_label.configure(text=f"Balance unavailable: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -1750,7 +1738,7 @@ class TransactionsTab(ctk.CTkFrame):
 
     def _build_ui(self):
         header = ctk.CTkLabel(
-            self, text="📜 TRANSACTION HISTORY",
+            self, text="📜 LOCAL SUBMISSION HISTORY",
             font=("Segoe UI", 14, "bold"), text_color=COLOR_CYAN,
         )
         header.pack(pady=(20, 10), padx=20)
@@ -1793,7 +1781,7 @@ class TransactionsTab(ctk.CTkFrame):
             ).pack(anchor="w", padx=15, pady=(8, 2))
 
             ctk.CTkLabel(
-                card, text=f"Amount: {amount:.4f} SKYNT",
+                card, text=f"Amount: {format_balance(amount)} EXCAL",
                 font=("Segoe UI", 12),
                 text_color=COLOR_GOLD,
             ).pack(anchor="w", padx=15, pady=(0, 2))
@@ -1808,6 +1796,10 @@ class TransactionsTab(ctk.CTkFrame):
                 card, text=f"TX: {tx_id}",
                 font=("Consolas", 9),
                 text_color=COLOR_TEXT_MUTED,
+            ).pack(anchor="w", padx=15, pady=(0, 8))
+            ctk.CTkLabel(
+                card, text=f"Status: {tx.get('status', 'local record; unverified')}",
+                font=("Segoe UI", 9), text_color=COLOR_TEXT_MUTED,
             ).pack(anchor="w", padx=15, pady=(0, 8))
 
 

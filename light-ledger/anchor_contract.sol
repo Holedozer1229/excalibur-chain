@@ -150,6 +150,12 @@ contract ExcaliburCheckpointAnchor {
             "fraud window closed");
 
         // 1. Header chain: links, PoW, ends at the checkpoint tip.
+        //    The first header may be a genesis block whose prevHash is
+        //    bytes32(0), so we skip the prevHash link check for i == 0.
+        //    If the first header is NOT genesis, we still verify its
+        //    prevHash field is zero (a well-formed genesis) or we accept
+        //    it as the chain start without checking the parent.
+        require(p.headers.length > 0, "empty header chain");
         bytes32 prevHash = bytes32(0);
         for (uint256 i = 0; i < p.headers.length; i++) {
             bytes memory h = p.headers[i];
@@ -157,12 +163,15 @@ contract ExcaliburCheckpointAnchor {
             bytes32 hash = _headerHash(h);
             if (i > 0) {
                 require(_headerPrev(h) == prevHash, "header chain broken");
+            } else {
+                // First header: accept any prevHash value.  A genesis
+                // block has bytes32(0); a mid-chain proof starts at an
+                // arbitrary block whose parent we do not verify here.
             }
             require(_meetsTarget(hash, _headerBits(h)), "bad PoW");
             prevHash = hash;
         }
         require(prevHash == cp.tipHash, "chain does not end at tip");
-        require(p.headers.length > 0, "empty header chain");
 
         // 2. The tx is in the creating block (Merkle proof).
         bytes32 txid = _txid(p.tx);
@@ -205,9 +214,15 @@ contract ExcaliburCheckpointAnchor {
     }
 
     function _headerBits(bytes memory h) internal pure returns (uint32) {
-        uint32 v;
-        assembly { v := mload(add(h, 76)) } // offset 72..76, low 4 bytes
-        return v;
+        // Bitcoin compact difficulty is stored as 4 big-endian bytes at
+        // header offset 72.  Read them manually to get the correct value
+        // regardless of EVM endianness.
+        return uint32(
+            (uint8(h[72]) << 24) |
+            (uint8(h[73]) << 16) |
+            (uint8(h[74]) << 8)  |
+            (uint8(h[75]))
+        );
     }
 
     function _meetsTarget(bytes32 hash, uint32 bits)
