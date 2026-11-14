@@ -1,0 +1,33 @@
+{
+ "what": "BIP-350 (bech32m, witness v1) encodings of the BTC burn-address programs",
+ "sources": [
+  "f-pattern P2WPKH bc1qffffffffffffffffffffffffffffffff82jzwn (decoded)",
+  "f-pattern P2WSH bc1qfffffffffffffffffffffffffffffffffffffffffffffffffffqe708k7 (decoded)",
+  "all-zero P2PKH 1111111111111111111114oLvT2 (20 zero bytes)"
+ ],
+ "pattern_unit": "4a5294a529",
+ "programs_verified": "decoded programs are the repeating 4A5294A529 bytes; 32-byte extends 20-byte",
+ "results": {
+  "f-pattern 20-byte": {
+   "program_hex": "4a5294a5294a5294a5294a5294a5294a5294a529",
+   "bip350_address": "bc1pffffffffffffffffffffffffffffffffeg49x6",
+   "taproot_shaped": false
+  },
+  "f-pattern 32-byte": {
+   "program_hex": "4a5294a5294a5294a5294a5294a5294a5294a5294a5294a5294a5294a5294a52",
+   "bip350_address": "bc1pfffffffffffffffffffffffffffffffffffffffffffffffffffqnf0wwz",
+   "taproot_shaped": true
+  },
+  "all-zero 20-byte": {
+   "program_hex": "0000000000000000000000000000000000000000",
+   "bip350_address": "bc1pqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmmente",
+   "taproot_shaped": false
+  },
+  "all-zero 32-byte": {
+   "program_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+   "bip350_address": "bc1pqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqqenm",
+   "taproot_shaped": true
+  }
+ },
+ "scope": "Encodings only. All four are unspendable by construction; no key hashes to these programs."
+}
