@@ -1,6 +1,6 @@
 # Sponsored Heights — Live Inventory
 
-Fork tip **47233** · via checkpoint fallback · board generated 2026-11-14 19:30 UTC · refreshed hourly.
+Fork tip **47233** · via checkpoint fallback · board generated 2026-11-14 20:30 UTC · refreshed hourly.
 
 Every height below is for sale at the price shown — the same
 price the payment watcher enforces (see [SPONSOR.md](SPONSOR.md)
