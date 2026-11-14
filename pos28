@@ -1,0 +1,35 @@
+At pos=28 in the Messerene pattern, the code embeds the Bitcoin genesis nonce (2083236893) as 4 little-endian bytes into the last 4 positions of the
+32-byte pattern.
+
+What's at position 28
+The Messerene pattern is 32 bytes long (indices 0–31). The genesis nonce 2083236893 packed as little-endian is:
+
+struct.pack('<I', 2083236893) = 0xD5 0x1D 0x7C 0x7C
+
+At pos=28, these 4 bytes replace the last 4 bytes of the pattern (indices 28, 29, 30, 31):
+
+╭──────────┬───────────────────────┬───────────────────────╮
+│ Position │ Original pattern byte │ Replaced with (nonce) │
+├──────────┼───────────────────────┼───────────────────────┤
+│ 28 │ 0xD2 │ 0xD5 (nonce byte 0) │
+│ 29 │ 0xC0 │ 0x1D (nonce byte 1) │
+│ 30 │ 0xB8 │ 0x7C (nonce byte 2) │
+│ 31 │ 0xA6 │ 0x7C (nonce byte 3) │
+╰──────────┴───────────────────────┴───────────────────────╯
+
+The original last 4 bytes of the pattern are D2C0B8A6. After embedding the nonce, they become D51D7C7C.
+
+Why it crashed
+The original code had no bounds check when writing the 4-byte nonce into the pattern. At pos=28, writing 4 bytes means accessing indices 28, 29, 30, 31
+— which exactly fits a 32-byte array. However, the crash occurred because the pattern string
+A1B3C5D7E9F8D6C4B2A0E8F6D4C2B0A8E6F4D2C0B8A6E4D2C0B8A6E4D2C0 is 62 hex characters, which is 31 bytes (not 32). When converted to bytes, orig_bytes has
+length 31, so index 31 is out of range.
+
+The fix added a bounds guard:
+
+if pos + i < len(combined):
+    combined[pos + i] = b
+
+This means at pos=28 on a 31-byte array, only 3 of the 4 nonce bytes are written (indices 28, 29, 30), and the 4th byte is silently dropped.
+
+> this is the key  D2C0B8A6. After embedding the nonce, they become D51D7C7C.
