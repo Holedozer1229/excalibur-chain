@@ -8,6 +8,7 @@
 
 **Live status, verified 2026-11-14:** fork tip **47,301**; the reference verifier walked all **47,302** headers from the anchor and passed in 144.4 s. Bitcoin tip 975,843. The solo miner is hashing at ~3.87M H/s in pool mode while the local Bitcoin node re-syncs.
 
+> [Whitepaper (PDF)](https://holedozer1229.github.io/excalibur-chain/aetherion-excalibur-whitepaper.pdf) ·
 > [Offer page](https://holedozer1229.github.io/excalibur-chain/) ·
 > [ONE SHOT tracker](https://holedozer1229.github.io/excalibur-chain/oneshot.html) ·
 > [Dr. Time record](https://holedozer1229.github.io/excalibur-chain/drtime.html) ·
