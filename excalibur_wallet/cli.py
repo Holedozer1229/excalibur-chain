@@ -12,10 +12,14 @@ command-line argument, never echoed, never logged.
 
 Every command that touches funds prints exactly what it did and what
 it did NOT do. `wallet send` builds, signs and verifies — and stops.
-There is no broadcast command in this wallet.
+Broadcast is a separate, explicit step: `wallet broadcast --file F
+--network fork|bitcoin --yes` submits an already-built, already-
+verified tx after re-checking it (replay, re-validation, unspent
+inputs, mempool acceptance). Without --yes it refuses.
 """
 import argparse
 import getpass
+import hashlib
 import json
 import os
 import sys
@@ -24,6 +28,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .wallet import Wallet, WalletError
 from .ledger import Ledger, RpcClient, RpcError
+from . import broadcast as broadcast_mod
+from .broadcast import BroadcastError
+from . import infancy as infancy_mod
+from .infancy import InfancyError
 from .txbuild import (build_send, build_htlc_claim, build_htlc_refund,
                      build_qhtlc_claim, build_qhtlc_refund,
                      build_pqh_spend, build_knot_lock_test,
@@ -136,9 +144,11 @@ def _print_tx_result(res):
     print(f"validated: locally at height {res['validated_at_height']} "
           f"(validate_tx OK)")
     print(f"raw hex:   {res['raw_hex']}")
-    print("NOT broadcast. This wallet never broadcasts. To submit, use "
-          "the node's sendrawtransaction yourself — only on your "
-          "explicit decision.")
+    print("NOT broadcast. Submit it with `wallet broadcast --tx <rawhex> "
+          "--network fork --yes` — or save it first (`wallet send "
+          "--save FILE`) and broadcast the file. Broadcast re-checks "
+          "the tx (replay, re-validation, unspent inputs) before "
+          "submitting, and verifies mempool acceptance after.")
 
 
 # ------------------------------------------------------------------ wallet
@@ -325,7 +335,148 @@ def cmd_wallet_send(args):
     except (TxBuildError, KnotRefused) as e:
         raise SystemExit(f"send refused: {e}")
     w.next_change(pw)  # advance the change counter on success only
+    if args.save:
+        by_key = {(u["txid"], u["vout"]): u for u in utxos}
+        saved_inputs = []
+        for inp in res["inputs"]:
+            u = by_key.get((inp["txid"], inp["vout"]), {})
+            saved_inputs.append({"txid": inp["txid"],
+                                 "vout": inp["vout"],
+                                 "value": inp["value"],
+                                 "lock": u.get("lock", ""),
+                                 "coinbase": bool(u.get("coinbase", False)),
+                                 "cb_h": int(u.get("cb_h", 0))})
+        doc = {"network": "fork", "raw_hex": res["raw_hex"],
+               "txid": res["txid"], "fee": res["fee"],
+               "validated": True,
+               "validated_at_height": res["validated_at_height"],
+               "inputs": saved_inputs, "outputs": res["outputs"]}
+        with open(args.save, "w") as f:
+            json.dump(doc, f, indent=2)
+        os.chmod(args.save, 0o600)
+        print(f"saved (0600): {args.save} — broadcast it with "
+              f"`wallet broadcast --file {args.save} --network fork --yes`")
     _print_tx_result(res)
+
+
+def _load_broadcast_tx(args):
+    """(raw_hex, inputs|None, height|None) from --file or --tx."""
+    if args.file:
+        with open(args.file) as f:
+            text = f.read().strip()
+        try:
+            doc = json.loads(text)
+        except ValueError:
+            doc = text
+        if isinstance(doc, dict) and "raw_hex" in doc:
+            return (doc["raw_hex"], doc.get("inputs") or None,
+                    doc.get("validated_at_height"))
+        if isinstance(doc, str):
+            return doc.strip(), None, None
+        raise SystemExit("--file must be a saved-tx JSON (raw_hex) "
+                         "or a plain hex file")
+    if args.tx:
+        return args.tx.strip(), None, None
+    raise SystemExit("broadcast needs --file FILE or --tx HEX")
+
+
+def _parse_btc_rpc(args):
+    host, port = "127.0.0.1", 8332
+    if args.btc_rpc:
+        try:
+            host, port = args.btc_rpc.rsplit(":", 1)
+            port = int(port)
+        except ValueError:
+            raise SystemExit("--btc-rpc must be HOST:PORT")
+    return host, port
+
+
+def cmd_wallet_broadcast(args):
+    if not args.yes:
+        print("REFUSED without --yes. Broadcast moves funds "
+              "irreversibly: the tx leaves this wallet and enters a "
+              "mempool. Re-run with --yes to accept that, after "
+              "checking the txid and the fee above.")
+        raise SystemExit(1)
+    raw_hex, inputs, _height = _load_broadcast_tx(args)
+    network = args.network
+    try:
+        if network == "fork":
+            led = _ledger(args)
+            res = broadcast_mod.broadcast_fork(
+                raw_hex, rpc=led.rpc, inputs=inputs, height=_height,
+                dry_run=args.dry_run)
+            height = led.rpc.tip()[0] if not args.dry_run else None
+        else:
+            host, port = _parse_btc_rpc(args)
+            res = broadcast_mod.broadcast_bitcoin(
+                raw_hex, host=host, port=port,
+                config_path=args.btc_rpc_config, dry_run=args.dry_run)
+            height = None
+    except (BroadcastError, RpcError) as e:
+        raise SystemExit(f"broadcast refused: {e}")
+    print(f"network:   {res['network']}")
+    print(f"txid:      {res['txid']}")
+    if res.get("fee") is not None:
+        print(f"fee:       {_fmt_swords(res['fee'])}")
+    if res["dry_run"]:
+        print("DRY RUN — validated, NOT submitted.")
+        return
+    print(f"mempool:   accepted ({res['txid'][:16]}… visible in the "
+          f"node mempool)")
+    log = broadcast_mod.append_broadcast_log(
+        args.datadir, {"network": res["network"], "txid": res["txid"],
+                       "height": height, "dry_run": False})
+    print(f"logged:    {log}")
+    print("Confirm it in a block with `wallet confirmations --txid "
+          f"{res['txid']} --network {res['network']}` — a payment is "
+          f"settled at {infancy_mod.PAYMENT_MIN_CONF} confirmations.")
+
+
+def cmd_wallet_confirmations(args):
+    txid = args.txid.lower()
+    if len(txid) != 64:
+        raise SystemExit("--txid must be 64 hex chars")
+    try:
+        if args.network == "fork":
+            conf = infancy_mod.confirmations(txid, "fork",
+                                             rpc=_ledger(args).rpc)
+        else:
+            host, port = _parse_btc_rpc(args)
+            user, password = broadcast_mod.load_btc_credentials(
+                args.btc_rpc_config)
+            btc = broadcast_mod.BitcoinRpcClient(host, port, user,
+                                                 password)
+            conf = infancy_mod.confirmations(txid, "bitcoin", btc_rpc=btc)
+    except (BroadcastError, InfancyError, RpcError) as e:
+        raise SystemExit(f"confirmations: {e}")
+    if conf is None:
+        print(f"tx {txid}: not in the mempool — mined, dropped, or "
+              f"unknown to this node. Check `wallet history`.")
+        return
+    ok, detail = infancy_mod.settled(conf)
+    print(f"tx {txid}: {conf} confirmation(s) — {detail}")
+    print("settled" if ok else "NOT settled yet — wait for more blocks")
+
+
+def cmd_wallet_security(args):
+    peers = []
+    if args.peers:
+        for p in args.peers.split(","):
+            try:
+                host, port = p.strip().rsplit(":", 1)
+                peers.append((host, int(port)))
+            except ValueError:
+                raise SystemExit(f"--peers entry {p!r} must be HOST:PORT")
+    try:
+        rpc = _ledger(args).rpc
+        rpc.tip()
+    except RpcError:
+        rpc = None
+    print("infancy security — young fork, known attack vectors:")
+    for chk in infancy_mod.security_report(args.datadir, rpc=rpc,
+                                           peers=peers):
+        print(f"  [{chk['status']:4}] {chk['name']}: {chk['detail']}")
 
 
 def cmd_wallet_locks(args):
@@ -873,12 +1024,47 @@ def cmd_node_status(args):
         print("P2P: 127.0.0.1:9433 not accepting connections")
 
 
+def _source_hash():
+    """SHA-256 (first 12 hex) over this package's .py sources, sorted.
+
+    Lets anyone check what source an exe/CLI was built from: run
+    `excalibur --version` and compare the hash with a fresh hash of the
+    source tree. Added 2026-11-14 (audit D6: exe currency was mtime-only).
+
+    In a PyInstaller exe the .py sources are embedded, not on disk, so
+    the hash falls back to the build-time `_build_version.txt` bundled
+    by build_wallet_exe.py (same hash, computed before the build).
+    """
+    pkg = os.path.dirname(os.path.abspath(__file__))
+    names = []
+    if os.path.isdir(pkg):
+        names = [n for n in sorted(os.listdir(pkg)) if n.endswith(".py")]
+    if names:
+        h = hashlib.sha256()
+        for name in names:
+            with open(os.path.join(pkg, name), "rb") as f:
+                h.update(f.read())
+        return h.hexdigest()[:12]
+    for base in (getattr(sys, "_MEIPASS", None), pkg):
+        if not base:
+            continue
+        for cand in (os.path.join(base, "excalibur_wallet",
+                                  "_build_version.txt"),
+                     os.path.join(base, "_build_version.txt")):
+            if os.path.isfile(cand):
+                with open(cand) as f:
+                    return f.read().strip()[:12]
+    return "frozen-unknown"
+
+
 # --------------------------------------------------------------------- main
 def build_parser():
     ap = argparse.ArgumentParser(
         prog="excalibur",
         description="Excalibur wallet — P2P ledger wallet, Aetherion QAI "
                     "light ledger, URUU view, Frostgate vault.")
+    ap.add_argument("--version", action="version",
+                    version="excalibur-wallet sources " + _source_hash())
     ap.add_argument("--datadir", default=os.environ.get(
         "EXCAL_WALLET_DIR", DEFAULT_DATADIR),
         help="wallet datadir (default: %(default)s)")
@@ -927,6 +1113,36 @@ def build_parser():
                    help="swords (int) or EXCAL (decimal)")
     p.add_argument("--fee-rate", type=int, default=1,
                    help="swords per vbyte (default 1)")
+    p.add_argument("--save", help="write the signed tx JSON (0600) for "
+                   "`wallet broadcast --file`")
+    p = wadd("broadcast", cmd_wallet_broadcast,
+             "submit a built+verified tx (needs --yes)")
+    p.add_argument("--file", help="saved-tx JSON from `wallet send --save`")
+    p.add_argument("--tx", help="raw tx hex (instead of --file)")
+    p.add_argument("--network", required=True,
+                   choices=["fork", "bitcoin"],
+                   help="which node receives the tx")
+    p.add_argument("--dry-run", action="store_true",
+                   help="validate + testmempoolaccept only, do not submit")
+    p.add_argument("--yes", action="store_true",
+                   help="accept that broadcast moves funds irreversibly")
+    p.add_argument("--btc-rpc", default=None,
+                   help="Bitcoin node HOST:PORT (default 127.0.0.1:8332)")
+    p.add_argument("--btc-rpc-config",
+                   help="0600 bitcoin.conf with rpcuser=/rpcpassword=")
+    p = wadd("confirmations", cmd_wallet_confirmations,
+             "confirmations of a txid (settled at 6)")
+    p.add_argument("--txid", required=True, help="64-hex txid")
+    p.add_argument("--network", required=True,
+                   choices=["fork", "bitcoin"])
+    p.add_argument("--btc-rpc", default=None,
+                   help="Bitcoin node HOST:PORT (default 127.0.0.1:8332)")
+    p.add_argument("--btc-rpc-config",
+                   help="0600 bitcoin.conf with rpcuser=/rpcpassword=")
+    p = wadd("security", cmd_wallet_security,
+             "infancy security report (replay/eclipse/reorg/double-spend)")
+    p.add_argument("--peers", help="comma list HOST:PORT to check tip "
+                   "agreement across (eclipse check)")
     wadd("locks", cmd_wallet_locks, "lock types + activation status")
     p = wadd("split", cmd_wallet_split,
              "Shamir-split the seed into k-of-n shares")
