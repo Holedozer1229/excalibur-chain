@@ -1,0 +1,14 @@
+{
+ "what": "BIP-341 Taproot, key-path-only (empty script tree), for Dr. Time",
+ "source": "public Trifold root from dr-time-overflow-countersignature.json; seed never read",
+ "trifold_root": "7083fbebd6bfbd5f82fd40827cf36bc30da81524914011e69488b5a63e7bfe55",
+ "scalar_is_root": true,
+ "internal_key_xonly": "c8c87daf2381d1c30bd8a34231837b14f9bd5fc3ddc1a2b53b9b0b4c16a8691e",
+ "internal_key_compressed": "02c8c87daf2381d1c30bd8a34231837b14f9bd5fc3ddc1a2b53b9b0b4c16a8691e",
+ "tweak_taptweak": "22c4a6fbdb025164e9caf649c2a610d3e12f4a7931e2f17a71327c9bc66c0bc6",
+ "output_key_xonly": "aa21046ae3345513303a0b5b36ea9d0326936153d8bf0f4f144850902796d784",
+ "output_key_parity": 0,
+ "script_pubkey": "5120aa21046ae3345513303a0b5b36ea9d0326936153d8bf0f4f144850902796d784",
+ "address_bech32m": "bc1p4gssg6hrx323xvp6pddnd65aqvnfxc2nmzls7nc5fpgfqfuk67zqyq7vtk",
+ "cross_check": "taproot_node/crypto.py and secp256k1.py agree; bech32m round-trips; genesis taproot address decodes"
+}

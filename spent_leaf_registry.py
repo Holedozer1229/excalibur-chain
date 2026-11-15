@@ -16,6 +16,38 @@ from file_locks import exclusive_file_lock, fsync_directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
+def extract_pairs(raw_tx: bytes):
+    """Return one-time Trifold (root, index) pairs revealed by a tx."""
+    from txpq import decode_witness
+    from txscript import parse_tx
+
+    try:
+        tx = parse_tx(raw_tx)
+    except Exception:
+        return []
+
+    pairs = []
+    for vin in tx["vin"]:
+        script = vin["script"]
+        if len(script) < 100:
+            continue
+        try:
+            root, sig = decode_witness(script)
+        except Exception:
+            try:
+                from txscript import parse_qhtlc_witness
+                _mode, root, sig, _secret, _descriptor = \
+                    parse_qhtlc_witness(script)
+            except Exception:
+                continue
+        pairs.append((root, int(sig["index"])))
+    return pairs
+
+
+def extract_pairs_from_txs(txs):
+    return [pair for raw_tx in txs for pair in extract_pairs(raw_tx)]
+
+
 def _registry_path() -> str:
     """Return the path to the spent-leaf registry file."""
     workspace = os.environ.get(

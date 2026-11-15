@@ -38,8 +38,9 @@ does not run on Windows.
 
 ## Known limits
 
-- Send builds, signs and verifies locally only — there is NO broadcast
-  path in the wallet by design. Nothing moves funds from the .exe.
+- Send builds, signs and verifies locally; broadcast is a separate
+  explicit step (`wallet broadcast --yes`) that re-checks the tx and
+  verifies mempool acceptance. Nothing moves funds without `--yes`.
 - The URUU anchor contract is not deployed yet, so checkpoints verify
   as *attested but pending* until their fraud window passes; bootstrap
   from a checkpoint correctly refuses until it is final.

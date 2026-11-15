@@ -1,7 +1,8 @@
 # Excalibur Wallet
 
 A P2P ledger wallet for the Excalibur fork — real keys, real chain,
-real signatures. No demos, no simulated balances, no broadcasts.
+real signatures. No demos, no simulated balances. Broadcast is a
+separate, explicit, per-tx decision (`wallet broadcast --yes`).
 
 - **Keys:** BIP39-style 12/24-word mnemonic, AES-256-CTR + HMAC
   encrypted at rest (600,000-iteration PBKDF2). The mnemonic is shown
@@ -26,9 +27,17 @@ real signatures. No demos, no simulated balances, no broadcasts.
   spends. Testnet-only. The wallet shells out to the real Rust
   binary — the FROST math is never re-implemented in Python.
 - **Send:** build + sign + verify locally under the full
-  spend-and-sign protocol. **This wallet never broadcasts.** There is
-  no broadcast command. Submitting a signed tx is a separate,
-  explicit user action outside this wallet.
+  spend-and-sign protocol. **Broadcast** is a separate, explicit step
+  (`wallet broadcast --file F --network fork|bitcoin --yes`): it
+  re-checks the already-built tx (replay, local re-validation,
+  inputs still unspent, mempool acceptance) before submitting, and
+  only on your explicit `--yes` for that exact broadcast. Fork txs go
+  to the fork node only; Bitcoin txs go to a Bitcoin Core node only.
+- **Infancy security** (`wallet security`): replay (structural —
+  fork locks are not Bitcoin scripts), eclipse (tip agreement across
+  2+ sources before a P2P sync trusts a tip), 51%/reorg (payments
+  settle at 6 confirmations, coinbase at 100), double-spend
+  (pre-broadcast unspent check + mempool verification, no RBF).
 
 ## Install
 
@@ -59,7 +68,10 @@ wallet info                          summary (kind, indices, PQH, Frostgate)
 wallet balance [--via rpc|local|snapshot]
 wallet utxos [--lock HEX]            list UTXOs
 wallet history [--limit N]
-wallet send --to LOCK --amount AMT   build+sign+verify ONLY (never broadcasts)
+wallet send --to LOCK --amount AMT [--save FILE]  build+sign+verify (saves the tx for broadcast)
+wallet broadcast --file FILE|--tx HEX --network fork|bitcoin --yes [--dry-run]  submit a built+verified tx
+wallet confirmations --txid HEX --network fork|bitcoin  confirmations + settled?
+wallet security [--peers HOST:PORT,...]  infancy security report
 wallet locks                         lock types + activation at tip
 wallet split --threshold K --shares N  Shamir-split the seed
 wallet import-node --wallet FILE [--keyfile F]
@@ -99,8 +111,16 @@ QHTLC, `05…` BRIDGE. `06…` KNOT is refused on the live fork.
 
 ## Honestly still open / blocked
 
-- **No broadcast path** — by design. Sending stops at build/sign/
-  verify. Broadcast needs a separate explicit user decision.
+- **Broadcast needs a node.** Fork broadcast submits to the fork
+  node RPC (127.0.0.1:9432) — the node must be up. Bitcoin broadcast
+  submits to a Bitcoin Core RPC (default 127.0.0.1:8332) and needs
+  credentials: `EXCAL_BTC_RPC_USER` / `EXCAL_BTC_RPC_PASSWORD`, or
+  `--btc-rpc-config <0600 bitcoin.conf>`. The wallet builds fork txs
+  only — a Bitcoin broadcast takes a raw Bitcoin tx (`--tx HEX`),
+  e.g. a BTC HTLC leg built elsewhere, and refuses fork txs on that
+  path (replay protection). Every broadcast needs `--yes`, is logged
+  to `broadcast_log.jsonl` (txid/network/height only), and is
+  verified in the mempool after submit.
 - **KNOT (0x06) staged, not activated** (proposed height 100,000).
   The wallet refuses KNOT outputs on the live fork; `wallet knot`
   builds test-chain-only txs validated at height 100,000.

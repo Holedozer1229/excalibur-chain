@@ -1,4 +1,4 @@
-"""txbuild.py — build + sign + verify. NEVER broadcast.
+"""txbuild.py — build + sign + verify.
 
 Full spend-and-sign protocol, always (Lux's standing order):
   1. build the full transaction (all inputs, all outputs, fee)
@@ -8,10 +8,11 @@ Full spend-and-sign protocol, always (Lux's standing order):
   4. run the fork's own validate_tx over the raw tx at height tip+1
   5. return the raw hex + txid for the user to review
 
-There is deliberately NO broadcast path in this module. A signed tx
-leaves the wallet only as hex printed to the user (or saved to a file
-they name). Submitting it is a separate, explicit user action through
-the node's sendrawtransaction — never this wallet's job.
+This module does NOT broadcast. Submitting a signed tx is a separate,
+explicit step in broadcast.py (`wallet broadcast --yes`), which
+re-checks the tx (replay, re-validation, unspent inputs, mempool
+acceptance) before it touches a node — and only on the user's
+explicit yes for that exact broadcast.
 
 Fee: 1 sword/vbyte default (the node's floor). vsize estimate is the
 node's (10 + 139/in + 30/out); the exact fee is recomputed from the
@@ -141,7 +142,8 @@ def build_send(utxos, lock_to_priv, dest_lock, amount,
     change_lock: 21-byte lock bytes for change
     height: validation height (tip+1); required.
     Returns {"raw_hex", "txid", "fee", "inputs", "outputs", "validated"}.
-    Raises TxBuildError on any failure. No broadcast, ever."""
+    Raises TxBuildError on any failure. This builds only — broadcast
+    is a separate, explicit step (broadcast.py)."""
     if height is None:
         raise TxBuildError("validation height required (tip+1)")
     if amount <= 0:
