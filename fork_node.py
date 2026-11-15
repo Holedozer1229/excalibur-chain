@@ -92,6 +92,11 @@ class ChainStore:
         self.tip_hash = None
         self.lock = threading.Lock()
         
+        # Height checkpoint file — persists tip height & hash so the wallet
+        # can validate the chain even after a node disconnect.
+        self._checkpoint_path = str(path) + ".height"
+        self._load_checkpoint()
+        
         # AetherionEXCAL: Advanced state
         self.governance_proposals = {}  # {proposal_id: proposal_data}
         self.staking_validators = {}    # {validator_id: validator_data}
@@ -120,6 +125,58 @@ class ChainStore:
         
         self._load()
         self._calculate_metrics()
+        
+        # Sync checkpoint with loaded chain state
+        self._checkpoint_height = self.tip_height
+        self._checkpoint_hash = self.tip_hash
+        
+        # Save checkpoint after loading so the file reflects the current chain state
+        self._save_checkpoint()
+    
+    def _load_checkpoint(self):
+        """Load the last saved height checkpoint (if any)."""
+        try:
+            with open(self._checkpoint_path, "r") as f:
+                data = json.loads(f.read().strip())
+                self._checkpoint_height = data.get("height", -1)
+                self._checkpoint_hash = data.get("hash", None)
+                logger.info(f"Loaded height checkpoint: height={self._checkpoint_height}, hash={self._checkpoint_hash[:16] if self._checkpoint_hash else 'None'}...")
+        except (FileNotFoundError, json.JSONDecodeError):
+            self._checkpoint_height = -1
+            self._checkpoint_hash = None
+    
+    def _save_checkpoint(self):
+        """Save the current tip height and hash to the checkpoint file."""
+        try:
+            data = json.dumps({
+                "height": self.tip_height,
+                "hash": self.tip_hash,
+                "timestamp": time.time()
+            })
+            tmp_path = self._checkpoint_path + ".tmp"
+            with open(tmp_path, "w") as f:
+                f.write(data)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, self._checkpoint_path)
+            logger.info(f"Saved height checkpoint: height={self.tip_height}")
+        except OSError as e:
+            logger.warning(f"Failed to save height checkpoint: {e}")
+    
+    def get_checkpoint(self):
+        """Get the last saved height checkpoint."""
+        with self.lock:
+            return {
+                "height": self._checkpoint_height,
+                "hash": self._checkpoint_hash,
+                "current_height": self.tip_height,
+                "current_hash": self.tip_hash,
+            }
+    
+    def save_checkpoint(self):
+        """Public method to save checkpoint (called on shutdown)."""
+        with self.lock:
+            self._save_checkpoint()
 
     def _load(self):
         logger.info(f"Loading chain from {self.path} ...")
@@ -422,6 +479,13 @@ class ChainStore:
             self.by_height[height] = new_rec
             self.tip_height = height
             self.tip_hash = hash_hex
+            
+            # Update checkpoint height tracking
+            self._checkpoint_height = height
+            self._checkpoint_hash = hash_hex
+            
+            # Save checkpoint immediately so height is persisted on every block
+            self._save_checkpoint()
             # Pending entries are revalidated by their senders after this
             # commit, avoiding a stale view or a conflicting leaf reservation.
             self.mempool.clear()
@@ -767,6 +831,15 @@ class ForkRPCHandler(http.server.BaseHTTPRequestHandler):
                 else:
                     blk = params[0]
                     result, error = self.store.submitblock(blk)
+            elif method == "getcheckpoint":
+                result = self.store.get_checkpoint()
+            elif method == "savecheckpoint":
+                self.store.save_checkpoint()
+                result = {"status": "saved", "checkpoint": self.store.get_checkpoint()}
+            elif method == "shutdown":
+                # Save checkpoint before shutting down
+                self.store.save_checkpoint()
+                result = {"status": "shutting down", "checkpoint": self.store.get_checkpoint()}
             
             # AetherionEXCAL: Advanced methods
             elif method == "getmetrics":

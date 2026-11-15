@@ -260,57 +260,67 @@ from .wormhole_live_connector import (
 )
 import sys as _sys
 _retrocausal_path = _sys.modules.get('retrocausal_entropy_well')
+_rew = None
 if _retrocausal_path is None:
     _retrocausal_dir = str(__file__).replace('sphinx_os\\nexus\\__init__.py', '').replace('sphinx_os/nexus/__init__.py', '')
     if _retrocausal_dir and _retrocausal_dir not in _sys.path:
         _sys.path.insert(0, _retrocausal_dir)
-    import retrocausal_entropy_well as _rew
-LAMBDA_MATRIX = _rew.LAMBDA_MATRIX
-PHASE_CONSTANT = _rew.PHASE_CONSTANT
-CausalSinkState = _rew.CausalSinkState
-RetrocausalSignal = _rew.RetrocausalSignal
-EntropyWellResult = _rew.EntropyWellResult
-CrossSinkCorrelation = _rew.CrossSinkCorrelation
-matrix_vector_multiply = _rew.matrix_vector_multiply
-arctan2_phase_shift = _rew.arctan2_phase_shift
-shannon_entropy = _rew.shannon_entropy
-inverse_entropy = _rew.inverse_entropy
-entropy_well_gradient = _rew.entropy_well_gradient
-lambda_transform = _rew.lambda_transform
-retrocausal_arctan2_transform = _rew.retrocausal_arctan2_transform
-compute_retrocausal_signal = _rew.compute_retrocausal_signal
-compute_entropy_well = _rew.compute_entropy_well
-compute_cross_sink_correlation = _rew.compute_cross_sink_correlation
-compute_single_signal = _rew.compute_single_signal
-apply_lambda_transform = _rew.apply_lambda_transform
-apply_phase_shift = _rew.apply_phase_shift
-run_retrocausal_experiment = _rew.run_retrocausal_experiment
+    try:
+        import retrocausal_entropy_well as _rew
+    except ImportError:
+        _rew = None
+if _rew is not None:
+    LAMBDA_MATRIX = _rew.LAMBDA_MATRIX
+    PHASE_CONSTANT = _rew.PHASE_CONSTANT
+    CausalSinkState = _rew.CausalSinkState
+    RetrocausalSignal = _rew.RetrocausalSignal
+    EntropyWellResult = _rew.EntropyWellResult
+    CrossSinkCorrelation = _rew.CrossSinkCorrelation
+    matrix_vector_multiply = _rew.matrix_vector_multiply
+    arctan2_phase_shift = _rew.arctan2_phase_shift
+    shannon_entropy = _rew.shannon_entropy
+    inverse_entropy = _rew.inverse_entropy
+    entropy_well_gradient = _rew.entropy_well_gradient
+    lambda_transform = _rew.lambda_transform
+    retrocausal_arctan2_transform = _rew.retrocausal_arctan2_transform
+    compute_retrocausal_signal = _rew.compute_retrocausal_signal
+    compute_entropy_well = _rew.compute_entropy_well
+    compute_cross_sink_correlation = _rew.compute_cross_sink_correlation
+    compute_single_signal = _rew.compute_single_signal
+    apply_lambda_transform = _rew.apply_lambda_transform
+    apply_phase_shift = _rew.apply_phase_shift
+    run_retrocausal_experiment = _rew.run_retrocausal_experiment
 
 # Retrocausal Seed Tracer
 import sys as _sys2
 _retrocausal_seed_path = _sys2.modules.get('retrocausal_seed_tracer')
+_rst = None
 if _retrocausal_seed_path is None:
     _retrocausal_seed_dir = str(__file__).replace('sphinx_os\\nexus\\__init__.py', '').replace('sphinx_os/nexus/__init__.py', '')
     if _retrocausal_seed_dir and _retrocausal_seed_dir not in _sys2.path:
         _sys2.path.insert(0, _retrocausal_seed_dir)
-    import retrocausal_seed_tracer as _rst
-GenesisSeedState = _rst.GenesisSeedState
-RetrocausalTrace = _rst.RetrocausalTrace
-SeedTraceResult = _rst.SeedTraceResult
-NullSpaceAnalysis = _rst.NullSpaceAnalysis
-encode_genesis_seed = _rst.encode_genesis_seed
-compute_byte_entropy = _rst.compute_byte_entropy
-compute_null_space = _rst.compute_null_space
-compute_singular_values = _rst.compute_singular_values
-project_onto_null_space = _rst.project_onto_null_space
-retrocausal_source_component = _rst.retrocausal_source_component
-inverse_lambda_transform = _rst.inverse_lambda_transform
-trace_to_seed = _rst.trace_to_seed
-compute_genesis_correlation = _rst.compute_genesis_correlation
-verify_phase_locking = _rst.verify_phase_locking
-trace_single_sink = _rst.trace_single_sink
-verify_genesis_source = _rst.verify_genesis_source
-run_seed_tracing_experiment = _rst.run_seed_tracing_experiment
+    try:
+        import retrocausal_seed_tracer as _rst
+    except ImportError:
+        _rst = None
+if _rst is not None:
+    GenesisSeedState = _rst.GenesisSeedState
+    RetrocausalTrace = _rst.RetrocausalTrace
+    SeedTraceResult = _rst.SeedTraceResult
+    NullSpaceAnalysis = _rst.NullSpaceAnalysis
+    encode_genesis_seed = _rst.encode_genesis_seed
+    compute_byte_entropy = _rst.compute_byte_entropy
+    compute_null_space = _rst.compute_null_space
+    compute_singular_values = _rst.compute_singular_values
+    project_onto_null_space = _rst.project_onto_null_space
+    retrocausal_source_component = _rst.retrocausal_source_component
+    inverse_lambda_transform = _rst.inverse_lambda_transform
+    trace_to_seed = _rst.trace_to_seed
+    compute_genesis_correlation = _rst.compute_genesis_correlation
+    verify_phase_locking = _rst.verify_phase_locking
+    trace_single_sink = _rst.trace_single_sink
+    verify_genesis_source = _rst.verify_genesis_source
+    run_seed_tracing_experiment = _rst.run_seed_tracing_experiment
 
 from .metatron_portal import (
     Octonion,
@@ -395,6 +405,16 @@ from .pictographic_seed_mapper import (
     get_pictograph_indices,
 )
 
+# Persistent P2P database
+from .postgres_p2p import P2PDatabase, get_db
+
+# Bootstrap discovery server
+from .p2p_bootstrap_server import (
+    BootstrapServer,
+    BootstrapClient,
+    BootstrapHandler,
+)
+
 __all__ = [
     "QuantumSpacetimeFabric",
     "ConsciousConsensusEngine",
@@ -464,6 +484,11 @@ __all__ = [
     "EntanglementBond",
     "EchoMessage",
     "GossipWave",
+    "P2PDatabase",
+    "get_db",
+    "BootstrapServer",
+    "BootstrapClient",
+    "BootstrapHandler",
     "OmniscientSphinx",
     "SphinxPerception",
     "SphinxProphecy",

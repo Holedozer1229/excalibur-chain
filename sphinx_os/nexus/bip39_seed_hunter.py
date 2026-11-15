@@ -92,13 +92,19 @@ GENESIS_GEMATRIA = [7, 3, 8, 300, 4, 8, 60, 200, 4, 10, 200, 50, 30, 40, 50, 50,
 LAMBDA_MATRIX = [[1, 1, 1], [1, 0, -1], [-1, -1, -1]]
 NULL_SPACE = [1, -2, 1]  # Null vector of lambda matrix
 
-# BIP39 word list loaded from file
-import os as _os
-_here = _os.path.dirname(_os.path.abspath(__file__))
-_file_path = _os.path.join(_here, '..', '..', 'excalibur_wallet', 'bip39_english.txt')
-with open(_file_path) as _f:
-    BIP39_WORDS = [w.strip() for w in _f if w.strip()]
-del _os, _here, _file_path, _f
+# BIP39 word list — reuse the already-loaded list from bip39_pictographic
+# to avoid re-reading files (which fails in PyInstaller bundles).
+try:
+    from sphinx_os.nexus.bip39_pictographic import BIP39_WORDS as _BIP39_WORDS
+    BIP39_WORDS = _BIP39_WORDS
+except ImportError:
+    # Fallback: load from file (development mode only)
+    import os as _os
+    _here = _os.path.dirname(_os.path.abspath(__file__))
+    _file_path = _os.path.join(_here, '..', '..', 'excalibur_wallet', 'bip39_english.txt')
+    with open(_file_path) as _f:
+        BIP39_WORDS = [w.strip() for w in _f if w.strip()]
+    del _os, _here, _file_path, _f
 
 assert len(BIP39_WORDS) == 2048
 BIP39_INDEX = {w: i for i, w in enumerate(BIP39_WORDS)}

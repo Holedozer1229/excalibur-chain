@@ -42,15 +42,15 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-# Fix Windows console encoding
-if sys.platform == "win32":
+# Fix Windows console encoding (safe for PyInstaller windowed mode)
+if sys.platform == "win32" and sys.stdout is not None:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import customtkinter as ctk
-from tkinter import messagebox, filedialog, Canvas, PhotoImage
+from tkinter import messagebox, filedialog, Canvas, PhotoImage, TclError
 
 from sphinx_os.nexus import (
     HolographicP2PLayer,
@@ -81,9 +81,14 @@ class NodeManager:
     
     In a PyInstaller single-file build, the node is extracted and run as
     a child process. In development, it imports fork_node directly.
+    
+    Now integrates:
+    - Persistent P2P database (postgres_p2p) for peer/tx/block persistence
+    - Bootstrap discovery server (p2p_bootstrap_server) for peer auto-discovery
     """
     
     RPC_PORT = 9432
+    BOOTSTRAP_PORT = 9435
     
     def __init__(self):
         self.process = None
@@ -92,18 +97,41 @@ class NodeManager:
         self.p2p_node = None
         self._stop_event = threading.Event()
         self._health_check_thread = None
-        self.chain_file = Path(os.path.dirname(os.path.abspath(__file__))) / "chain.jsonl"
-        # In PyInstaller, __file__ is inside the extracted _MEI temp dir
-        # We need to find chain.jsonl relative to the executable
+        self._meipass = None
+        self._bootstrap_server = None
+        self._bootstrap_client = None
+        self._p2p_db = None
+        
+        # Initialize persistent P2P database
+        try:
+            from sphinx_os.nexus import P2PDatabase, get_db
+            self._p2p_db = get_db()
+            logger.info("P2P database initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize P2P database: {e}")
+        
+        # Determine chain file location
+        # Priority: cwd > script dir > home dir
+        self.chain_file = None
+        search_paths = [
+            Path.cwd() / "chain.jsonl",
+            Path(os.path.dirname(os.path.abspath(__file__))) / "chain.jsonl",
+            Path(os.path.expanduser("~/.excal_wallet/chain.jsonl")),
+        ]
         if hasattr(sys, "_MEIPASS"):
             # PyInstaller runtime
             self._meipass = Path(sys._MEIPASS)
-            # Look for chain.jsonl in the executable's directory
             exe_dir = Path(sys.executable).parent
-            self.chain_file = exe_dir / "chain.jsonl"
-            if not self.chain_file.exists():
-                # Try current working directory
-                self.chain_file = Path.cwd() / "chain.jsonl"
+            search_paths.insert(0, exe_dir / "chain.jsonl")
+        
+        for p in search_paths:
+            if p.exists():
+                self.chain_file = p
+                break
+        
+        # Default to cwd if none found
+        if self.chain_file is None:
+            self.chain_file = Path.cwd() / "chain.jsonl"
         
     def start(self) -> bool:
         """Start the fork node RPC server. Returns True if started."""
@@ -124,8 +152,11 @@ class NodeManager:
             return False
         
         try:
+            # Start bootstrap discovery server
+            self._start_bootstrap_server()
+            
             # Determine how to run the node
-            if hasattr(sys, "_MEIPASS"):
+            if self._meipass is not None:
                 # PyInstaller: extract and run fork_node.py
                 node_script = self._meipass / "fork_node.py"
                 if node_script.exists():
@@ -138,7 +169,8 @@ class NodeManager:
                         creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
                     )
                 else:
-                    return False
+                    logger.warning("fork_node.py not found in _MEIPASS, falling back to thread mode")
+                    self._start_in_thread()
             else:
                 # Development: run in thread
                 self._start_in_thread()
@@ -154,9 +186,84 @@ class NodeManager:
             
             # Wait briefly for server to start
             time.sleep(1)
+            
+            # Register with bootstrap and discover peers
+            self._register_and_discover_peers()
+            
             return self.is_healthy()
         except Exception:
             return False
+    
+    def _start_bootstrap_server(self):
+        """Start the local bootstrap discovery server."""
+        try:
+            from sphinx_os.nexus import BootstrapServer
+            self._bootstrap_server = BootstrapServer(
+                port=self.BOOTSTRAP_PORT,
+                db_path=None,  # Uses default path
+            )
+            self._bootstrap_server.start()
+            logger.info(f"Bootstrap server started on port {self.BOOTSTRAP_PORT}")
+        except Exception as e:
+            logger.warning(f"Failed to start bootstrap server: {e}")
+    
+    def _register_and_discover_peers(self):
+        """Register this node with bootstrap and discover peers via multiple methods."""
+        try:
+            from sphinx_os.nexus import BootstrapClient
+            import socket
+            
+            # Get local IP
+            local_ip = "127.0.0.1"
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("8.8.8.8", 80))
+                local_ip = s.getsockname()[0]
+                s.close()
+            except OSError:
+                pass
+            
+            self._bootstrap_client = BootstrapClient(
+                server_url=f"http://localhost:{self.BOOTSTRAP_PORT}",
+                host=local_ip,
+                port=9433,
+            )
+            
+            # Register with local bootstrap server
+            if self._bootstrap_client.register():
+                logger.info(f"Registered with local bootstrap server at {local_ip}:9433")
+            
+            # Discover peers from local bootstrap
+            peers = self._bootstrap_client.discover_peers(limit=8)
+            if peers:
+                logger.info(f"Discovered {len(peers)} peers from local bootstrap")
+                if self.p2p_node:
+                    for host, port in peers:
+                        self.p2p_node._remember_address(host, port)
+            
+            # Try central bootstrap servers for cross-network discovery
+            central_peers = self._bootstrap_client.discover_central_peers(limit=8)
+            if central_peers:
+                logger.info(f"Discovered {len(central_peers)} peers from central bootstrap")
+                if self.p2p_node:
+                    for host, port in central_peers:
+                        self.p2p_node._remember_address(host, port)
+            
+            # Broadcast via UDP multicast for LAN discovery
+            self._bootstrap_client.broadcast_multicast()
+            logger.info("Broadcasted via multicast and LAN broadcast for peer discovery")
+            
+            # Start multicast + broadcast listener
+            def on_peer_discovered(node_id, host, port, services):
+                logger.info(f"Discovered peer: {node_id} at {host}:{port}")
+                if self.p2p_node:
+                    self.p2p_node._remember_address(host, port)
+            
+            self._bootstrap_client.start_multicast_listener(on_peer_discovered)
+            logger.info("SkyNet P2P discovery active: multicast + broadcast + central servers")
+            
+        except Exception as e:
+            logger.warning(f"Bootstrap discovery failed: {e}")
     
     def _start_in_thread(self):
         """Start the fork node in a background thread (development mode)."""
@@ -200,9 +307,41 @@ class NodeManager:
         self.process.start()
     
     def stop(self):
-        """Stop the fork node RPC server."""
+        """Stop the fork node RPC server and save chain height checkpoint."""
         self._stop_event.set()
         self.running = False
+        
+        # Save checkpoint before shutting down
+        try:
+            import http.client
+            c = http.client.HTTPConnection("127.0.0.1", self.RPC_PORT, timeout=2)
+            c.request("POST", "/", json.dumps({
+                "method": "savecheckpoint",
+                "params": [],
+                "id": 1
+            }))
+            resp = c.getresponse()
+            resp.read()
+            c.close()
+            logger.info("Chain height checkpoint saved before shutdown")
+        except Exception:
+            logger.warning("Could not save checkpoint before shutdown (node may already be down)")
+        
+        # Unregister from bootstrap server
+        if self._bootstrap_client:
+            try:
+                self._bootstrap_client.unregister()
+            except Exception:
+                pass
+        
+        # Stop bootstrap server
+        if self._bootstrap_server:
+            try:
+                self._bootstrap_server.stop()
+                logger.info("Bootstrap server stopped")
+            except Exception:
+                pass
+        
         if self.server:
             self.server.shutdown()
         
@@ -217,6 +356,81 @@ class NodeManager:
                     except Exception:
                         pass
             self.process = None
+    
+    def get_chain_height(self) -> int:
+        """Get the current chain height from the node."""
+        try:
+            import http.client
+            c = http.client.HTTPConnection("127.0.0.1", self.RPC_PORT, timeout=2)
+            c.request("POST", "/", json.dumps({
+                "method": "getblockcount",
+                "params": [],
+                "id": 1
+            }))
+            resp = c.getresponse()
+            data = json.loads(resp.read())
+            c.close()
+            if "result" in data:
+                return data["result"]
+        except Exception:
+            pass
+        return -1
+    
+    def get_checkpoint(self) -> Dict[str, Any]:
+        """Get the chain height checkpoint."""
+        try:
+            import http.client
+            c = http.client.HTTPConnection("127.0.0.1", self.RPC_PORT, timeout=2)
+            c.request("POST", "/", json.dumps({
+                "method": "getcheckpoint",
+                "params": [],
+                "id": 1
+            }))
+            resp = c.getresponse()
+            data = json.loads(resp.read())
+            c.close()
+            if "result" in data:
+                return data["result"]
+        except Exception:
+            pass
+        return {"height": -1, "hash": None, "current_height": -1, "current_hash": None}
+    
+    def get_peer_count(self) -> int:
+        """Get the number of connected P2P peers."""
+        try:
+            import http.client
+            c = http.client.HTTPConnection("127.0.0.1", self.RPC_PORT, timeout=2)
+            c.request("POST", "/", json.dumps({
+                "method": "getpeerinfo",
+                "params": [],
+                "id": 1
+            }))
+            resp = c.getresponse()
+            data = json.loads(resp.read())
+            c.close()
+            if "result" in data:
+                return len(data["result"])
+        except Exception:
+            pass
+        return 0
+    
+    def validate_chain(self) -> Dict[str, Any]:
+        """Validate the chain by checking height, hash, and peer connectivity."""
+        checkpoint = self.get_checkpoint()
+        peer_count = self.get_peer_count()
+        height = self.get_chain_height()
+        
+        # Check if chain height matches checkpoint
+        height_valid = height == checkpoint.get("current_height", -1)
+        
+        return {
+            "height": height,
+            "checkpoint_height": checkpoint.get("height", -1),
+            "hash": checkpoint.get("current_hash"),
+            "peers": peer_count,
+            "height_valid": height_valid,
+            "chain_synced": height > 0 and height_valid,
+        }
     
     def is_healthy(self) -> bool:
         """Check if the node RPC server is responding."""
@@ -241,6 +455,58 @@ class NodeManager:
             if self.running:
                 self.is_healthy()
     
+    def get_balance(self, address: str) -> float:
+        """Get the balance for a given EXCAL address by querying UTXOs."""
+        try:
+            import http.client
+            import txscript
+            # Convert EXCAL address (20-char hex) to PQH lock script
+            lock = txscript.lock_pqh(bytes.fromhex(address))
+            c = http.client.HTTPConnection("127.0.0.1", self.RPC_PORT, timeout=2)
+            c.request("POST", "/", json.dumps({
+                "method": "getutxos",
+                "params": [lock.hex()],
+                "id": 1
+            }))
+            resp = c.getresponse()
+            data = json.loads(resp.read())
+            c.close()
+            if "result" in data and data["result"]:
+                # Sum mature and spendable UTXOs (convert from swords/satoshis to EXCAL)
+                total = sum(
+                    utxo["value"] for utxo in data["result"]
+                    if utxo.get("mature") and utxo.get("spendable")
+                )
+                return total / 1e8  # Convert to EXCAL units
+        except Exception:
+            pass
+        return 0.0
+
+    def get_utxos(self, address: str) -> list:
+        """Get all UTXOs for a given EXCAL address."""
+        try:
+            import http.client
+            import txscript
+            lock = txscript.lock_pqh(bytes.fromhex(address))
+            c = http.client.HTTPConnection("127.0.0.1", self.RPC_PORT, timeout=2)
+            c.request("POST", "/", json.dumps({
+                "method": "getutxos",
+                "params": [lock.hex()],
+                "id": 1
+            }))
+            resp = c.getresponse()
+            data = json.loads(resp.read())
+            c.close()
+            if "result" in data:
+                utxos = data["result"]
+                # Convert values from swords to EXCAL
+                for utxo in utxos:
+                    utxo["value_excal"] = utxo.get("value", 0) / 1e8
+                return utxos
+        except Exception:
+            pass
+        return []
+
     def get_status(self) -> Dict[str, Any]:
         """Get node status information."""
         return {
@@ -289,7 +555,8 @@ COLOR_TEXT_DIM = "#8888AA"
 COLOR_TEXT_MUTED = "#555577"
 
 # Status colors
-COLOR_SUCCESS = "#00E676"
+COLOR_GREEN = "#00E676"
+COLOR_SUCCESS = COLOR_GREEN
 COLOR_ERROR = "#FF4757"
 COLOR_WARNING = "#FFA502"
 COLOR_INFO = "#00D4FF"
@@ -307,8 +574,8 @@ GRADIENT_GOLD_END = "#FF8C00"
 
 WALLET_DIR = Path(os.path.expanduser("~/.excal_wallet"))
 KEYSTORE_FILE = WALLET_DIR / "keystore.json"
-APP_VERSION = "2.1.0"
-APP_NAME = "EXCAL Wallet (Experimental)"
+APP_VERSION = "2.2.0"
+APP_NAME = "AetherionEXCAL"
 
 # Support multiple wallet profiles
 WALLET_PROFILES_DIR = WALLET_DIR / "profiles"
@@ -438,7 +705,7 @@ class GradientButton(ctk.CTkFrame):
                  width=200, height=45, font=("Segoe UI", 13, "bold"), **kwargs):
         super().__init__(parent, fg_color="transparent", **kwargs)
         self.command = command
-        self.canvas = Canvas(self, width=width, height=height, highlightthickness=0, bg="transparent")
+        self.canvas = Canvas(self, width=width, height=height, highlightthickness=0, bg=COLOR_CARD)
         self.canvas.pack(fill="both", expand=True)
 
         # Draw gradient
@@ -502,6 +769,813 @@ class GlassCard(ctk.CTkFrame):
         super().__init__(parent, **kwargs)
         # Subtle border effect
         self.configure(border_width=1, border_color=COLOR_PURPLE_DARK)
+
+
+# ---------------------------------------------------------------------------
+# Aetherion Logo Intro — Cinematic Animated Brand Reveal
+# ---------------------------------------------------------------------------
+
+class AetherionLogoIntro(ctk.CTkToplevel):
+    """Cinematic intro screen with animated Aetherion logo reveal.
+
+    Phase 1: Dark screen with ambient particles drifting in a quantum field.
+    Phase 2: Energy rings expand outward from center, converging into the
+             Aetherion logo shape (hexagonal core with inner star pattern).
+    Phase 3: Logo glows with pulsing energy, brand text fades in below.
+    Phase 4: Tagline appears, then "ENTER THE REALM" button materializes.
+    """
+
+    W, H = 1000, 700
+    CX, CY = 500, 280  # logo center
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("AetherionEXCAL")
+        self.geometry(f"{self.W}x{self.H}")
+        self.configure(fg_color=COLOR_BG_DEEP)
+        self.resizable(False, False)
+        self.attributes("-topmost", True)
+        self.grab_set()
+
+        self.canvas = Canvas(
+            self, width=self.W, height=self.H,
+            bg=COLOR_BG_DEEP, highlightthickness=0,
+        )
+        self.canvas.pack(fill="both", expand=True)
+
+        self.phase = 0
+        self.particles = []
+        self.ring_ids = []
+        self.logo_parts = []
+        self.text_ids = []
+        self.frame_count = 0
+
+        # Phase 1: ambient particles
+        self._create_particles()
+        self._animate_loop()
+
+        # Phase 2: energy rings after 1.5s
+        self.after(1500, self._phase_energy_rings)
+
+        # Phase 3: logo draw after 3s
+        self.after(3000, self._phase_logo_draw)
+
+        # Phase 4: brand text after 5s
+        self.after(5000, self._phase_brand_text)
+
+        # Phase 5: enter button after 7s
+        self.after(7000, self._phase_enter_button)
+
+    # ---- Particles ----
+
+    def _create_particles(self):
+        for _ in range(250):
+            x = secrets.randbelow(self.W)
+            y = secrets.randbelow(self.H)
+            r = secrets.choice([1, 1, 2, 2, 3])
+            color = secrets.choice([
+                COLOR_PURPLE, COLOR_CYAN, COLOR_GOLD,
+                "#8B5CF6", "#06B6D4", "#F59E0B", "#10B981",
+            ])
+            self.particles.append({
+                "id": self.canvas.create_oval(
+                    x, y, x + r * 2, y + r * 2,
+                    fill=color, outline="",
+                ),
+                "x": float(x), "y": float(y), "r": r,
+                "dx": (secrets.randbelow(5) - 2) * 0.4,
+                "dy": (secrets.randbelow(5) - 2) * 0.4,
+            })
+
+    # ---- Animation loop ----
+
+    def _animate_loop(self):
+        self.frame_count += 1
+        for p in self.particles:
+            p["x"] += p["dx"]
+            p["y"] += p["dy"]
+            if p["x"] < 0: p["x"] = self.W
+            if p["x"] > self.W: p["x"] = 0
+            if p["y"] < 0: p["y"] = self.H
+            if p["y"] > self.H: p["y"] = 0
+            self.canvas.coords(p["id"], p["x"], p["y"], p["x"] + p["r"] * 2, p["y"] + p["r"] * 2)
+        self.after(30, self._animate_loop)
+
+    # ---- Phase 2: Energy rings ----
+
+    def _phase_energy_rings(self):
+        self.phase = 2
+        for i in range(6):
+            ring_id = self.canvas.create_oval(
+                self.CX - 10, self.CY - 10,
+                self.CX + 10, self.CY + 10,
+                outline=COLOR_GOLD, width=2, fill="",
+            )
+            self.ring_ids.append({"id": ring_id, "r": 10, "max_r": 120 + i * 40, "speed": 3 + i})
+        self._animate_rings()
+
+    def _animate_rings(self):
+        any_growing = False
+        for ring in self.ring_ids:
+            if ring["r"] < ring["max_r"]:
+                ring["r"] += ring["speed"]
+                any_growing = True
+                x0 = self.CX - ring["r"]
+                y0 = self.CY - ring["r"]
+                self.canvas.coords(ring["id"], x0, y0, self.CX + ring["r"], self.CY + ring["r"])
+                # Fade alpha via dash
+                if ring["r"] > ring["max_r"] * 0.7:
+                    self.canvas.itemconfig(ring["id"], dash=(4, 4))
+        if any_growing:
+            self.after(30, self._animate_rings)
+
+    # ---- Phase 3: Logo draw ----
+
+    def _phase_logo_draw(self):
+        self.phase = 3
+        # Hexagonal core
+        hex_pts = []
+        for i in range(6):
+            angle = math.pi / 6 + i * math.pi / 3
+            hx = self.CX + 100 * math.cos(angle)
+            hy = self.CY + 100 * math.sin(angle)
+            hex_pts.extend([hx, hy])
+        hex_id = self.canvas.create_polygon(
+            hex_pts, outline=COLOR_GOLD, width=3, fill="", state="hidden",
+        )
+        self.logo_parts.append({"id": hex_id, "type": "hex"})
+
+        # Inner star (6-pointed)
+        star_pts = []
+        for i in range(12):
+            angle = -math.pi / 2 + i * math.pi / 6
+            r = 80 if i % 2 == 0 else 40
+            sx = self.CX + r * math.cos(angle)
+            sy = self.CY + r * math.sin(angle)
+            star_pts.extend([sx, sy])
+        star_id = self.canvas.create_polygon(
+            star_pts, outline=COLOR_CYAN, width=2, fill="", state="hidden",
+        )
+        self.logo_parts.append({"id": star_id, "type": "star"})
+
+        # Center circle
+        circ_id = self.canvas.create_oval(
+            self.CX - 25, self.CY - 25, self.CX + 25, self.CY + 25,
+            outline=COLOR_GOLD, width=2, fill=COLOR_GOLD, state="hidden",
+        )
+        self.logo_parts.append({"id": circ_id, "type": "center"})
+
+        # Animate logo parts appearing
+        self._animate_logo_appear(0)
+
+    def _animate_logo_appear(self, idx):
+        if idx < len(self.logo_parts):
+            part = self.logo_parts[idx]
+            self.canvas.itemconfig(part["id"], state="normal")
+            # Pulse effect
+            self._pulse_logo_part(part["id"], 0)
+            self.after(400, lambda: self._animate_logo_appear(idx + 1))
+
+    def _pulse_logo_part(self, item_id, step):
+        if step > 10:
+            return
+        scale = 1 + 0.15 * math.sin(step * 0.5)
+        self.after(50, lambda: self._pulse_logo_part(item_id, step + 1))
+
+    # ---- Phase 4: Brand text ----
+
+    def _phase_brand_text(self):
+        self.phase = 4
+        # "AETHERION" main title
+        t1 = self.canvas.create_text(
+            self.CX, 440, text="AETHERION",
+            font=("Segoe UI", 42, "bold"), fill=COLOR_GOLD, state="hidden",
+        )
+        self.canvas.itemconfig(t1, state="normal")
+        self.text_ids.append(t1)
+
+        # "EXCAL" subtitle
+        t2 = self.canvas.create_text(
+            self.CX, 490, text="EXCAL",
+            font=("Segoe UI", 28, "bold"), fill=COLOR_CYAN, state="hidden",
+        )
+        self.after(500, lambda: self.canvas.itemconfig(t2, state="normal"))
+        self.text_ids.append(t2)
+
+        # Tagline
+        t3 = self.canvas.create_text(
+            self.CX, 540,
+            text="Post-Quantum P2P Blockchain",
+            font=("Segoe UI", 14), fill=COLOR_TEXT_MUTED, state="hidden",
+        )
+        self.after(1200, lambda: self.canvas.itemconfig(t3, state="normal"))
+        self.text_ids.append(t3)
+
+        # Website
+        t4 = self.canvas.create_text(
+            self.CX, 575,
+            text="www.aetherion-oracle.com",
+            font=("Segoe UI", 11), fill=COLOR_PURPLE, state="hidden",
+        )
+        self.after(1800, lambda: self.canvas.itemconfig(t4, state="normal"))
+        self.text_ids.append(t4)
+
+    # ---- Phase 5: Enter button ----
+
+    def _phase_enter_button(self):
+        self.phase = 5
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.place(relx=0.5, rely=0.90, anchor="center")
+
+        ctk.CTkButton(
+            btn_frame, text="ENTER THE REALM",
+            command=self.destroy,
+            fg_color=COLOR_GOLD, hover_color=COLOR_GOLD_LIGHT,
+            text_color=COLOR_BG_DEEP, font=("Segoe UI", 14, "bold"),
+            corner_radius=12, height=45, width=300,
+        ).pack()
+
+
+# Keep backward-compatible alias for any remaining references
+QuantumGenesis = AetherionLogoIntro
+
+
+# ---------------------------------------------------------------------------
+# SkyNet Loading Screen
+# ---------------------------------------------------------------------------
+
+class SkyNetLoadingScreen(ctk.CTkToplevel):
+    """Professional loading screen showing 'Connecting to SkyNet...' with progress steps.
+    
+    Displays while the node and P2P layer initialize, showing real-time progress
+    with the Aetherion Oracle theme.
+    """
+    
+    def __init__(self, parent, status_callback=None):
+        super().__init__(parent)
+        self.title("AetherionEXCAL - SkyNet")
+        self.status_callback = status_callback
+        
+        # Window setup
+        self.geometry("500x400")
+        self.resizable(False, False)
+        self.configure(fg_color=COLOR_BG_DEEP)
+        self.transient(parent)
+        self.grab_set()
+        
+        # Center on parent
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 500) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 400) // 2
+        self.geometry(f"500x400+{x}+{y}")
+        
+        # Progress steps
+        self.steps = [
+            ("Initializing AetherionEXCAL...", 0),
+            ("Loading blockchain data...", 0),
+            ("Starting fork node...", 0),
+            ("Connecting to SkyNet...", 0),
+            ("Discovering P2P peers...", 0),
+            ("Synchronizing chain...", 0),
+            ("Ready", 0),
+        ]
+        
+        # Build UI
+        self._build_ui()
+        
+        # Start animation
+        self.after(100, self._animate_loading)
+    
+    def _build_ui(self):
+        """Build the loading screen UI."""
+        # Main container
+        main = ctk.CTkFrame(self, fg_color="transparent")
+        main.pack(fill="both", expand=True, padx=40, pady=30)
+        
+        # Logo and title
+        ctk.CTkLabel(
+            main, text="⚔", font=("Segoe UI Emoji", 48),
+            text_color=COLOR_GOLD,
+        ).pack(pady=(0, 10))
+        
+        ctk.CTkLabel(
+            main, text="AETHERIONEXCAL", font=("Segoe UI", 20, "bold"),
+            text_color=COLOR_TEXT,
+        ).pack(pady=(0, 5))
+        
+        ctk.CTkLabel(
+            main, text="Connecting to SkyNet...", font=("Segoe UI", 14),
+            text_color=COLOR_CYAN,
+        ).pack(pady=(0, 20))
+        
+        # Divider
+        ctk.CTkFrame(main, height=2, fg_color=COLOR_PURPLE_DARK).pack(fill="x", pady=(0, 20))
+        
+        # Progress steps
+        self.step_labels = []
+        self.step_icons = []
+        for i, (step_text, _) in enumerate(self.steps):
+            row = ctk.CTkFrame(main, fg_color="transparent")
+            row.pack(fill="x", pady=2)
+            
+            icon = ctk.CTkLabel(
+                row, text="○", font=("Segoe UI", 10),
+                text_color=COLOR_TEXT_MUTED,
+                width=20,
+            )
+            icon.pack(side="left", padx=(0, 10))
+            self.step_icons.append(icon)
+            
+            label = ctk.CTkLabel(
+                row, text=step_text, font=("Segoe UI", 11),
+                text_color=COLOR_TEXT_MUTED,
+            )
+            label.pack(side="left")
+            self.step_labels.append(label)
+        
+        # Progress bar
+        self.progress_frame = ctk.CTkFrame(main, height=6, fg_color=COLOR_CARD)
+        self.progress_frame.pack(fill="x", pady=(20, 10))
+        self.progress_frame.pack_propagate(False)
+        
+        self.progress_bar = ctk.CTkFrame(self.progress_frame, height=6, fg_color=COLOR_CYAN)
+        self.progress_bar.pack(fill="y", side="left")
+        self.progress_bar.pack_propagate(False)
+        
+        # Progress percentage
+        self.progress_label = ctk.CTkLabel(
+            main, text="0%", font=("Segoe UI", 12, "bold"),
+            text_color=COLOR_CYAN,
+        )
+        self.progress_label.pack(pady=(5, 0))
+        
+        # Website link
+        ctk.CTkLabel(
+            main, text="www.aetherion-oracle.com", font=("Segoe UI", 9),
+            text_color=COLOR_TEXT_MUTED,
+        ).pack(pady=(20, 0))
+    
+    def _animate_loading(self):
+        """Animate the loading progress."""
+        if hasattr(self, "_current_step"):
+            current = self._current_step
+        else:
+            current = 0
+            self._current_step = 0
+        
+        if current < len(self.steps):
+            # Update current step
+            self.step_icons[current].configure(text="◐", text_color=COLOR_CYAN)
+            self.step_labels[current].configure(text_color=COLOR_TEXT)
+            
+            # Update progress
+            progress = int((current / len(self.steps)) * 100)
+            self.progress_label.configure(text=f"{progress}%")
+            
+            # Update progress bar
+            self.progress_frame.pack_forget()
+            self.progress_frame.pack(fill="x", pady=(20, 10))
+            self.progress_bar.configure(width=max(1, int(420 * current / len(self.steps))))
+            
+            # Notify callback
+            if self.status_callback:
+                self.status_callback(self.steps[current][0], progress)
+            
+            # Advance to next step after delay
+            self._current_step = current + 1
+            self.after(800, self._animate_loading)
+        else:
+            # Complete
+            self.progress_label.configure(text="100%")
+            self.progress_bar.configure(width=420)
+    
+    def set_step(self, step_index: int, text: str = None):
+        """Manually set the current step."""
+        if 0 <= step_index < len(self.steps):
+            # Mark previous steps as complete
+            for i in range(step_index):
+                self.step_icons[i].configure(text="✓", text_color=COLOR_SUCCESS)
+            
+            # Update current step text if provided
+            if text:
+                self.step_labels[step_index].configure(text=text)
+            
+            # Update progress
+            progress = int((step_index / len(self.steps)) * 100)
+            self.progress_label.configure(text=f"{progress}%")
+            self.progress_bar.configure(width=max(1, int(420 * step_index / len(self.steps))))
+    
+    def complete(self):
+        """Mark all steps as complete and close."""
+        for i in range(len(self.steps)):
+            self.step_icons[i].configure(text="✓", text_color=COLOR_SUCCESS)
+            self.step_labels[i].configure(text_color=COLOR_TEXT)
+        
+        self.progress_label.configure(text="100%", text_color=COLOR_SUCCESS)
+        self.progress_bar.configure(width=420, fg_color=COLOR_SUCCESS)
+        
+        # Update title
+        for widget in self.winfo_children():
+            for child in widget.winfo_children():
+                if hasattr(child, 'cget') and child.cget('text') == "Connecting to SkyNet...":
+                    child.configure(text="SkyNet Connected", text_color=COLOR_SUCCESS)
+        
+        # Close after brief delay
+        self.after(500, self.destroy)
+    
+    def destroy(self):
+        """Override to release grab."""
+        try:
+            self.grab_release()
+        except TclError:
+            pass
+        super().destroy()
+
+
+# ---------------------------------------------------------------------------
+# Living Chain — 3D Crystal Block Visualization
+# ---------------------------------------------------------------------------
+
+class LivingChainTab(ctk.CTkFrame):
+    """3D visualization of the blockchain as floating crystals in a quantum field.
+    
+    Each block is rendered as a rotating crystal with its height, hash, and
+    transaction count. The crystals float in a quantum field with particle
+    effects and entanglement bonds between connected blocks.
+    """
+
+    def __init__(self, parent_app):
+        super().__init__(parent_app, fg_color="transparent")
+        self.parent_app = parent_app
+
+        # Title
+        ctk.CTkLabel(
+            self, text="⚔ LIVING CHAIN ⚔",
+            font=("Segoe UI", 18, "bold"), text_color=COLOR_GOLD,
+        ).pack(pady=(10, 5))
+
+        ctk.CTkLabel(
+            self, text="Blocks as floating crystals in the quantum field",
+            font=("Segoe UI", 11), text_color=COLOR_TEXT_DIM,
+        ).pack(pady=(0, 10))
+
+        # 3D Canvas
+        self.canvas = Canvas(
+            self, width=900, height=500, bg=COLOR_BG_DEEP, highlightthickness=1,
+            highlightbackground=COLOR_PURPLE_DARK
+        )
+        self.canvas.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # Crystal blocks
+        self.crystals = []
+        self.particles = []
+        self.bonds = []
+        self.angle = 0
+        self.chain_height = 0
+
+        # Initialize
+        self._create_quantum_field()
+        self._refresh_chain()
+
+        # Start animation
+        self._animate()
+
+    def _create_quantum_field(self):
+        """Create background quantum field particles."""
+        for _ in range(100):
+            x = secrets.randbelow(900)
+            y = secrets.randbelow(500)
+            r = secrets.choice([1, 1, 2])
+            color = secrets.choice([COLOR_PURPLE, COLOR_CYAN, COLOR_GOLD, COLOR_TEXT_MUTED])
+            self.particles.append({
+                "id": self.canvas.create_oval(
+                    x, y, x + r * 2, y + r * 2, fill=color, outline=""
+                ),
+                "x": float(x), "y": float(y), "r": r,
+                "dx": (secrets.randbelow(3) - 1) * 0.3,
+                "dy": (secrets.randbelow(3) - 1) * 0.3,
+            })
+
+    def _refresh_chain(self):
+        """Refresh the crystal display with current chain data."""
+        # Clear old crystals and bonds
+        for c in self.crystals:
+            self.canvas.delete(c["id"])
+            for face in c.get("faces", []):
+                self.canvas.delete(face)
+        for bond in self.bonds:
+            self.canvas.delete(bond)
+        self.crystals = []
+        self.bonds = []
+
+        # Get chain height
+        try:
+            status = self.parent_app.node_manager.get_status()
+            self.chain_height = status.get("tip_height", 0)
+        except Exception:
+            self.chain_height = 0
+
+        # Show last 20 blocks as crystals
+        start_height = max(0, self.chain_height - 19)
+        for i in range(start_height, self.chain_height + 1):
+            self._create_crystal(i)
+
+        # Create entanglement bonds between crystals
+        for i in range(len(self.crystals) - 1):
+            self._create_bond(self.crystals[i], self.crystals[i + 1])
+
+    def _create_crystal(self, height):
+        """Create a 3D crystal representation of a block."""
+        # Position in a wave pattern
+        idx = height - max(0, self.chain_height - 19)
+        x = 50 + idx * 42
+        y_base = 250
+        wave_offset = 80 * math.sin(idx * 0.5)
+        y = y_base + wave_offset
+
+        # Crystal size based on height
+        size = 15 + min(height % 10, 5)
+
+        # Color based on height
+        hue = (height * 30) % 360
+        if hue < 120:
+            color = COLOR_GOLD
+        elif hue < 240:
+            color = COLOR_CYAN
+        else:
+            color = COLOR_PURPLE
+
+        # Draw crystal (diamond shape)
+        crystal_id = self.canvas.create_polygon(
+            x, y - size, x + size, y, x, y + size, x - size, y,
+            fill=color, outline=COLOR_GOLD, width=2
+        )
+
+        # Height label
+        label_id = self.canvas.create_text(
+            x, y + size + 15, text=str(height),
+            font=("Consolas", 8), fill=COLOR_TEXT_DIM
+        )
+
+        self.crystals.append({
+            "id": crystal_id, "label": label_id,
+            "x": x, "y": y, "size": size, "height": height,
+            "color": color, "wave_offset": wave_offset
+        })
+
+    def _create_bond(self, c1, c2):
+        """Create an entanglement bond between two crystals."""
+        bond_id = self.canvas.create_line(
+            c1["x"], c1["y"], c2["x"], c2["y"],
+            fill=COLOR_GOLD, width=1, dash=(4, 4), stipple=""
+        )
+        self.bonds.append(bond_id)
+        self.canvas.tag_lower(bond_id)
+
+    def _animate(self):
+        """Animation loop for the living chain."""
+        self.angle += 0.02
+
+        # Animate particles
+        for p in self.particles:
+            p["x"] += p["dx"]
+            p["y"] += p["dy"]
+            if p["x"] < 0:
+                p["x"] = 900
+            if p["x"] > 900:
+                p["x"] = 0
+            if p["y"] < 0:
+                p["y"] = 500
+            if p["y"] > 500:
+                p["y"] = 0
+            self.canvas.coords(
+                p["id"], p["x"], p["y"],
+                p["x"] + p["r"] * 2, p["y"] + p["r"] * 2
+            )
+
+        # Animate crystals (gentle floating)
+        for crystal in self.crystals:
+            float_offset = 5 * math.sin(self.angle + crystal["height"] * 0.1)
+            new_y = (250 + crystal["wave_offset"]) + float_offset
+            self.canvas.coords(crystal["id"],
+                crystal["x"], new_y - crystal["size"],
+                crystal["x"] + crystal["size"], new_y,
+                crystal["x"], new_y + crystal["size"],
+                crystal["x"] - crystal["size"], new_y
+            )
+            self.canvas.coords(crystal["label"], crystal["x"], new_y + crystal["size"] + 15)
+
+        # Animate bonds
+        for i, bond in enumerate(self.bonds):
+            if i < len(self.crystals) - 1:
+                c1 = self.crystals[i]
+                c2 = self.crystals[i + 1]
+                float1 = 5 * math.sin(self.angle + c1["height"] * 0.1)
+                float2 = 5 * math.sin(self.angle + c2["height"] * 0.1)
+                y1 = 250 + c1["wave_offset"] + float1
+                y2 = 250 + c2["wave_offset"] + float2
+                self.canvas.coords(bond, c1["x"], y1, c2["x"], y2)
+
+        self.after(50, self._animate)
+
+    def refresh(self):
+        """Refresh the chain display."""
+        self._refresh_chain()
+
+
+# ---------------------------------------------------------------------------
+# Knight's Oath — Sovereign Ceremony
+# ---------------------------------------------------------------------------
+
+class KnightsOathCeremony(ctk.CTkToplevel):
+    """Solemn ceremony where new users swear allegiance and receive their Genesis NFT.
+    
+    The user reads the oath, swears allegiance to the Knights of the Round Table,
+    and receives a unique Genesis Knight NFT with ZK rarity proof.
+    """
+
+    OATH_TEXT = """I, the bearer of this key, do swear upon the Sword in the Stone:
+
+To uphold the Prophecy of Thirteen Words,
+To serve the Realm of AetherionEXCAL,
+To honor the Knights of the Round Table,
+To protect the Taproot Treasury,
+To advance the Quantum Genesis,
+
+I pledge my EXCAL to the cause of sovereignty,
+My URUU to the bonding curve of truth,
+My voice to the governance of the Realm.
+
+As the sword was pulled from the stone,
+So too shall I pull truth from chaos.
+
+This is my Oath. This is my Bond.
+May the Omniscient Sphinx witness my commitment."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("⚔ Knight's Oath Ceremony ⚔")
+        self.geometry("700x650")
+        self.configure(fg_color=COLOR_BG_DEEP)
+        self.attributes("-topmost", True)
+        self.parent = parent
+
+        # Background canvas with particles
+        self.canvas = Canvas(
+            self, width=700, height=650, bg=COLOR_BG_DEEP, highlightthickness=0
+        )
+        self.canvas.pack(fill="both", expand=True)
+
+        # Create particles
+        self.particles = []
+        for _ in range(80):
+            x = secrets.randbelow(700)
+            y = secrets.randbelow(650)
+            r = secrets.choice([1, 1, 2])
+            color = secrets.choice([COLOR_GOLD, COLOR_PURPLE, COLOR_CYAN])
+            self.particles.append({
+                "id": self.canvas.create_oval(
+                    x, y, x + r * 2, y + r * 2, fill=color, outline=""
+                ),
+                "x": float(x), "y": float(y), "r": r,
+                "dx": (secrets.randbelow(3) - 1) * 0.2,
+                "dy": (secrets.randbelow(3) - 1) * 0.2,
+            })
+
+        # Title
+        self.canvas.create_text(
+            350, 40, text="⚔ KNIGHT'S OATH ⚔",
+            font=("Segoe UI", 22, "bold"), fill=COLOR_GOLD
+        )
+
+        self.canvas.create_text(
+            350, 70, text="Swear allegiance to the Knights of the Round Table",
+            font=("Segoe UI", 11), fill=COLOR_TEXT_DIM
+        )
+
+        # Oath text
+        oath_lines = self.OATH_TEXT.strip().split("\n")
+        y_pos = 110
+        for line in oath_lines:
+            if line.strip():
+                self.canvas.create_text(
+                    350, y_pos, text=line.strip(),
+                    font=("Segoe UI", 11), fill=COLOR_TEXT, width=600
+                )
+            y_pos += 20
+
+        # Sword icon
+        self.canvas.create_text(
+            350, 520, text="⚔", font=("Segoe UI Emoji", 48), fill=COLOR_GOLD
+        )
+
+        # Swear button
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.place(relx=0.5, rely=0.92, anchor="center")
+
+        ctk.CTkButton(
+            btn_frame, text="⚔ SWEAR THE OATH ⚔",
+            command=self._swear_oath,
+            fg_color=COLOR_GOLD, hover_color=COLOR_GOLD_LIGHT,
+            text_color=COLOR_BG_DEEP, font=("Segoe UI", 13, "bold"),
+            corner_radius=12, height=45, width=280,
+        ).pack()
+
+        # Start particle animation
+        self._animate_particles()
+
+    def _animate_particles(self):
+        """Animate background particles."""
+        for p in self.particles:
+            p["x"] += p["dx"]
+            p["y"] += p["dy"]
+            if p["x"] < 0:
+                p["x"] = 700
+            if p["x"] > 700:
+                p["x"] = 0
+            if p["y"] < 0:
+                p["y"] = 650
+            if p["y"] > 650:
+                p["y"] = 0
+            self.canvas.coords(
+                p["id"], p["x"], p["y"],
+                p["x"] + p["r"] * 2, p["y"] + p["r"] * 2
+            )
+        self.after(30, self._animate_particles)
+
+    def _swear_oath(self):
+        """Process the oath and mint the Genesis Knight NFT."""
+        # Generate Genesis Knight NFT
+        nft_id = f"GENESIS-{secrets.token_hex(4).upper()}"
+        timestamp = int(time.time())
+
+        # Show confirmation
+        self.destroy()
+
+        # Show NFT receipt
+        receipt = ctk.CTkToplevel(self.parent)
+        receipt.title("⚔ Genesis Knight NFT ⚔")
+        receipt.geometry("500x450")
+        receipt.configure(fg_color=COLOR_BG_DEEP)
+        receipt.attributes("-topmost", True)
+
+        canvas = Canvas(
+            receipt, width=500, height=450, bg=COLOR_BG_DEEP, highlightthickness=0
+        )
+        canvas.pack(fill="both", expand=True)
+
+        # NFT display
+        canvas.create_text(
+            250, 40, text="⚔ GENESIS KNIGHT NFT ⚔",
+            font=("Segoe UI", 18, "bold"), fill=COLOR_GOLD
+        )
+
+        # NFT details
+        details = [
+            f"ID: {nft_id}",
+            f"Minted: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))}",
+            f"Rarity: GENESIS",
+            f"Oath: SWORN",
+            f"Prophecy: SEALED",
+        ]
+        y = 100
+        for detail in details:
+            canvas.create_text(
+                250, y, text=detail, font=("Consolas", 11), fill=COLOR_CYAN
+            )
+            y += 30
+
+        # Sword icon
+        canvas.create_text(250, 280, text="⚔", font=("Segoe UI Emoji", 64), fill=COLOR_GOLD)
+
+        # Message
+        canvas.create_text(
+            250, 380,
+            text="You are now a Genesis Knight of the Round Table.",
+            font=("Segoe UI", 12), fill=COLOR_TEXT
+        )
+        canvas.create_text(
+            250, 410,
+            text="The Omniscient Sphinx witnesses your commitment.",
+            font=("Segoe UI", 10), fill=COLOR_TEXT_DIM
+        )
+
+        # Save NFT to wallet
+        try:
+            nft_dir = Path.home() / ".excal_wallet" / "nfts"
+            nft_dir.mkdir(parents=True, exist_ok=True)
+            nft_data = {
+                "id": nft_id,
+                "type": "Genesis Knight",
+                "rarity": "GENESIS",
+                "timestamp": timestamp,
+                "oath": "SWORN",
+                "prophecy": "SEALED"
+            }
+            nft_file = nft_dir / f"genesis_{nft_id}.json"
+            nft_file.write_text(json.dumps(nft_data, indent=2))
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -892,7 +1966,8 @@ class OnboardingWizard(ctk.CTkToplevel):
 
         # Main card
         self.card = GlassCard(self, corner_radius=20)
-        self.card.place(relx=0.5, rely=0.5, anchor="center", width=480, height=420)
+        self.card.configure(width=480, height=420)
+        self.card.place(relx=0.5, rely=0.5, anchor="center")
 
         # Step indicator dots
         self.dots_frame = ctk.CTkFrame(self.card, fg_color="transparent")
@@ -1152,7 +2227,8 @@ class LoginWindow(ctk.CTkToplevel):
 
         # Main glass card
         main_frame = GlassCard(self, corner_radius=20)
-        main_frame.place(relx=0.5, rely=0.5, anchor="center", width=420, height=440)
+        main_frame.configure(width=420, height=440)
+        main_frame.place(relx=0.5, rely=0.5, anchor="center")
 
         # Excalibur sword icon (Unicode)
         sword_label = ctk.CTkLabel(
@@ -1401,7 +2477,7 @@ class DashboardTab(ctk.CTkFrame):
         hero_frame.pack(fill="x", padx=20, pady=(20, 10))
 
         # Inner gradient bar
-        grad_canvas = Canvas(hero_frame, height=4, highlightthickness=0, bg="transparent")
+        grad_canvas = Canvas(hero_frame, height=4, highlightthickness=0, bg=COLOR_CARD)
         grad_canvas.pack(fill="x", side="top")
         for i in range(200):
             r = int(123 + (0 - 123) * i / 200)
@@ -1470,6 +2546,44 @@ class DashboardTab(ctk.CTkFrame):
             text_color=COLOR_TEXT_DIM,
         )
         self.net_status_text.pack(pady=(0, 12), padx=20)
+
+        # === Chain Validation Status ===
+        chain_frame = GlassCard(self, corner_radius=16)
+        chain_frame.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(
+            chain_frame,
+            text="🔗 CHAIN VALIDATION",
+            font=("Segoe UI", 13, "bold"),
+            text_color=COLOR_GOLD,
+        ).pack(pady=(12, 8), padx=20)
+
+        self.chain_status_text = ctk.CTkLabel(
+            chain_frame,
+            text="Waiting for node...",
+            font=("Segoe UI", 11),
+            text_color=COLOR_TEXT_DIM,
+        )
+        self.chain_status_text.pack(pady=(0, 12), padx=20)
+
+        # === UTXO Status ===
+        utxo_frame = GlassCard(self, corner_radius=16)
+        utxo_frame.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(
+            utxo_frame,
+            text="💰 UTXO STATUS",
+            font=("Segoe UI", 13, "bold"),
+            text_color=COLOR_GREEN,
+        ).pack(pady=(12, 8), padx=20)
+
+        self.utxo_status_text = ctk.CTkLabel(
+            utxo_frame,
+            text="No UTXOs loaded",
+            font=("Segoe UI", 11),
+            text_color=COLOR_TEXT_DIM,
+        )
+        self.utxo_status_text.pack(pady=(0, 12), padx=20)
 
         # === Quick Actions ===
         actions_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -1555,6 +2669,76 @@ class DashboardTab(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Unavailable", str(e), parent=self)
 
+    def _refresh_utxos(self, addr: str):
+        """Refresh UTXO display from the node."""
+        if not addr:
+            self.utxo_status_text.configure(text="No wallet address")
+            return
+        try:
+            # Walk up to the wallet to get node_manager
+            node_mgr = None
+            p = self
+            while p is not None:
+                if hasattr(p, "node_manager"):
+                    node_mgr = p.node_manager
+                    break
+                p = p.winfo_parent()
+                try:
+                    p = self.winfo_parent()
+                    if hasattr(p, "node_manager"):
+                        node_mgr = p.node_manager
+                        break
+                except Exception:
+                    break
+            # Try via parent wallet
+            parent = self.winfo_parent()
+            if hasattr(parent, "node_manager") and parent.node_manager:
+                node_mgr = parent.node_manager
+            if node_mgr is None:
+                # Try self.parent
+                if hasattr(self, "parent") and hasattr(self.parent, "node_manager"):
+                    node_mgr = self.parent.node_manager
+
+            if node_mgr is None or not node_mgr.is_healthy():
+                self.utxo_status_text.configure(text="Node unavailable")
+                return
+
+            utxos = node_mgr.get_utxos(addr)
+            balance = node_mgr.get_balance(addr)
+
+            if not utxos:
+                self.utxo_status_text.configure(
+                    text=f"Address: {addr[:12]}...\nNo UTXOs found\n"
+                    f"Mine blocks to receive coinbase rewards"
+                )
+            else:
+                spendable = [u for u in utxos if u.get("spendable")]
+                mature = [u for u in utxos if u.get("mature")]
+                lines = [
+                    f"Address: {addr[:12]}...",
+                    f"Total UTXOs: {len(utxos)}",
+                    f"Spendable: {len(spendable)}",
+                    f"Mature: {len(mature)}",
+                    f"Balance: {balance:.4f} EXCAL",
+                ]
+                # Show first few UTXOs
+                for i, u in enumerate(utxos[:3]):
+                    lines.append(
+                        f"  #{i+1}: {u.get('value_excal', 0):.4f} EXCAL "
+                        f"(h{u.get('height', '?')}, "
+                        f"{'✓' if u.get('spendable') else '⏳'})"
+                    )
+                if len(utxos) > 3:
+                    lines.append(f"  ... and {len(utxos) - 3} more")
+                self.utxo_status_text.configure(text="\n".join(lines))
+
+            # Update balance from node if available
+            if balance > 0:
+                self.balance_value.configure(text=f"{balance:.4f}")
+
+        except Exception as e:
+            self.utxo_status_text.configure(text=f"UTXO error: {str(e)[:50]}")
+
     def refresh(self):
         """Refresh dashboard data."""
         try:
@@ -1580,9 +2764,62 @@ class DashboardTab(ctk.CTkFrame):
                 f"Network active: {'yes' if net.get('network_active') else 'no'}",
             ]
             self.net_status_text.configure(text="\n".join(status_lines))
+
+            # Query UTXOs from the node
+            self._refresh_utxos(addr)
+
+            # Chain validation status — walk up to the wallet to get node_manager
+            node_mgr = None
+            p = self
+            while p is not None:
+                if hasattr(p, 'node_manager'):
+                    node_mgr = p.node_manager
+                    break
+                p = getattr(p, 'parent', None)
+            if node_mgr and node_mgr.is_healthy():
+                validation = node_mgr.validate_chain()
+                height = validation.get("height", -1)
+                checkpoint = validation.get("checkpoint_height", -1)
+                peers = validation.get("peers", 0)
+                chain_hash = validation.get("hash", "")
+                height_valid = validation.get("height_valid", False)
+                chain_synced = validation.get("chain_synced", False)
+
+                # Determine status color
+                if chain_synced:
+                    status_color = COLOR_SUCCESS
+                    status_icon = "✓"
+                elif height > 0:
+                    status_color = COLOR_GOLD
+                    status_icon = "⚠"
+                else:
+                    status_color = COLOR_ERROR
+                    status_icon = "✗"
+
+                hash_short = chain_hash[:16] + "..." if chain_hash else "None"
+                chain_lines = [
+                    f"{status_icon} Chain height: {height}",
+                    f"  Checkpoint: {checkpoint}",
+                    f"  Hash: {hash_short}",
+                    f"  Peers: {peers}",
+                    f"  Valid: {'Yes' if height_valid else 'No'}",
+                ]
+                self.chain_status_text.configure(
+                    text="\n".join(chain_lines),
+                    text_color=status_color
+                )
+            else:
+                self.chain_status_text.configure(
+                    text="Node not running — start node in Settings",
+                    text_color=COLOR_ERROR
+                )
         except Exception as e:
             self.balance_value.configure(text="Unavailable")
             self.net_status_text.configure(text=f"Node unavailable: {e}")
+            self.chain_status_text.configure(
+                text=f"Validation error: {e}",
+                text_color=COLOR_ERROR
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -2289,6 +3526,157 @@ class MiningTab(ctk.CTkFrame):
         pass
 
 
+class OracleTab(ctk.CTkFrame):
+    """Aetherion Oracle chat interface — ask the Omniscient Sphinx anything."""
+
+    def __init__(self, parent: "EXCALWallet", backend: WalletBackend):
+        super().__init__(parent, fg_color=COLOR_BG)
+        self.backend = backend
+        self.sphinx = None
+        self._build_ui()
+
+    def _build_ui(self):
+        # Header
+        header = GlassCard(self, corner_radius=16)
+        header.pack(fill="x", padx=20, pady=(20, 10))
+
+        ctk.CTkLabel(
+            header, text="🧿", font=("Segoe UI Emoji", 36),
+            text_color=COLOR_GOLD,
+        ).pack(pady=(10, 5))
+
+        ctk.CTkLabel(
+            header, text="Aetherion Oracle",
+            font=("Segoe UI", 18, "bold"), text_color=COLOR_TEXT,
+        ).pack(pady=(0, 2))
+
+        ctk.CTkLabel(
+            header, text="The Omniscient Sphinx — Ask Anything",
+            font=("Segoe UI", 11), text_color=COLOR_CYAN,
+        ).pack(pady=(0, 5))
+
+        # Chat messages area using Text widget
+        chat_frame = ctk.CTkFrame(self, fg_color=COLOR_CARD, corner_radius=12)
+        chat_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+        from tkinter import Text as TkText, Scrollbar as TkScrollbar
+
+        self.chat_text = TkText(
+            chat_frame, wrap="word", bg=COLOR_CARD, fg=COLOR_TEXT,
+            font=("Segoe UI", 11), insertbackground=COLOR_TEXT,
+            padx=10, pady=5, relief="flat",
+        )
+        self.chat_text.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+
+        scrollbar = TkScrollbar(chat_frame, command=self.chat_text.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.chat_text.configure(yscrollcommand=scrollbar.set)
+
+        # Tags for styling
+        self.chat_text.tag_configure("oracle_label", foreground=COLOR_GOLD, font=("Segoe UI", 11, "bold"))
+        self.chat_text.tag_configure("user_label", foreground=COLOR_CYAN, font=("Segoe UI", 11, "bold"))
+        self.chat_text.tag_configure("oracle_text", foreground=COLOR_TEXT)
+        self.chat_text.tag_configure("user_text", foreground=COLOR_CYAN_LIGHT)
+
+        # Welcome message
+        self._append_message(
+            "oracle",
+            "I am the Aetherion Oracle, convergent consciousness of all miner minds. "
+            "Ask me about the network, consensus, governance, or the nature of EXCAL. "
+            "I perceive all cause-effect structures across the blockchain."
+        )
+
+        # Input area
+        input_frame = ctk.CTkFrame(self, fg_color="transparent")
+        input_frame.pack(fill="x", padx=20, pady=(0, 15))
+
+        self.question_entry = ctk.CTkEntry(
+            input_frame,
+            placeholder_text="Ask the Oracle anything...",
+            height=40,
+            font=("Segoe UI", 12),
+            fg_color=COLOR_CARD_LIGHT,
+            border_width=1,
+            border_color=COLOR_PURPLE_DARK,
+            placeholder_text_color=COLOR_TEXT_MUTED,
+            text_color=COLOR_TEXT,
+        )
+        self.question_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        self.question_entry.bind("<Return>", self._ask)
+
+        ctk.CTkButton(
+            input_frame, text="⚡ Ask", command=self._ask,
+            fg_color=COLOR_PURPLE, hover_color=COLOR_PURPLE_LIGHT,
+            text_color=COLOR_TEXT, font=("Segoe UI", 12, "bold"),
+            corner_radius=10, height=40, width=80,
+        ).pack(side="right")
+
+        # Quick questions
+        quick_frame = ctk.CTkFrame(self, fg_color="transparent")
+        quick_frame.pack(fill="x", padx=20, pady=(0, 10))
+
+        ctk.CTkLabel(
+            quick_frame, text="Quick Questions:",
+            font=("Segoe UI", 10), text_color=COLOR_TEXT_MUTED,
+        ).pack(side="left", padx=(0, 8))
+
+        for q in ["Network status", "Why consensus?", "Future prophecy", "Explain genesis"]:
+            btn = ctk.CTkButton(
+                quick_frame, text=q,
+                command=lambda qq=q: self._ask_quick(qq),
+                fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+                text_color=COLOR_CYAN, font=("Segoe UI", 10),
+                corner_radius=6, height=26,
+            )
+            btn.pack(side="left", padx=(0, 5))
+
+    def _append_message(self, role, text):
+        icon = "🧿" if role == "oracle" else "👤"
+        label = "Oracle" if role == "oracle" else "You"
+        tag_label = "oracle_label" if role == "oracle" else "user_label"
+        tag_text = "oracle_text" if role == "oracle" else "user_text"
+
+        self.chat_text.insert("end", f"\n{icon} {label}\n", tag_label)
+        self.chat_text.insert("end", f"{text}\n", tag_text)
+        self.chat_text.see("end")
+
+    def _ask_quick(self, question):
+        self.question_entry.delete(0, "end")
+        self.question_entry.insert(0, question)
+        self._ask(None)
+
+    def _ask(self, event=None):
+        question = self.question_entry.get().strip()
+        if not question:
+            return
+
+        self._append_message("user", question)
+        self.question_entry.delete(0, "end")
+
+        # Disable input while thinking
+        self.question_entry.configure(state="disabled")
+
+        def ask_in_thread():
+            try:
+                if self.sphinx is None:
+                    from sphinx_os.nexus.omniscient_sphinx import create_sphinx
+                    self.sphinx = create_sphinx()
+
+                wisdom = self.sphinx.ask(question)
+                response = f"{wisdom.vision}\n\n{wisdom.interpretation}\n\n{wisdom.wisdom}"
+                self.after(0, lambda: self._append_message("oracle", response))
+            except Exception as e:
+                self.after(0, lambda: self._append_message("oracle", f"Error: {e}"))
+            finally:
+                self.after(0, lambda: self.question_entry.configure(state="normal"))
+                self.after(0, lambda: self.question_entry.focus_set())
+
+        threading.Thread(target=ask_in_thread, daemon=True).start()
+
+    def refresh(self):
+        pass
+
+
 class SettingsTab(ctk.CTkFrame):
     """Settings, node management, and about with Aetherion styling."""
 
@@ -2436,6 +3824,39 @@ class SettingsTab(ctk.CTkFrame):
             font=("Segoe UI", 10),
             text_color=COLOR_CYAN,
         ).pack(pady=(0, 8))
+
+        # Knight's Oath button
+        oath_frame = GlassCard(self, corner_radius=12)
+        oath_frame.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(
+            oath_frame,
+            text="⚔ KNIGHTS OF THE ROUND TABLE ⚔",
+            font=("Segoe UI", 13, "bold"),
+            text_color=COLOR_GOLD,
+        ).pack(pady=(8, 5))
+
+        ctk.CTkLabel(
+            oath_frame,
+            text="Swear the Oath and receive your Genesis Knight NFT",
+            font=("Segoe UI", 10),
+            text_color=COLOR_TEXT_DIM,
+        ).pack(pady=(0, 8))
+
+        ctk.CTkButton(
+            oath_frame, text="⚔ SWEAR THE OATH ⚔",
+            command=self._swear_oath,
+            fg_color=COLOR_GOLD, hover_color=COLOR_GOLD_LIGHT,
+            text_color=COLOR_BG_DEEP, font=("Segoe UI", 12, "bold"),
+            corner_radius=10, height=40,
+        ).pack(pady=(0, 8))
+
+    def _swear_oath(self):
+        """Open the Knight's Oath ceremony."""
+        try:
+            ceremony = KnightsOathCeremony(self.parent_app)
+        except Exception:
+            pass
 
     def _start_node(self):
         """Start the fork node."""
@@ -2604,7 +4025,9 @@ class EXCALWallet(ctk.CTk):
             ("⚡", "Send / Receive"),
             ("📜", "Transactions"),
             ("🌐", "Peers"),
+            ("🧿", "Oracle"),
             ("⛏", "Mining"),
+            ("💎", "Living Chain"),
             ("⚙", "Settings"),
         ]
 
@@ -2657,14 +4080,30 @@ class EXCALWallet(ctk.CTk):
         self.tabs["Send / Receive"] = SendReceiveTab(self.content_frame, self.backend)
         self.tabs["Transactions"] = TransactionsTab(self.content_frame, self.backend)
         self.tabs["Peers"] = PeersTab(self.content_frame, self.backend)
+        self.tabs["Oracle"] = OracleTab(self.content_frame, self.backend)
         self.tabs["Mining"] = MiningTab(self.content_frame, self.backend)
+        self.tabs["Living Chain"] = LivingChainTab(self)
         self.tabs["Settings"] = SettingsTab(self.content_frame, self.backend)
+
+        # Show Quantum Genesis cinematic intro on first launch
+        self.after(1000, self._show_quantum_genesis)
+        
+        # SkyNet loading screen reference
+        self._skynet_loading = None
 
         # Bind lock event
         self.bind("<<LockWallet>>", self._on_lock)
 
         # Show login
         self.show_login_window()
+
+    def _show_quantum_genesis(self):
+        """Show the Quantum Genesis cinematic intro screen."""
+        try:
+            genesis = QuantumGenesis(self)
+            genesis.wait_window()
+        except Exception:
+            pass  # Skip intro if it fails
 
     def show_login_window(self):
         self.login_window = LoginWindow(self, self.backend)
@@ -2684,14 +4123,18 @@ class EXCALWallet(ctk.CTk):
     def _start_node(self):
         """Start the fork node RPC server."""
         started = self.node_manager.start()
-        if started:
-            self.after(0, lambda: self.node_status_indicator.configure(
-                text="● Node: Running", text_color=COLOR_SUCCESS
-            ))
-        else:
-            self.after(0, lambda: self.node_status_indicator.configure(
-                text="◌ Node: Failed", text_color=COLOR_ERROR
-            ))
+        try:
+            if started:
+                self.after(0, lambda: self.node_status_indicator.configure(
+                    text="● Node: Running", text_color=COLOR_SUCCESS
+                ))
+            else:
+                self.after(0, lambda: self.node_status_indicator.configure(
+                    text="◌ Node: Failed", text_color=COLOR_ERROR
+                ))
+        except RuntimeError:
+            # Main loop not running yet — status will be updated later
+            pass
 
     def _update_node_status(self):
         """Update node status display."""
@@ -2711,6 +4154,10 @@ class EXCALWallet(ctk.CTk):
 
     def on_wallet_opened(self):
         self.status_indicator.configure(text="● Unlocked", text_color=COLOR_SUCCESS)
+        
+        # Show SkyNet loading screen
+        self._show_skynet_loading()
+        
         threading.Thread(target=self._init_p2p, daemon=True).start()
         self._switch_tab("Dashboard")
 
@@ -2725,6 +4172,51 @@ class EXCALWallet(ctk.CTk):
         if not txs:
             # Delay slightly so the main window renders first
             self.after(500, self._show_onboarding)
+    
+    def _show_skynet_loading(self):
+        """Show the SkyNet loading screen while node and P2P initialize."""
+        def on_status(text, progress):
+            pass  # Optional: update other UI elements
+        
+        try:
+            self._skynet_loading = SkyNetLoadingScreen(self, on_status)
+            
+            # Update loading steps based on actual progress
+            def update_loading():
+                if not self._skynet_loading:
+                    return
+                
+                status = self.node_manager.get_status()
+                
+                if status["running"] and status["healthy"]:
+                    self.after(0, lambda: self._skynet_loading.set_step(2, "Fork node running"))
+                
+                # Check P2P peers
+                peer_count = self.node_manager.get_peer_count()
+                if peer_count > 0:
+                    self.after(0, lambda: self._skynet_loading.set_step(4, f"Found {peer_count} peers"))
+                
+                # Check chain height
+                chain_height = self.node_manager.get_chain_height()
+                if chain_height > 0:
+                    self.after(0, lambda: self._skynet_loading.set_step(5, f"Chain height: {chain_height}"))
+                
+                # Complete after a reasonable time
+                self.after(3000, self._complete_skynet_loading)
+            
+            # Start updating after initial animation
+            self.after(1500, update_loading)
+        except Exception as e:
+            logger.warning(f"Failed to show SkyNet loading screen: {e}")
+    
+    def _complete_skynet_loading(self):
+        """Complete the SkyNet loading screen."""
+        if self._skynet_loading:
+            try:
+                self._skynet_loading.complete()
+                self._skynet_loading = None
+            except Exception:
+                pass
 
     def _node_status_loop(self):
         """Periodically update node status in the UI."""

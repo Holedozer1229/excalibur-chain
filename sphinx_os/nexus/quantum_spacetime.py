@@ -275,3 +275,86 @@ class QuantumSpacetimeFabric:
         self.wormholes = []
         self.active_wormholes = []
         self.step = 0
+
+    def apply_quantum_gate(self, gate: np.ndarray, qubits: list) -> None:
+        """Apply a quantum gate matrix to specified qubits.
+        
+        Args:
+            gate: 2x2 unitary gate matrix (e.g., Hadamard, Pauli-X).
+            qubits: List of qubit indices to apply the gate to.
+        """
+        for q in qubits:
+            if 0 <= q < self.num_qubits:
+                # Apply gate to Bloch sphere state (simplified)
+                state = self.states[q].copy()
+                # Convert Bloch vector to state vector approximation
+                state_vec = np.array([np.sqrt((1 + state[2]) / 2), 
+                                      np.sqrt((1 - state[2]) / 2) * np.exp(1j * np.arctan2(state[1], state[0]))])
+                # Apply gate
+                new_vec = gate @ state_vec
+                # Convert back to Bloch vector
+                self.states[q] = [
+                    2 * np.real(new_vec[0] * np.conj(new_vec[1])),
+                    2 * np.imag(new_vec[0] * np.conj(new_vec[1])),
+                    np.abs(new_vec[0])**2 - np.abs(new_vec[1])**2
+                ]
+                # Create local curvature
+                self.curvature[q, q] += 0.1
+
+    def unified_step(self) -> dict:
+        """Perform one unified evolution step and return metrics.
+        
+        Returns:
+            Dict with entanglement_entropy, curvature_rms, and other metrics.
+        """
+        self.evolve(1)
+        ent_entropy = self.compute_entanglement_entropy()
+        curv_rms = float(np.sqrt(np.mean(self.curvature ** 2)))
+        purity = self.compute_quantum_purity()
+        return {
+            "entanglement_entropy": ent_entropy,
+            "curvature_rms": curv_rms,
+            "quantum_purity": purity,
+            "wormhole_count": len(self.active_wormholes),
+            "step": self.step,
+        }
+
+    def compute_entanglement_entropy(self) -> float:
+        """Compute the average entanglement entropy across all qubit pairs.
+        
+        Returns:
+            Average entanglement entropy (0 to 1).
+        """
+        return float(np.mean(self.entanglement))
+
+    def compute_quantum_purity(self) -> float:
+        """Compute the quantum purity of the fabric state.
+        
+        Purity measures how close the state is to a pure state (1.0 = pure, 0.0 = maximally mixed).
+        
+        Returns:
+            Purity value (0 to 1).
+        """
+        # Purity = 1 - entropy (simplified)
+        entropy = self.compute_entanglement_entropy()
+        return max(0.0, min(1.0, 1.0 - entropy))
+
+    @property
+    def step_count(self) -> int:
+        """Return the current step count."""
+        return self.step
+
+    @property
+    def grid_size(self) -> int:
+        """Return the number of qubits (grid size)."""
+        return self.num_qubits
+
+    @property
+    def wormhole_nodes(self) -> list:
+        """Return list of active wormhole endpoints."""
+        nodes = set()
+        for wh in self.active_wormholes:
+            if not wh.closed:
+                nodes.add(wh.endpoint_a)
+                nodes.add(wh.endpoint_b)
+        return list(nodes)

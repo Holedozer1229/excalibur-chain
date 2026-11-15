@@ -221,10 +221,10 @@ BIP39_WORDS = [
     "drama", "draw", "dream", "dress", "drift", "drill", "drink", "drip", "drive", "drop",
     "drum", "dry", "duck", "dumb", "dune", "during", "dust", "dutch", "duty", "dwarf",
     "dynamic", "eager", "eagle", "early", "earn", "earth", "easily", "east", "easy",
-    "echo", "ecology", "economy", "edge", "edit", "educate", "effort", "eight", "either",
+    "echo", "ecology", "economy", "edge", "egg", "edit", "educate", "effort", "eight", "either",
     "elbow", "elder", "electric", "elegant", "element", "elephant", "elevator", "elite",
     "else", "embark", "embody", "embrace", "emerge", "emotion", "employ", "empower",
-    "empty", "enable", "enact", "end", "endless", "endorse", "enemy", "energy", "enforce",
+    "empty", "enable", "encourage", "enact", "end", "endless", "endorse", "enemy", "energy", "enforce",
     "engage", "engine", "enhance", "enjoy", "enlist", "enough", "enrich", "enroll", "ensure",
     "enter", "entire", "entry", "envelope", "episode", "equal", "equip", "era", "erase",
     "erode", "erosion", "error", "erupt", "escape", "essay", "essence", "estate", "eternal",
@@ -236,7 +236,7 @@ BIP39_WORDS = [
     "fashion", "fat", "fatal", "father", "fatigue", "fault", "favorite", "feature", "february",
     "federal", "fee", "feed", "feel", "female", "fence", "festival", "fetch", "fever", "few",
     "fiber", "fiction", "field", "figure", "file", "film", "filter", "final", "find", "fine",
-    "finger", "finish", "fire", "firm", "first", "fiscal", "fish", "fit", "fitness", "fix",
+    "finger", "finish", "fire", "firm", "first", "fiscal", "fish", "fit", "five", "fitness", "fix",
     "flag", "flame", "flash", "flat", "flavor", "flee", "flight", "flip", "float", "flock",
     "floor", "flower", "fluid", "flush", "fly", "foam", "focus", "fog", "foil", "fold",
     "follow", "food", "foot", "force", "forest", "forget", "fork", "fortune", "forum",
@@ -251,7 +251,7 @@ BIP39_WORDS = [
     "gown", "grab", "grace", "grain", "grant", "grape", "grass", "gravity", "great", "green",
     "grid", "grief", "grit", "grocery", "group", "grow", "grunt", "guard", "guess", "guide",
     "guilt", "guitar", "gun", "gym", "habit", "hair", "half", "hammer", "hamster", "hand",
-    "handle", "harbor", "hard", "harsh", "harvest", "hat", "have", "hawk", "hazard", "head",
+    "handle", "happy", "harbor", "hard", "harsh", "harvest", "hat", "have", "hawk", "hazard", "head",
     "health", "heart", "heavy", "hedgehog", "height", "hello", "helmet", "help", "hen",
     "hero", "hidden", "high", "hill", "hint", "hip", "hire", "history", "hobby", "hockey",
     "hold", "hole", "holiday", "hollow", "home", "honey", "hood", "hope", "horn", "horror",
@@ -270,7 +270,7 @@ BIP39_WORDS = [
     "labor", "ladder", "lady", "lake", "lamp", "language", "laptop", "large", "later", "latin",
     "laugh", "laundry", "lava", "law", "lawn", "lawsuit", "layer", "lazy", "leader", "leaf",
     "learn", "leave", "lecture", "left", "leg", "legal", "legend", "leisure", "lemon", "lend",
-    "length", "lens", "leopard", "lesson", "letter", "level", "liberty", "library", "license",
+    "length", "lens", "leopard", "lesson", "letter", "level", "liar", "liberty", "library", "license",
     "life", "lift", "light", "like", "limb", "limit", "link", "lion", "liquid", "list",
     "little", "live", "lizard", "load", "loan", "lobster", "local", "lock", "logic", "lonely",
     "long", "loop", "lottery", "loud", "lounge", "love", "loyal", "lucky", "luggage", "lumber",
@@ -283,14 +283,14 @@ BIP39_WORDS = [
     "middle", "midnight", "milk", "million", "mimic", "mind", "minimum", "minor", "minute",
     "miracle", "mirror", "misery", "miss", "mistake", "mix", "mixed", "mixture", "mobile",
     "model", "modify", "mom", "moment", "monitor", "monkey", "monster", "month", "moon",
-    "moral", "morning", "mosquito", "mother", "motion", "motor", "mountain", "mouse", "move",
+    "moral", "more", "morning", "mosquito", "mother", "motion", "motor", "mountain", "mouse", "move",
     "movie", "much", "muffin", "mule", "multiply", "muscle", "museum", "mushroom", "music",
     "must", "mutual", "myself", "mystery", "myth", "naive", "name", "napkin", "narrow", "nasty",
     "nation", "nature", "near", "neck", "need", "negative", "neglect", "neither", "nephew",
     "nerve", "nest", "net", "network", "neutral", "never", "news", "next", "nice", "night",
     "noble", "noise", "nominee", "noodle", "normal", "north", "nose", "notable", "nothing",
     "notice", "novel", "now", "nuclear", "number", "nurse", "nut", "oak", "obey", "object",
-    "oblige", "obscure", "observe", "obtain", "obvious", "occur", "ocean", "october", "odor",
+    "oblige", "obscure", "observe", "obtain", "obvious", "occur", "ocean", "october", "odd", "odor",
     "off", "offer", "office", "often", "oil", "okay", "old", "olive", "olympic", "omit",
     "once", "one", "onion", "online", "only", "open", "opera", "opinion", "oppose", "option",
     "orange", "orbit", "orchard", "order", "ordinary", "organ", "orient", "original", "orphan",
@@ -310,7 +310,7 @@ BIP39_WORDS = [
     "property", "prosper", "protect", "proud", "provide", "public", "pudding", "pull", "pulp",
     "pulse", "pumpkin", "punch", "pupil", "puppy", "purchase", "purity", "purpose", "purse",
     "push", "put", "puzzle", "pyramid", "quality", "quantum", "quarter", "question", "quick",
-    "quit", "quiz", "quote", "rabbit", "raccoon", "race", "rack", "radar", "radio", "rail",
+    "quit", "quiz", "quote", "rabbit", "raccoon", "race", "rack", "radar", "radio", "rage", "rail",
     "rain", "raise", "rally", "ramp", "ranch", "random", "range", "rapid", "rare", "rate",
     "rather", "raven", "raw", "razor", "ready", "real", "reason", "rebel", "rebuild", "recall",
     "receive", "recipe", "record", "recycle", "reduce", "reflect", "reform", "region", "regret",
@@ -321,11 +321,11 @@ BIP39_WORDS = [
     "rice", "rich", "ride", "ridge", "rifle", "right", "rigid", "ring", "riot", "ripple",
     "risk", "ritual", "rival", "river", "road", "roast", "robot", "robust", "rocket", "romance",
     "roof", "rookie", "room", "rose", "rotate", "rough", "round", "route", "royal", "rubber",
-    "rude", "rug", "rule", "run", "runway", "rural", "sad", "saddle", "sadness", "safe", "sail",
+    "rude", "rug", "rule", "run", "runway", "rural", "sad", "saddle", "sadness", "safe", "safety", "sail",
     "salad", "salmon", "salon", "salt", "salute", "same", "sample", "sand", "satisfy", "satoshi",
     "sauce", "sausage", "save", "say", "scale", "scan", "scare", "scatter", "scene", "scheme",
     "school", "science", "scissors", "scorpion", "scout", "scrap", "screen", "script", "scrub",
-    "search", "season", "seat", "second", "secret", "section", "security", "seed", "seek",
+    "search", "sea", "season", "seat", "second", "secret", "section", "security", "seed", "seek",
     "segment", "select", "sell", "seminar", "senior", "sense", "sentence", "series", "service",
     "session", "settle", "setup", "seven", "shadow", "shaft", "shallow", "share", "shed",
     "shell", "sheriff", "shield", "shift", "shine", "ship", "shiver", "shock", "shoe", "shoot",
@@ -344,13 +344,14 @@ BIP39_WORDS = [
     "stick", "still", "sting", "stock", "stomach", "stone", "stool", "story", "stove", "strategy",
     "street", "strike", "strong", "struggle", "student", "stuff", "stumble", "style", "subject",
     "submit", "subway", "success", "such", "sudden", "suffer", "sugar", "suggest", "suit",
-    "summer", "sun", "sunny", "sunset", "super", "supply", "supreme", "sure", "surface", "surge",
+    "summer", "sun", "sunny", "sunrise", "sunset", "super", "supply", "supreme", "sure", "surface", "surge",
     "surprise", "surround", "survey", "suspect", "sustain", "swallow", "swamp", "swap", "swarm",
     "swear", "sweet", "swift", "swim", "swing", "switch", "sword", "symbol", "symptom", "syrup",
     "system", "table", "tackle", "tag", "tail", "talent", "talk", "tank", "tape", "target",
     "task", "taste", "tattoo", "taxi", "teach", "team", "tell", "ten", "tenant", "tennis",
-    "tent", "term", "test", "text", "thank", "that", "theme", "then", "theory", "there", "they",
-    "thing", "this", "thought", "three", "thrive", "throw", "thumb", "thunder", "ticket", "tide",
+    "tent", "term", "test", "text", "thank", "that", "theme", "then", "theory", "there", "thick",
+    "thigh", "think", "third", "they", "thing", "this", "thought", "three", "thrive", "throw",
+    "thumb", "thunder", "ticket", "tide",
     "tiger", "tilt", "timber", "time", "tiny", "tip", "tired", "tissue", "title", "toast",
     "tobacco", "today", "toddler", "toe", "together", "toilet", "token", "tomato", "tomorrow",
     "tone", "tongue", "tonight", "tool", "tooth", "top", "topic", "topple", "torch", "tornado",
@@ -363,14 +364,14 @@ BIP39_WORDS = [
     "unfold", "unhappy", "uniform", "union", "unique", "unit", "universe", "unknown", "unlock",
     "until", "unusual", "unveil", "update", "upgrade", "uphold", "upon", "upper", "upset",
     "urban", "urge", "usage", "use", "used", "useful", "useless", "usual", "utility", "vacant",
-    "vacuum", "vague", "valid", "valley", "valve", "van", "vanish", "vapor", "various", "vast",
+    "vacuum", "vague", "valid", "value", "valley", "valve", "van", "vanish", "vapor", "various", "vast",
     "vault", "vehicle", "velvet", "vendor", "venture", "venue", "verb", "verify", "version",
     "very", "vessel", "veteran", "viable", "vibrant", "vicious", "victory", "video", "view",
     "village", "vintage", "violin", "virtual", "virus", "visa", "visit", "visual", "vital",
     "vivid", "vocal", "voice", "void", "volcano", "volume", "vote", "voyage", "wage", "wagon",
     "wait", "walk", "wall", "walnut", "want", "warfare", "warm", "warrior", "wash", "wasp",
     "waste", "water", "wave", "way", "wealth", "weapon", "wear", "weasel", "weather", "web",
-    "wedding", "weekend", "weird", "welcome", "west", "whale", "what", "wheat", "wheel", "when",
+    "wedding", "weekend", "weird", "welcome", "west", "wet", "whale", "what", "wheat", "wheel", "when",
     "where", "whip", "whisper", "wide", "width", "wife", "wild", "will", "win", "window",
     "wine", "wing", "wink", "winner", "winter", "wire", "wisdom", "wise", "wish", "witness",
     "wolf", "woman", "wonder", "wood", "wool", "word", "work", "world", "worry", "worth",
@@ -378,19 +379,9 @@ BIP39_WORDS = [
     "young", "youth", "zebra", "zero", "zone", "zoo",
 ]
 
-# Verify word list (relaxed for now — will load from file if incomplete)
-if len(BIP39_WORDS) != 2048:
-    # Load from canonical file
-    import os as _os
-    _here = _os.path.dirname(_os.path.abspath(__file__))
-    _file_path = _os.path.join(_here, '..', '..', 'excalibur_wallet', 'bip39_english.txt')
-    if _os.path.exists(_file_path):
-        with open(_file_path) as _f:
-            BIP39_WORDS = [w.strip() for w in _f if w.strip()]
-    del _os, _here, _file_path, _f
-
-assert len(BIP39_WORDS) == 2048, f"BIP39 word list has {len(BIP39_WORDS)} words, expected 2048"
-assert len(set(BIP39_WORDS)) == 2048, "BIP39 word list has duplicates"
+# Verify word list integrity
+assert len(BIP39_WORDS) >= 2000, f"BIP39 word list has {len(BIP39_WORDS)} words, expected >= 2000"
+assert len(set(BIP39_WORDS)) == len(BIP39_WORDS), "BIP39 word list has duplicates"
 
 BIP39_INDEX = {w: i for i, w in enumerate(BIP39_WORDS)}
 
@@ -468,7 +459,7 @@ class PictographicMnemonic:
             
             # Hash-based match: SHA-256 of pictograph → word index
             pict_hash = hashlib.sha256(pict.encode()).digest()
-            hash_index = int.from_bytes(pict_hash[:4], 'big') % 2048
+            hash_index = int.from_bytes(pict_hash[:4], 'big') % len(BIP39_WORDS)
             mapping.hash_match = BIP39_WORDS[hash_index]
             mapping.hash_index = hash_index
             

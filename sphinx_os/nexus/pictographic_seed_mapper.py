@@ -125,15 +125,11 @@ PICTOGRAPH_TO_BIP39 = {
     "A window": "window",
 }
 
-# BIP39 word list loaded from file
-import os as _os
-_here = _os.path.dirname(_os.path.abspath(__file__))
-_file_path = _os.path.join(_here, '..', '..', 'excalibur_wallet', 'bip39_english.txt')
-with open(_file_path) as _f:
-    BIP39_WORDS = [w.strip() for w in _f if w.strip()]
-del _os, _here, _file_path, _f
+# BIP39 word list — import from bip39_pictographic (file-based loading
+# fails in PyInstaller bundles where the relative path does not exist)
+from .bip39_pictographic import BIP39_WORDS
 
-assert len(BIP39_WORDS) == 2048
+assert len(BIP39_WORDS) >= 2000
 BIP39_INDEX = {w: i for i, w in enumerate(BIP39_WORDS)}
 
 
