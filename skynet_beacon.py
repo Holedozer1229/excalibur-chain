@@ -41,6 +41,7 @@ import json
 import logging
 import os
 import socket
+import struct
 import sys
 import threading
 import time
@@ -249,7 +250,7 @@ class SkyNetBeacon:
             sock.settimeout(1.0)
             sock.bind(("", self.multicast_port))
             
-            mreq = socket.pack("4s4s",
+            mreq = struct.pack("4s4s",
                               socket.inet_aton(self.multicast_group),
                               socket.inet_aton("0.0.0.0"))
             sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
@@ -369,9 +370,10 @@ class SkyNetBeacon:
                     "host": peer["host"],
                     "port": peer["port"],
                     "services": peer["services"],
+                    "last_seen": peer["last_seen"],
                 })
         
-        peers.sort(key=lambda p: p["last_seen"], reverse=True)
+        peers.sort(key=lambda p: p.get("last_seen", 0), reverse=True)
         return peers[:limit]
     
     def get_peers(self, limit: int = 8) -> list:

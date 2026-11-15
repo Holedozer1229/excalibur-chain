@@ -179,7 +179,13 @@ class P2PDatabase:
         Returns:
             dict: Peer record
         """
+        now = time.time()
         with self._lock, self._connect() as conn:
+            # Delete any existing entry with same host:port but different node_id
+            conn.execute("""
+                DELETE FROM peers WHERE host = ? AND port = ? AND node_id != ?
+            """, (host, port, node_id))
+            
             conn.execute("""
                 INSERT INTO peers (node_id, host, port, services, user_agent, version, last_seen)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -190,10 +196,10 @@ class P2PDatabase:
                     user_agent = excluded.user_agent,
                     version = excluded.version,
                     last_seen = excluded.last_seen
-            """, (node_id, host, port, services, user_agent, version, time.time()))
+            """, (node_id, host, port, services, user_agent, version, now))
             
             row = conn.execute("SELECT * FROM peers WHERE node_id = ?", (node_id,)).fetchone()
-            return dict(row)
+            return dict(row) if row else None
     
     def get_peer(self, node_id: str) -> dict:
         """Get a peer by node_id.

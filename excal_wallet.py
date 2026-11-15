@@ -1233,12 +1233,21 @@ class LivingChainTab(ctk.CTkFrame):
         self.angle = 0
         self.chain_height = 0
 
-        # Initialize
-        self._create_quantum_field()
-        self._refresh_chain()
+        # Initialize with error guards
+        try:
+            self._create_quantum_field()
+        except Exception as e:
+            logger.warning(f"LivingChain quantum field error: {e}")
+        try:
+            self._refresh_chain()
+        except Exception as e:
+            logger.warning(f"LivingChain refresh error: {e}")
 
         # Start animation
-        self._animate()
+        try:
+            self._animate()
+        except Exception as e:
+            logger.warning(f"LivingChain animation error: {e}")
 
     def _create_quantum_field(self):
         """Create background quantum field particles."""
@@ -1325,56 +1334,71 @@ class LivingChainTab(ctk.CTkFrame):
 
     def _create_bond(self, c1, c2):
         """Create an entanglement bond between two crystals."""
-        bond_id = self.canvas.create_line(
-            c1["x"], c1["y"], c2["x"], c2["y"],
-            fill=COLOR_GOLD, width=1, dash=(4, 4), stipple=""
-        )
-        self.bonds.append(bond_id)
-        self.canvas.tag_lower(bond_id)
+        try:
+            bond_id = self.canvas.create_line(
+                c1["x"], c1["y"], c2["x"], c2["y"],
+                fill=COLOR_GOLD, width=1, dash=(4, 4)
+            )
+            self.bonds.append(bond_id)
+            self.canvas.tag_lower(bond_id)
+        except TclError:
+            pass
 
     def _animate(self):
         """Animation loop for the living chain."""
-        self.angle += 0.02
+        try:
+            self.angle += 0.02
 
-        # Animate particles
-        for p in self.particles:
-            p["x"] += p["dx"]
-            p["y"] += p["dy"]
-            if p["x"] < 0:
-                p["x"] = 900
-            if p["x"] > 900:
-                p["x"] = 0
-            if p["y"] < 0:
-                p["y"] = 500
-            if p["y"] > 500:
-                p["y"] = 0
-            self.canvas.coords(
-                p["id"], p["x"], p["y"],
-                p["x"] + p["r"] * 2, p["y"] + p["r"] * 2
-            )
+            # Animate particles
+            for p in self.particles:
+                p["x"] += p["dx"]
+                p["y"] += p["dy"]
+                if p["x"] < 0:
+                    p["x"] = 900
+                if p["x"] > 900:
+                    p["x"] = 0
+                if p["y"] < 0:
+                    p["y"] = 500
+                if p["y"] > 500:
+                    p["y"] = 0
+                try:
+                    self.canvas.coords(
+                        p["id"], p["x"], p["y"],
+                        p["x"] + p["r"] * 2, p["y"] + p["r"] * 2
+                    )
+                except TclError:
+                    pass
 
-        # Animate crystals (gentle floating)
-        for crystal in self.crystals:
-            float_offset = 5 * math.sin(self.angle + crystal["height"] * 0.1)
-            new_y = (250 + crystal["wave_offset"]) + float_offset
-            self.canvas.coords(crystal["id"],
-                crystal["x"], new_y - crystal["size"],
-                crystal["x"] + crystal["size"], new_y,
-                crystal["x"], new_y + crystal["size"],
-                crystal["x"] - crystal["size"], new_y
-            )
-            self.canvas.coords(crystal["label"], crystal["x"], new_y + crystal["size"] + 15)
+            # Animate crystals (gentle floating)
+            for crystal in self.crystals:
+                float_offset = 5 * math.sin(self.angle + crystal["height"] * 0.1)
+                new_y = (250 + crystal["wave_offset"]) + float_offset
+                try:
+                    self.canvas.coords(crystal["id"],
+                        crystal["x"], new_y - crystal["size"],
+                        crystal["x"] + crystal["size"], new_y,
+                        crystal["x"], new_y + crystal["size"],
+                        crystal["x"] - crystal["size"], new_y
+                    )
+                    self.canvas.coords(crystal["label"], crystal["x"], new_y + crystal["size"] + 15)
+                except TclError:
+                    pass
 
-        # Animate bonds
-        for i, bond in enumerate(self.bonds):
-            if i < len(self.crystals) - 1:
-                c1 = self.crystals[i]
-                c2 = self.crystals[i + 1]
-                float1 = 5 * math.sin(self.angle + c1["height"] * 0.1)
-                float2 = 5 * math.sin(self.angle + c2["height"] * 0.1)
-                y1 = 250 + c1["wave_offset"] + float1
-                y2 = 250 + c2["wave_offset"] + float2
-                self.canvas.coords(bond, c1["x"], y1, c2["x"], y2)
+            # Animate bonds
+            for i, bond in enumerate(self.bonds):
+                if i < len(self.crystals) - 1:
+                    c1 = self.crystals[i]
+                    c2 = self.crystals[i + 1]
+                    float1 = 5 * math.sin(self.angle + c1["height"] * 0.1)
+                    float2 = 5 * math.sin(self.angle + c2["height"] * 0.1)
+                    y1 = 250 + c1["wave_offset"] + float1
+                    y2 = 250 + c2["wave_offset"] + float2
+                    try:
+                        self.canvas.coords(bond, c1["x"], y1, c2["x"], y2)
+                    except TclError:
+                        pass
+        except Exception as e:
+            logger.warning(f"LivingChain animation error: {e}")
 
         self.after(50, self._animate)
 

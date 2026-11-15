@@ -146,17 +146,42 @@ Aetherion-Excalibur is raising on a **$1.5M SAFE, $8M post-money cap, 20% discou
 | zkSync Bridge | Cross-chain EXCAL↔URUU bridge with bonding curve |
 | Oracle Chat | Ask the Omniscient Sphinx anything |
 
-### P2P Breakthrough — Nodes Connect Automatically
+### SkyNet P2P — Always-On Node Beacon
 
-**The problem:** Two machines running AetherionEXCAL couldn't find each other. The P2P layer stored everything in memory and required hardcoded seed peers.
+**Your node stays discoverable 24/7**, even when the wallet GUI is closed.
 
-**The solution:** Three new modules make P2P work between machines:
+**`AetherionEXCAL-Beacon.exe`** (25.3 MB) is a standalone background service that:
+- Runs the bootstrap discovery server (HTTP + UDP multicast/broadcast)
+- Registers this machine with central SkyNet beacons
+- Heartbeats every 60 seconds to stay alive
+- Discovers and shares peers with other nodes
+- Persists all P2P data in SQLite
 
-1. **`postgres_p2p.py`** — Persistent SQLite database that stores peers, transactions, blocks, and EREPR state. Data survives restarts.
-2. **`p2p_bootstrap_server.py`** — Bootstrap discovery server with HTTP REST API and UDP multicast. Nodes register themselves and discover peers automatically.
-3. **NodeManager integration** — The wallet starts a bootstrap server, registers itself, discovers peers via HTTP and UDP multicast, and persists all P2P data.
+**Three language implementations** — run any combination:
 
-**How it works:** When you launch AetherionEXCAL on two machines on the same network, they automatically discover each other via UDP multicast broadcast. Each machine runs a bootstrap server that registers the local node and shares known peers. No hardcoded IPs, no manual configuration — just launch and connect.
+| Language | File | Build |
+| --- | --- | --- |
+| **Python** | `skynet_beacon.py` | `pyinstaller AetherionEXCAL-Beacon.spec` → `AetherionEXCAL-Beacon.exe` |
+| **Node.js** | `skynet-p2p.js` | `npm install ws` → `node skynet-p2p.js` |
+| **.NET 8** | `skynet-p2p.cs` | `dotnet build` → `dotnet run` |
+
+**Auto-start on Windows:**
+```powershell
+# Double-click or run:
+start-beacon.bat
+# Or place in shell:startup for auto-start on login
+```
+
+**Auto-start on Mac:**
+```bash
+# Copy plist and load:
+cp com.aetherion.skynet-beacon.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.aetherion.skynet-beacon.plist
+```
+
+**How SkyNet works:** When you launch the beacon on two machines, they automatically discover each other via UDP multicast (239.1.1.1:9436) and LAN broadcast (255.255.255.255:9437). Each beacon runs an HTTP REST API (port 9435) for peer discovery. No hardcoded IPs, no manual configuration — just launch and connect.
+
+**Cross-network discovery:** Deploy the [SkyNet Cloudflare Worker beacon](skynet-beacon/) for always-on peer discovery across the internet. Free tier: 100K requests/day, $0/month.
 
 ### Run it
 
@@ -167,6 +192,9 @@ python3 window_planner.py       # current window: frozen bits, blocks
 python3 grace_miner.py          # strategy validation + flood simulation
 STRATUM_HOST=0.0.0.0 python3 stratum_fork.py   # serve GPU miners
 dist\AetherionEXCAL.exe         # launch the unified wallet (Windows)
+dist\AetherionEXCAL-Beacon.exe  # start the always-on SkyNet beacon
+node skynet-p2p.js              # Node.js P2P node
+dotnet run --project skynet-p2p.cs  # .NET P2P node
 ```
 
 ## Honest scope
