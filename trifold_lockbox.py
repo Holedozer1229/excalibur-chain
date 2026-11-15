@@ -42,7 +42,10 @@ one assumption forty years of trying has not dented.
 
 Pure stdlib. Test keys only. No network.
 """
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows: no fcntl
+    fcntl = None
 import hashlib
 import json
 import os
