@@ -282,8 +282,8 @@ def test_qhtlc_pqh():
     tmp = tempfile.mkdtemp(prefix="excal-pqh-reg-")
     reg = SpentLeafRegistry(os.path.join(tmp, "spent_pqh_registry.json"))
     secret = bytes(range(32))
-    claim_key = TrifoldKey(os.urandom(32))
-    refund_key = TrifoldKey(os.urandom(32))
+    claim_key = TrifoldKey(os.urandom(32), state_dir=tmp)
+    refund_key = TrifoldKey(os.urandom(32), state_dir=tmp)
     lock, desc = qhtlc_lock(secret, claim_key.root, refund_key.root,
                             51000)
     funding = [_fake_utxo(_funding_txid("qhtlc-fund"), 0, 5 * SWORD, lock)]
@@ -301,7 +301,7 @@ def test_qhtlc_pqh():
     check("qhtlc refund added a second registry pair",
           len(reg.as_set()) == 2)
     # PQH spend with the same throwaway registry
-    pqh_key = TrifoldKey(os.urandom(32))
+    pqh_key = TrifoldKey(os.urandom(32), state_dir=tmp)
     pqh_lock = lock_pqh_for_root(pqh_key.root)
     funding2 = [_fake_utxo(_funding_txid("pqh-fund"), 0, 5 * SWORD,
                            pqh_lock)]
@@ -383,10 +383,10 @@ def test_locks():
         check("locks build_send refuses a KNOT destination", False)
     except (TxBuildError, KnotRefused):
         check("locks build_send refuses a KNOT destination", True)
-    sts = {s["type"]: s for s in lock_status(44515)}
-    check("locks PKH active at live tip", sts["pkh"]["active"] is True)
-    check("locks KNOT staged at live tip", sts["knot"]["active"] is False)
-    check("locks QHTLC active at live tip", sts["qhtlc"]["active"] is True)
+    sts = {s["type"]: s for s in lock_status(44520)}
+    check("locks PKH active at 44520", sts["pkh"]["active"] is True)
+    check("locks KNOT activated at 44520", sts["knot"]["active"] is True)
+    check("locks QHTLC active at 44520", sts["qhtlc"]["active"] is True)
 
 
 # ============================================================== live chain / RPC
