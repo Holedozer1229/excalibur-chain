@@ -68,6 +68,7 @@ class PrometheusMetrics:
         self.node_info = Info(
             'excalibur_node',
             'Excalibur Chain node information',
+            labelnames=['version', 'network', 'sword'],
             registry=self._registry,
         )
 
@@ -206,6 +207,167 @@ class PrometheusMetrics:
             registry=self._registry,
         )
 
+        # --- Chain Metrics ---
+        self.chain_height = Gauge(
+            'excalibur_chain_height',
+            'Current blockchain height (latest block number)',
+            registry=self._registry,
+        )
+
+        self.chain_difficulty = Gauge(
+            'excalibur_chain_difficulty',
+            'Current mining difficulty',
+            registry=self._registry,
+        )
+
+        self.chain_total_work = Gauge(
+            'excalibur_chain_total_work',
+            'Total cumulative work in the chain',
+            registry=self._registry,
+        )
+
+        # --- Block Metrics ---
+        self.blocks_mined = Counter(
+            'excalibur_blocks_mined_total',
+            'Total blocks mined by this node',
+            registry=self._registry,
+        )
+
+        self.block_height = Gauge(
+            'excalibur_last_block_height',
+            'Height of the last mined block',
+            registry=self._registry,
+        )
+
+        self.block_size = Histogram(
+            'excalibur_block_size_bytes',
+            'Block sizes in bytes',
+            buckets=[1000, 5000, 10000, 50000, 100000, 500000, 1000000],
+            registry=self._registry,
+        )
+
+        self.block_transactions = Histogram(
+            'excalibur_block_transactions',
+            'Number of transactions per block',
+            buckets=[1, 5, 10, 25, 50, 100, 250, 500],
+            registry=self._registry,
+        )
+
+        self.block_time = Histogram(
+            'excalibur_block_time_seconds',
+            'Time between blocks',
+            buckets=[10, 30, 60, 120, 300, 600],
+            registry=self._registry,
+        )
+
+        # --- Mempool Metrics ---
+        self.mempool_size = Gauge(
+            'excalibur_mempool_size',
+            'Number of transactions in the mempool',
+            registry=self._registry,
+        )
+
+        self.mempool_bytes = Gauge(
+            'excalibur_mempool_bytes',
+            'Total size of mempool transactions in bytes',
+            registry=self._registry,
+        )
+
+        self.mempool_fee_rate = Histogram(
+            'excalibur_mempool_fee_rate',
+            'Transaction fee rates in mempool (swords/byte)',
+            buckets=[0.001, 0.01, 0.1, 1, 10, 100],
+            registry=self._registry,
+        )
+
+        # --- Mining Metrics ---
+        self.mining_hashrate = Gauge(
+            'excalibur_mining_hashrate',
+            'Current mining hashrate (hashes/second)',
+            registry=self._registry,
+        )
+
+        self.mining_hashes_total = Counter(
+            'excalibur_mining_hashes_total',
+            'Total hashes computed by this node',
+            registry=self._registry,
+        )
+
+        self.mining_active = Gauge(
+            'excalibur_mining_active',
+            'Whether mining is active (1) or inactive (0)',
+            registry=self._registry,
+        )
+
+        self.mining_nonce = Gauge(
+            'excalibur_mining_nonce',
+            'Current mining nonce value',
+            registry=self._registry,
+        )
+
+        # --- RPC Metrics ---
+        self.rpc_requests_total = Counter(
+            'excalibur_rpc_requests_total',
+            'Total RPC requests',
+            labelnames=['method', 'status'],
+            registry=self._registry,
+        )
+
+        self.rpc_latency = Histogram(
+            'excalibur_rpc_latency_seconds',
+            'RPC request latency',
+            buckets=[0.001, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0],
+            registry=self._registry,
+        )
+
+        # --- P2P Metrics ---
+        self.p2p_inventory_sent = Counter(
+            'excalibur_p2p_inventory_sent_total',
+            'Total inventory items sent',
+            labelnames=['type'],
+            registry=self._registry,
+        )
+
+        self.p2p_inventory_received = Counter(
+            'excalibur_p2p_inventory_received_total',
+            'Total inventory items received',
+            labelnames=['type'],
+            registry=self._registry,
+        )
+
+        self.p2p_bandwidth_sent = Counter(
+            'excalibur_p2p_bandwidth_sent_bytes',
+            'Total P2P bandwidth sent',
+            registry=self._registry,
+        )
+
+        self.p2p_bandwidth_received = Counter(
+            'excalibur_p2p_bandwidth_received_bytes',
+            'Total P2P bandwidth received',
+            registry=self._registry,
+        )
+
+        # --- SkyNet Beacon Metrics ---
+        self.beacon_peers = Gauge(
+            'excalibur_beacon_peers',
+            'Number of peers registered with the beacon',
+            registry=self._registry,
+        )
+
+        self.beacon_heartbeats = Counter(
+            'excalibur_beacon_heartbeats_total',
+            'Total heartbeats received',
+            registry=self._registry,
+        )
+
+        # --- Lock Type Metrics ---
+        self.lock_types_total = Counter(
+            'excalibur_lock_types_total',
+            'Transactions by lock type',
+            labelnames=['lock_type'],
+            registry=self._registry,
+        )
+
         self._initialized = True
 
     def _create_stubs(self):
@@ -238,6 +400,30 @@ class PrometheusMetrics:
         self.bytes_sent = _NoOp()
         self.bytes_received = _NoOp()
         self.errors_total = _NoOp()
+        self.chain_height = _NoOp()
+        self.chain_difficulty = _NoOp()
+        self.chain_total_work = _NoOp()
+        self.blocks_mined = _NoOp()
+        self.block_height = _NoOp()
+        self.block_size = _NoOp()
+        self.block_transactions = _NoOp()
+        self.block_time = _NoOp()
+        self.mempool_size = _NoOp()
+        self.mempool_bytes = _NoOp()
+        self.mempool_fee_rate = _NoOp()
+        self.mining_hashrate = _NoOp()
+        self.mining_hashes_total = _NoOp()
+        self.mining_active = _NoOp()
+        self.mining_nonce = _NoOp()
+        self.rpc_requests_total = _NoOp()
+        self.rpc_latency = _NoOp()
+        self.p2p_inventory_sent = _NoOp()
+        self.p2p_inventory_received = _NoOp()
+        self.p2p_bandwidth_sent = _NoOp()
+        self.p2p_bandwidth_received = _NoOp()
+        self.beacon_peers = _NoOp()
+        self.beacon_heartbeats = _NoOp()
+        self.lock_types_total = _NoOp()
 
     def update_uptime(self):
         """Update the uptime gauge."""

@@ -232,6 +232,9 @@ a = Analysis(
         'riemann_hypothesis_proof',
         # Noble surprise
         'nobel_surprise',
+        # Prometheus metrics
+        'sphinx_os.prometheus_metrics',
+        'sphinx_os.metrics_wiring',
     ],
     hookspath=['hooks'],
     hooksconfig={},

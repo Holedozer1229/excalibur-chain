@@ -1,0 +1,222 @@
+# Alerting Rules for Excalibur Chain
+#
+# Place this file at: /etc/prometheus/alert_rules.yml
+# or alongside prometheus.yml
+#
+# Groups of alerting rules evaluated by Prometheus
+#
+groups:
+  # Node Health Alerts
+  - name: excalibur_node_health
+    rules:
+      # Node is down if no metrics received for 2 minutes
+      - alert: ExcaliburNodeDown
+        expr: up{job="excalibur_node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Excalibur node is down"
+          description: "The Excalibur node has been unreachable for more than 2 minutes."
+          runbook_url: "https://github.com/Holedozer1229/excalibur-chain/blob/master/README.md"
+
+      # Beacon is down
+      - alert: SkyNetBeaconDown
+        expr: up{job="skynet_beacon"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SkyNet Beacon is down"
+          description: "The SkyNet Beacon has been unreachable for more than 2 minutes."
+
+      # Uptime reset detected (node restarted)
+      - alert: ExcaliburNodeRestarted
+        expr: excalibur_uptime_seconds < 60 and increase(excalibur_uptime_seconds[5m]) < 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Excalibur node restarted"
+          description: "The Excalibur node appears to have restarted (uptime < 60s)."
+
+  # Chain Health Alerts
+  - name: excalibur_chain_health
+    rules:
+      # Chain height not increasing for 10 minutes
+      - alert: ChainStalled
+        expr: increase(excalibur_chain_height[10m]) == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Blockchain chain height is not increasing"
+          description: "The chain height has not increased for 10 minutes. Mining may have stopped."
+
+      # Block time exceeds 5 minutes
+      - alert: HighBlockTime
+        expr: rate(excalibur_block_time_seconds_sum[5m]) / rate(excalibur_block_time_seconds_count[5m]) > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Block time is abnormally high"
+          description: "Average block time exceeds 5 minutes. Current: {{ $value }}s"
+
+      # Difficulty spike
+      - alert: DifficultySpike
+        expr: excalibur_chain_difficulty / predict_linear(excalibur_chain_difficulty[1h], 3600) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mining difficulty spike detected"
+          description: "Difficulty increased by more than 2x the predicted rate."
+
+  # Peer Network Alerts
+  - name: excalibur_peer_network
+    rules:
+      # No peers connected
+      - alert: NoPeersConnected
+        expr: excalibur_peers_connected == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No P2P peers connected"
+          description: "The node has had no connected peers for 5 minutes."
+
+      # Low peer count
+      - alert: LowPeerCount
+        expr: excalibur_peers_connected < 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low peer count"
+          description: "Only {{ $value }} peers connected. Recommended minimum: 3."
+
+      # Network coherence below threshold
+      - alert: LowNetworkCoherence
+        expr: excalibur_network_coherence < 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network coherence is low"
+          description: "P2P network coherence score is {{ $value }} (threshold: 0.5)."
+
+      # High peer churn
+      - alert: HighPeerChurn
+        expr: rate(excalibur_peers_disconnected_total[5m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High peer disconnection rate"
+          description: "More than 2 peer disconnections per minute over the last 5 minutes."
+
+  # Mempool Alerts
+  - name: excalibur_mempool
+    rules:
+      # Mempool overflow
+      - alert: MempoolOverflow
+        expr: excalibur_mempool_size > 10000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mempool is overflowing"
+          description: "Mempool contains {{ $value }} transactions (threshold: 10000)."
+
+      # Mempool size growing rapidly
+      - alert: MempoolGrowingFast
+        expr: increase(excalibur_mempool_size[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mempool is growing rapidly"
+          description: "Mempool grew by {{ $value }} transactions in the last 5 minutes."
+
+  # Mining Alerts
+  - name: excalibur_mining
+    rules:
+      # Mining stopped
+      - alert: MiningStopped
+        expr: excalibur_mining_active == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mining has stopped"
+          description: "The node's mining process has been inactive for 5 minutes."
+
+      # Low hashrate
+      - alert: LowHashrate
+        expr: excalibur_mining_hashrate < 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mining hashrate is very low"
+          description: "Current hashrate is {{ $value }} H/s (threshold: 1000 H/s)."
+
+      # No blocks mined in 30 minutes
+      - alert: NoBlocksMined
+        expr: increase(excalibur_blocks_mined_total[30m]) == 0 and excalibur_mining_active == 1
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No blocks mined in 30 minutes"
+          description: "Mining is active but no blocks have been found in 30 minutes."
+
+  # RPC Alerts
+  - name: excalibur_rpc
+    rules:
+      # High RPC error rate
+      - alert: HighRPCErrorRate
+        expr: rate(excalibur_rpc_requests_total{status="error"}[5m]) / rate(excalibur_rpc_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High RPC error rate"
+          description: "More than 10% of RPC requests are failing. Error rate: {{ $value }}."
+
+      # High RPC latency
+      - alert: HighRPCLatency
+        expr: rate(excalibur_rpc_latency_seconds_sum[5m]) / rate(excalibur_rpc_latency_seconds_count[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High RPC latency"
+          description: "Average RPC latency exceeds 1 second. Current: {{ $value }}s."
+
+  # Error Rate Alerts
+  - name: excalibur_errors
+    rules:
+      # High error rate in any component
+      - alert: HighErrorRate
+        expr: rate(excalibur_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate in component {{ $labels.component }}"
+          description: "Component {{ $labels.component }} is generating {{ $value }} errors/second."
+
+  # Bandwidth Alerts
+  - name: excalibur_bandwidth
+    rules:
+      # High bandwidth usage
+      - alert: HighBandwidthUsage
+        expr: rate(excalibur_bytes_sent_total[5m]) + rate(excalibur_bytes_received_total[5m]) > 10485760
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network bandwidth usage"
+          description: "Total bandwidth exceeds 10 MB/s over the last 10 minutes."
