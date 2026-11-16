@@ -205,3 +205,25 @@ def verify(pub, sig, h):
     if s > N // 2:
         return False  # reject high-S: malleability guard
     return _verify_rs(pub, h, r, s)
+
+
+# ─── High-level helpers for wallet usage ──────────────────────────────────
+
+def private_generate():
+    """Generate a random private key hex string (64 hex chars)."""
+    import os
+    return os.urandom(32).hex()
+
+
+def private_to_public(priv_hex):
+    """Convert private key hex to compressed public key hex (66 hex chars)."""
+    d = int(priv_hex, 16)
+    pt = priv_to_pub(d)
+    return compress(pt).hex()
+
+
+def encode_xonly(pub_hex):
+    """Extract x-only pubkey hex (64 hex chars) from compressed public key hex."""
+    # Compressed pubkey: 02/03 + 32 bytes x = 33 bytes = 66 hex chars
+    # x-only is just the x coordinate (last 64 hex chars)
+    return pub_hex[2:]

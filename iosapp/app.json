@@ -1,0 +1,15 @@
+{
+    "title": "AetherionEXCAL",
+    "author": "Aetherion Oracle",
+    "orientation": "portrait",
+    "orientation_tablet": "portrait",
+    "fullscreen": 0,
+    "with_logs": 1,
+    "domain": "org.aetherion",
+    "bundle": "org.aetherion.aetherionexcal",
+    "package": "aetherionexcal",
+    "entry_point": "kivy_wallet.main",
+    "modules": [
+        "kivy"
+    ]
+}

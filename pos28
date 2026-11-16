@@ -22,11 +22,11 @@ The original last 4 bytes of the pattern are B3C5D7E9. After embedding the nonce
 Why it crashed
 The original code had no bounds check when writing the 4-byte nonce into the pattern. At pos=28, writing 4 bytes means accessing indices 28, 29, 30, 31
 — which exactly fits a 32-byte array. The crash occurred because the pattern string used by the code
-A1B3C5D7E9F8D6C4B2A0E8F6D4C2B0A8E6F4D2C0B8A6E4D2C0B8A6E4D2C0 is 60 hex characters, which is 30 bytes (not 32). When converted to bytes, orig_bytes has
+8D6C4BA1B3C5D7E9F2A0E8F6D4C2B0A8E6F4D2C0B8A6E4D2C0B8A6E4D2C0 is 60 hex characters, which is 30 bytes (not 32). When converted to bytes, orig_bytes has
 length 30, so indices 30 and 31 are out of range — only 2 of the 4 nonce bytes (indices 28, 29) land.
 
 Note: that string is also not the canonical pattern. The canonical pattern in messerene_operator.py is
-A1B3C5D7E9F8D6C4B2A1B3C5D7E9F8D6C4B2A1B3C5D7E9F8D6C4B2A1B3C5D7E9 — 64 hex characters, 32 bytes, block "A1B3C5D7E9F8D6C4B2" x3 + "A1B3C5D7E9". On the canonical pattern, pos=28 + 4 bytes fits exactly and nothing is dropped. D2C0B8A6 is the repeating motif inside the short string, not its last 4 bytes — the short string's last 4 bytes are A6E4D2C0.
+A1B3F8D6C4B2A1B3C5D7E9F8D6C4B2A1B3C5D7E9F8D6C4B2A1B3C5D7E9C5D7E9 — 64 hex characters, 32 bytes, block "A1B3C5D7E9F8D6C4B2" x3 + "A1B3C5D7E9". On the canonical pattern, pos=28 + 4 bytes fits exactly and nothing is dropped. D2C0B8A6 is the repeating motif inside the short string, not its last 4 bytes — the short string's last 4 bytes are A6E4D2C0.
 
 The fix added a bounds guard:
 
