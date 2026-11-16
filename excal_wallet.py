@@ -101,6 +101,21 @@ class NodeManager:
         self._bootstrap_server = None
         self._bootstrap_client = None
         self._p2p_db = None
+        self._quantum = None
+
+        # Initialize quantum protocol suite
+        try:
+            from sphinx_os.nexus.quantum import E91Handshake, GHZBeacon
+            from quantum_p2p_glue import QuantumPeerAuth, QuantumBeaconService
+            self._quantum = {
+                'e91': E91Handshake(num_pairs=256),
+                'ghz': GHZBeacon(num_participants=8, num_rounds=16),
+                'peer_auth': QuantumPeerAuth(),
+                'beacon_service': QuantumBeaconService(participants=8),
+            }
+            logger.info("Quantum protocols ready: E91 handshake + GHZ beacon")
+        except Exception as e:
+            logger.warning(f"Quantum protocols unavailable: {e}")
         
         # Initialize persistent P2P database
         try:
