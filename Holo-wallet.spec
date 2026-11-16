@@ -14,7 +14,7 @@ a = Analysis(
         'sphinx_os.nexus.self_organizing_treasury',
         'sphinx_os.nexus.orchestrator',
     ],
-    hookspath=[],
+    hookspath=['hooks'],
     hooksconfig={},
     runtime_hooks=[],
     excludes=['tkinter', 'unittest', 'pytest', 'setuptools'],

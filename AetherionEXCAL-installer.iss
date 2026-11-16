@@ -29,15 +29,16 @@ PrivilegesRequired=admin
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a &Desktop Icon"; GroupDescription: "Shortcuts:"; Checked: true
-Name: "quicklaunchicon"; Description: "Create a &Start Menu Icon"; GroupDescription: "Shortcuts:"; Checked: true
-Name: "autostart"; Description: "Start &SkyNet Beacon on login"; GroupDescription: "Auto-start:"; Checked: false
+Name: "desktopicon"; Description: "Create a &Desktop Icon"; GroupDescription: "Shortcuts:"
+Name: "quicklaunchicon"; Description: "Create a &Start Menu Icon"; GroupDescription: "Shortcuts:"
+Name: "autostart"; Description: "Start &SkyNet Beacon on login"; GroupDescription: "Auto-start:"; Flags: unchecked
 
 [Files]
 Source: "dist\AetherionEXCAL.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\AetherionEXCAL-Beacon.exe"; DestDir: "{app}"; Flags: ignoreversion; Components:beacon
 Source: "dist\AetherionEXCAL-StratumMiner.exe"; DestDir: "{app}"; Flags: ignoreversion; Components:miner
 Source: "dist\AetherionEXCAL-P2P.exe"; DestDir: "{app}"; Flags: ignoreversion; Components:p2p
+Source: "dist\AetherionEXCAL-AutonomousNode.exe"; DestDir: "{app}"; Flags: ignoreversion; Components:autonomous
 Source: "start-beacon.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion; Components:docs
@@ -47,7 +48,9 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: deskto
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: quicklaunchicon
 Name: "{group}\SkyNet Beacon"; Filename: "{app}\AetherionEXCAL-Beacon.exe"; Tasks: quicklaunchicon; Components:beacon
 Name: "{group}\Stratum Miner"; Filename: "{app}\AetherionEXCAL-StratumMiner.exe"; Tasks: quicklaunchicon; Components:miner
+Name: "{group}\Autonomous Node"; Filename: "{app}\AetherionEXCAL-AutonomousNode.exe"; Tasks: quicklaunchicon; Components:autonomous
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
+Name: "{userstartup}\AetherionEXCAL-Beacon"; Filename: "{app}\AetherionEXCAL-Beacon.exe"; Tasks: autostart; Components: beacon
 
 [Registry]
 Root: HKCU; Subkey: "Software\AetherionEXCAL"; Flags: uninsdeletekey
@@ -63,25 +66,11 @@ Name: "main"; Description: "AetherionEXCAL Wallet"; Types: custom full; Flags: f
 Name: "beacon"; Description: "SkyNet Beacon (always-on P2P node)"; Types: full
 Name: "miner"; Description: "Stratum Miner (CPU/GPU mining)"; Types: full
 Name: "p2p"; Description: "Node.js P2P Client"; Types: full
+Name: "autonomous"; Description: "Autonomous Node (headless SkyNet/SpinxOS node)"; Types: full
 Name: "docs"; Description: "Documentation"; Types: full
 
 [Code]
 function ShouldSkipFile(filename: String): Boolean;
 begin
   Result := False;
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  beaconStartupPath: String;
-begin
-  if CurStep = ssPostInstall then
-  begin
-    // Auto-start SkyNet Beacon if selected
-    if IsTaskSelected('autostart') then
-    begin
-      beaconStartupPath := ExpandConstant('{userstartup}\AetherionEXCAL-Beacon.lnk');
-      CreateShortcut(beaconStartupPath, ExpandConstant('{app}\AetherionEXCAL-Beacon.exe'), '', '', 0, '', '', 0, False);
-    end;
-  end;
 end;

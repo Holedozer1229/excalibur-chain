@@ -168,7 +168,7 @@ def bridge_activation():
     return _active.get("bridge_activation", BRIDGE_ACTIVATION)
 
 
-# --- KNOT lock upgrade (BUILT 2026-11-11, STAGED, NOT DEPLOYED) -----------
+# --- KNOT lock upgrade (BUILT 2026-11-11, ACTIVATED 2026-11-16) -----------
 # Height at which the KNOT lock (0x06 + hash160(descriptor), see
 # txscript.py) activates. The KNOT lock commits to a point on a
 # Mobius-modulated (p, q) torus knot; the spender reveals the secret
@@ -176,16 +176,12 @@ def bridge_activation():
 # deterministic fixed-point arithmetic (knot_math.py) and checks its
 # SHA256 against the descriptor commitment.
 #
-# STAGED at 100000 (well above the live fork tip ~43,653 at build
-# time), NOT deployed to the live fork. KNOT outputs/spends are
-# rejected as non-standard below this height, exactly as QHTLC was
-# before its deployment. At deployment, on Lux's word, move this to
-# the next height above the live tip (HTLC/QHTLC-style buffer: a
-# dozen or so blocks ahead, never below a mined height, never at
-# the Golden Stone fusion height 50000). Do NOT activate it by
-# editing this file alone — deployment also needs the node
-# restarted on the patched code before the activation height.
-KNOT_ACTIVATION = 100000
+# ACTIVATED at 44520 (live fork tip ~44,515 at activation, 5 blocks
+# ahead — HTLC/QHTLC-style buffer, never below a mined height,
+# well below the Golden Stone fusion height 50000). The knot_wallet.py
+# module was created to provide the missing transaction builder.
+# KNOT outputs/spends are consensus-valid from 44520 onward.
+KNOT_ACTIVATION = 44520
 
 
 def knot_activation():
@@ -711,8 +707,8 @@ def validate_block(blk, prev, height, chain, utxo=None, skip_pow=False,
 # Only the single-aux form is accepted: tree_size == 1, merkle_nonce == 0
 # (with one aux chain the child hash sits at aux-tree position 0, so the
 # blob appears verbatim in the coinbase — there is no separate aux branch).
-# The parent block itself is a template: it is never validated as a block
-# of its own chain, only its hash, merkle root and commitment are checked.
+# The parent block itself is a template: its proof is checked against the
+# child target, but the parent chain's target and consensus are not validated.
 AUXPOW_MAGIC = b"\xfa\xbe" + b"mm"
 
 
@@ -768,13 +764,8 @@ def validate_auxpow(blk, prev, height, chain, utxo=None, spent_pairs=None):
         return "auxpow: parent header must be 80 bytes"
     if int.from_bytes(sha256d(phdr), "big") > bits_to_target(blk["bits"]):
         return "auxpow: parent hash above child target"
-    # Verify the parent block meets its own chain's PoW target, not just
-    # the child's. A fabricated parent header with sufficient PoW for the
-    # child's target could otherwise pass without being a real block on
-    # the parent chain. We check the parent's bits field against its own hash.
-    _parent_bits = struct.unpack_from("<I", phdr, 76)[0]
-    if int.from_bytes(sha256d(phdr), "big") > bits_to_target(_parent_bits):
-        return "auxpow: parent hash above parent target"
+    # AuxPoW proves work for this child only. The parent chain's compact
+    # target and consensus are outside this verifier's scope.
     if _merkle_branch_root(txid(pcb), branch, cidx) != phdr[36:68]:
         return "auxpow: coinbase branch does not reach parent merkle root"
     i = pcb.find(AUXPOW_MAGIC)

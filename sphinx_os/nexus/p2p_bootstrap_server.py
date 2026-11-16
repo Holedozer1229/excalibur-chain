@@ -139,8 +139,8 @@ class BootstrapServer:
     
     def _run_http(self):
         """Run the HTTP server."""
-        handler = BootstrapHandler(self)
-        self._server = HTTPServer(("0.0.0.0", self.port), handler)
+        self._server = HTTPServer(("0.0.0.0", self.port), BootstrapHandler)
+        self._server.bootstrap_server = self
         try:
             self._server.serve_forever()
         except OSError:
@@ -248,18 +248,20 @@ class BootstrapServer:
         
         with self._lock:
             for node_id, peer in self._peers.items():
+                last_seen = peer.get("last_seen", 0)
                 # Skip stale peers
-                if now - peer["last_seen"] > PEER_TTL:
+                if now - last_seen > PEER_TTL:
                     continue
                 peers.append({
-                    "node_id": peer["node_id"],
-                    "host": peer["host"],
-                    "port": peer["port"],
-                    "services": peer["services"],
+                    "node_id": peer.get("node_id", node_id),
+                    "host": peer.get("host", ""),
+                    "port": peer.get("port", 9433),
+                    "services": peer.get("services", 0),
+                    "last_seen": last_seen,
                 })
         
         # Sort by last_seen (most recent first)
-        peers.sort(key=lambda p: p["last_seen"], reverse=True)
+        peers.sort(key=lambda p: p.get("last_seen", 0), reverse=True)
         return peers[:limit]
     
     def get_peers(self, limit: int = 8) -> list:
@@ -279,7 +281,7 @@ class BootstrapServer:
         with self._lock:
             total = len(self._peers)
             active = sum(1 for p in self._peers.values() 
-                        if now - p["last_seen"] < PEER_TTL)
+                        if now - p.get("last_seen", 0) < PEER_TTL)
         
         db_stats = self.db.get_stats()
         return {
@@ -296,7 +298,7 @@ class BootstrapServer:
         with self._lock:
             stale = [
                 node_id for node_id, peer in self._peers.items()
-                if now - peer["last_seen"] > PEER_TTL
+                if now - peer.get("last_seen", 0) > PEER_TTL
             ]
             for node_id in stale:
                 del self._peers[node_id]
@@ -315,7 +317,10 @@ class BootstrapHandler(BaseHTTPRequestHandler):
     
     def log_message(self, format, *args):
         """Override to use our logger."""
-        logger.debug(f"{args[0]}")
+        try:
+            logger.debug(format % args)
+        except Exception:
+            pass
     
     def do_GET(self):
         """Handle GET requests."""

@@ -237,6 +237,8 @@ class Node:
               "getbestblockhash": self.rpc_getbestblockhash,
               "getchaintips": self.rpc_getchaintips,
               "getblock": self.rpc_getblock,
+              "getblockbyheight": self.rpc_getblockbyheight,
+              "getrawtransaction": self.rpc_getrawtransaction,
               "getrawmempool": self.rpc_getrawmempool,
               "getmempoolinfo": self.rpc_getmempoolinfo,
               "sendrawtransaction": self.rpc_sendrawtransaction,
@@ -281,6 +283,40 @@ class Node:
                     "merkle": rec["merkle"].hex(), "time": rec["time"],
                     "bits": hex(rec["bits"]), "nonce": rec["nonce"],
                     "tx": [txid_internal(t).hex() for t in rec["txs"]]}
+
+    def rpc_getblockbyheight(self, p):
+        """Get block by height. params: [height]."""
+        height = int(p[0])
+        with self.lock:
+            rec = self.cs.by_height.get(height)
+            if rec is None:
+                raise ValueError(f"block at height {height} not found")
+            tip = self.cs.tip()["height"]
+            return {"hash": rec["hash"].hex(), "height": rec["height"],
+                    "confirmations": tip - rec["height"] + 1,
+                    "version": rec["version"], "prev": rec["prev"].hex(),
+                    "merkle": rec["merkle"].hex(), "time": rec["time"],
+                    "bits": hex(rec["bits"]), "nonce": rec["nonce"],
+                    "tx": [txid_internal(t).hex() for t in rec["txs"]]}
+
+    def rpc_getrawtransaction(self, p):
+        """Get raw transaction hex. params: [txid_hex].
+        Searches mempool first, then chain blocks (tip backwards, last 100 blocks)."""
+        txid_hex = p[0]
+        with self.lock:
+            # Check mempool first
+            if txid_hex in self.mempool.txs:
+                return self.mempool.txs[txid_hex].hex()
+            # Search recent blocks (tip backwards)
+            tip_height = self.cs.tip()["height"]
+            for h in range(tip_height, max(tip_height - 100, -1), -1):
+                rec = self.cs.by_height.get(h)
+                if rec is None:
+                    continue
+                for raw in rec["txs"]:
+                    if txid_internal(raw).hex() == txid_hex:
+                        return raw.hex()
+        raise ValueError(f"transaction {txid_hex} not found")
 
     def rpc_getrawmempool(self, _p):
         with self.lock:

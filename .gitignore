@@ -90,3 +90,6 @@ sphinx_os/nexus/__pycache__/
 # Junie (AI assistant)
 # ============================================================
 .junie/plans/
+
+# Windows reserved names
+NUL

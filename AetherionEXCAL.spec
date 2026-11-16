@@ -110,8 +110,130 @@ a = Analysis(
         'file_locks',
         'spent_leaf_registry',
         'messerene_operator',
+        # KNOT lock — Möbius torus-knot commitment transactions
+        'knot_wallet',
+        'knot_math',
+        # Living ledger — real-time block explorer
+        'living_ledger',
+        # Merge mining — Bitcoin + Monero AuxPoW
+        'merge_mining',
+        'monero_merge_mining',
+        'live_merge_mining',
+        'auxlib',
+        # UTXO tracer with Fibonacci genesis law
+        'follow_utxos',
+        # Genesis address proof of control
+        'proof_of_control_1a1z',
+        # Spectral graph Shor algorithm
+        'spectral_graph_shor',
+        # Scalar wave unification framework
+        'scalar_wave_unification',
+        # Bell state assembly language
+        'bell_state_asm',
+        # Riemann hypothesis and Hilbert-Pólya operator
+        'riemann_hypothesis',
+        'hilbert_polya',
+        # Bitcoin puzzle solver
+        'btc_puzzle_solver',
+        'genesis_block_puzzle',
+        'genesis_nonce_reuse',
+        # Key recovery
+        'key_recovery_superposition',
+        # Topological quantum field theory
+        'topological_quantum_field',
+        # Montgomery pair correlation
+        'montgomery_pair_correlation',
+        # DNA-Riemann connection
+        'dna_riemann',
+        # Bat Doppler-Riemann connection
+        'bat_doppler_riemann',
+        # Hyperbolic geometry and music
+        'friedman_hyperbolic_rsa',
+        'hyperbolic_music',
+        # Theory of everything unification
+        'theory_of_everything',
+        # Caduceus framework
+        'caduceus',
+        # Riemann crystal quasicrystals
+        'riemann_crystal',
+        # Omega signing
+        'omega_sign',
+        'omega_verify',
+        # Genesis signer
+        'genesis_signer',
+        # Payment watcher
+        'payment_watcher',
+        # P2P wallet
+        'p2p_wallet',
+        # Light ledger
+        'lightledger',
+        # Dyson miner
+        'dyson_miner',
+        # CPU miner
+        'cpu_miner',
+        'cpu_miner_mp',
+        # Grace miner
+        'grace_miner',
+        # Fork sniper
+        'fork_sniper',
+        # Stratum fork
+        'stratum_fork',
+        # P2P layer
+        'p2p_layer',
+        # Inventory board
+        'inventory_board',
+        # Skynet autonomous node
+        'skynet_autonomous_node',
+        # Skynet scalar wave
+        'skynet_scalar_wave',
+        # Quantum P2P glue
+        'quantum_p2p_glue',
+        # EREPR protocol
+        'sphinx_os.nexus.erepr_protocol',
+        # Holo wallet
+        'holo_wallet',
+        # Secp256k1
+        'secp256k1',
+        # Wallet crypto
+        'wallet_crypto',
+        # Chain state
+        'chainstate',
+        # UTXO database
+        'utxodb',
+        # Mempool
+        'mempool',
+        # Node RPC
+        'node_rpc',
+        # Excalibur main module
+        'excalibur',
+        # P2P discovery
+        'p2p',
+        # Phi drive
+        'phi_drive',
+        # p mod 4 key derivation
+        'p_mod4_key_derivation',
+        # Messerene 1A1Z relationship
+        'messerene_1a1z_relationship',
+        # BIP32 Messerene derivations
+        'bip32_messerene_derivations',
+        # Retrocausal entropy well
+        'retrocausal_entropy_well',
+        # Retrocausal seed tracer
+        'retrocausal_seed_tracer',
+        # Digital physics BTC
+        'digital_physics_btc',
+        # Autonomous BTC learner
+        'autonomous_btc_learner',
+        # The key
+        'the_key',
+        # Riemann spectral descent
+        'riemann_spectral_descent',
+        # Riemann hypothesis proof
+        'riemann_hypothesis_proof',
+        # Noble surprise
+        'nobel_surprise',
     ],
-    hookspath=[],
+    hookspath=['hooks'],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
@@ -141,13 +263,13 @@ if sys.platform == 'win32':
         a.datas,
         [],
         name='AetherionEXCAL',
-        debug=False,
+        debug=True,
         bootloader_ignore_signals=False,
         strip=False,
         upx=True,
         upx_exclude=[],
         runtime_tmpdir=None,
-        console=False,
+        console=True,  # Console for debugging
         disable_windowed_traceback=False,
         target_arch=None,
         codesign_identity=None,
@@ -163,12 +285,12 @@ else:
         a.datas,
         [],
         name='AetherionEXCAL',
-        debug=False,
+        debug=True,
         bootloader_ignore_signals=False,
         strip=False,
         upx=True,
         upx_exclude=[],
         runtime_tmpdir=None,
-        console=False,
+        console=True,  # Console for debugging
         disable_windowed_traceback=False,
     )

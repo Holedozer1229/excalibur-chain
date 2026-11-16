@@ -13,9 +13,13 @@ import sys
 import subprocess
 from pathlib import Path
 
-# Fix Windows console encoding
+# Fix Windows console encoding (safe for PyInstaller windowed mode)
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    try:
+        if sys.stdout is not None:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
 
 
 def check_python_version():

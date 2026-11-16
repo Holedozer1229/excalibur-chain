@@ -227,3 +227,33 @@ def encode_xonly(pub_hex):
     # Compressed pubkey: 02/03 + 32 bytes x = 33 bytes = 66 hex chars
     # x-only is just the x coordinate (last 64 hex chars)
     return pub_hex[2:]
+
+
+# ─── Compatibility wrappers for p2p_wallet.py ─────────────────────────────
+# These delegate to wallet_transactions so the P2P PyInstaller build (which
+# bundles secp256k1.py but not excal_wallet.py) can still import them.
+
+def generate_keypair():
+    """Generate a PQH key pair. Returns dict with private_key, public_key, address."""
+    from wallet_transactions import create_pqh_key
+    return create_pqh_key()
+
+
+def sign_transaction(private_key, tx_data):
+    """Sign a transaction. Raises RuntimeError — use WalletBackend instead."""
+    raise RuntimeError(
+        "Signing arbitrary JSON is not a consensus transaction. "
+        "Use WalletBackend.send_transaction."
+    )
+
+
+def validate_address(addr):
+    """Validate an EXCAL wallet address (40 uppercase hex characters)."""
+    if not addr or not isinstance(addr, str) or len(addr) != 40:
+        return False
+    try:
+        from wallet_transactions import address_lock
+        address_lock(addr)
+        return True
+    except (ValueError, TypeError):
+        return False

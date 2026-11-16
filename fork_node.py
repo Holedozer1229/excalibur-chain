@@ -414,6 +414,70 @@ class ChainStore:
                 return None
             return self._rec_to_rpc(rec)
 
+    def _block_summary(self, rec):
+        import txscript
+
+        txs = rec.get("txs", [])
+        txids = [
+            txscript.txid_display(bytes.fromhex(tx) if isinstance(tx, str) else bytes(tx))
+            for tx in txs
+        ]
+        bits = rec["bits"]
+        return {
+            "height": rec["height"],
+            "hash": rec["hash"],
+            "prev": rec.get("prev"),
+            "merkle": rec.get("merkle"),
+            "time": rec["time"],
+            "bits": f"{bits:08x}" if isinstance(bits, int) else bits,
+            "nonce": rec["nonce"],
+            "tx_count": len(txids),
+            "txids": txids,
+        }
+
+    def getblocksummary(self, identifier):
+        with self.lock:
+            if isinstance(identifier, int) and not isinstance(identifier, bool):
+                rec = self.by_height.get(identifier)
+            else:
+                rec = self.by_hash.get(str(identifier).lower())
+            return self._block_summary(rec) if rec is not None else None
+
+    def getrecentblocks(self, count=12):
+        try:
+            count = max(1, min(int(count), 50))
+        except (TypeError, ValueError):
+            count = 12
+        with self.lock:
+            start = self.tip_height
+            recent = [
+                self.by_height[height]
+                for height in range(start, max(-1, start - count), -1)
+                if height in self.by_height
+            ]
+        return [self._block_summary(rec) for rec in recent]
+
+    def getmempoolinfo(self):
+        import txscript
+
+        with self.lock:
+            raw_transactions = list(self.mempool.values())
+        node = getattr(ForkRPCHandler, "p2p_node", None)
+        if node is not None:
+            raw_transactions.extend(node.mempool.values())
+
+        rows_by_txid = {}
+        for raw in raw_transactions:
+            txid = txscript.txid_display(raw)
+            rows_by_txid[txid] = {"txid": txid, "size_bytes": len(raw)}
+        rows = list(rows_by_txid.values())
+        rows.sort(key=lambda row: row["txid"])
+        return {
+            "size": len(rows),
+            "bytes": sum(row["size_bytes"] for row in rows),
+            "transactions": rows,
+        }
+
     def submitblock(self, blk):
         """Validate a block against the active UTXO and commit atomically."""
         import txscript
@@ -799,6 +863,17 @@ class ForkRPCHandler(http.server.BaseHTTPRequestHandler):
                         error = f"block not found at height: {height}"
                     else:
                         result = rec
+            elif method == "getblocksummary":
+                if not params:
+                    error = "missing block height or hash parameter"
+                else:
+                    result = self.store.getblocksummary(params[0])
+                    if result is None:
+                        error = f"block not found: {params[0]}"
+            elif method == "getrecentblocks":
+                result = self.store.getrecentblocks(params[0] if params else 12)
+            elif method == "getmempoolinfo":
+                result = self.store.getmempoolinfo()
             elif method == "getnewaddress":
                 error = "Use the encrypted wallet to generate a PQH address"
             elif method == "getwalletutxos":

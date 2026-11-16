@@ -13,9 +13,13 @@ import sys
 import os
 import numpy as np
 
-# Fix Windows console encoding
+# Fix Windows console encoding (safe for PyInstaller windowed mode)
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    try:
+        if sys.stdout is not None:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -235,8 +235,8 @@ class SkyNetBeacon:
     
     def _run_http(self):
         """Run the HTTP server."""
-        handler = BeaconHandler(self)
-        self._server = HTTPServer(("0.0.0.0", self.port), handler)
+        self._server = HTTPServer(("0.0.0.0", self.port), BeaconHandler)
+        self._server.beacon = self
         try:
             self._server.serve_forever()
         except OSError:
@@ -363,14 +363,15 @@ class SkyNetBeacon:
         
         with self._lock:
             for node_id, peer in self._peers.items():
-                if now - peer["last_seen"] > PEER_TTL:
+                last_seen = peer.get("last_seen", 0)
+                if now - last_seen > PEER_TTL:
                     continue
                 peers.append({
-                    "node_id": peer["node_id"],
-                    "host": peer["host"],
-                    "port": peer["port"],
-                    "services": peer["services"],
-                    "last_seen": peer["last_seen"],
+                    "node_id": peer.get("node_id", node_id),
+                    "host": peer.get("host", ""),
+                    "port": peer.get("port", 9433),
+                    "services": peer.get("services", 0),
+                    "last_seen": last_seen,
                 })
         
         peers.sort(key=lambda p: p.get("last_seen", 0), reverse=True)
@@ -386,7 +387,7 @@ class SkyNetBeacon:
         with self._lock:
             total = len(self._peers)
             active = sum(1 for p in self._peers.values()
-                        if now - p["last_seen"] < PEER_TTL)
+                        if now - p.get("last_seen", 0) < PEER_TTL)
         
         db_stats = self.db.get_stats()
         return {
@@ -544,7 +545,11 @@ class BeaconHandler(BaseHTTPRequestHandler):
     """HTTP request handler for the SkyNet Beacon."""
     
     def log_message(self, format, *args):
-        logger.debug(f"{args[0]}")
+        """Suppress default stderr logging; use our logger instead."""
+        try:
+            logger.debug(format % args)
+        except Exception:
+            pass
     
     def do_GET(self):
         parsed = urlparse(self.path)

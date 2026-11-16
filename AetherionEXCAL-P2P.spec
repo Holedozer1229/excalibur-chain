@@ -145,7 +145,7 @@ a = Analysis(
         'win32com.shell.shellcon',
         'pythoncom',
     ],
-    hookspath=[],
+    hookspath=['hooks'],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
@@ -176,13 +176,13 @@ if sys.platform == 'win32':
         a.datas,
         [],
         name='AetherionEXCAL-P2P',
-        debug=False,
+        debug=True,
         bootloader_ignore_signals=False,
         strip=False,
         upx=True,
         upx_exclude=[],
         runtime_tmpdir=None,
-        console=False,  # No console window — GUI only
+        console=True,  # Console for debugging
         disable_windowed_traceback=False,
         target_arch=None,
         codesign_identity=None,
@@ -199,13 +199,13 @@ else:
         a.datas,
         [],
         name='AetherionEXCAL-P2P',
-        debug=False,
+        debug=True,
         bootloader_ignore_signals=False,
         strip=False,
         upx=True,
         upx_exclude=[],
         runtime_tmpdir=None,
-        console=False,
+        console=True,  # Console for debugging
         disable_windowed_traceback=False,
     )
 

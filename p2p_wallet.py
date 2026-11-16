@@ -45,9 +45,13 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-# Fix Windows console encoding
+# Fix Windows console encoding (safe for PyInstaller windowed mode)
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    try:
+        if sys.stdout is not None:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -120,8 +124,11 @@ class DesktopIconCreator:
             if sys.platform != "win32":
                 return False
             
-            import pythoncom
-            from win32com.shell import shell, shellcon
+            try:
+                import pythoncom
+                from win32com.shell import shell, shellcon
+            except ImportError:
+                return False
             
             # Get the executable path
             if hasattr(sys, "_MEIPASS"):
@@ -176,7 +183,10 @@ class DesktopIconCreator:
             if not os.path.exists(exe_path):
                 return False
             
-            import win32com.client
+            try:
+                import win32com.client
+            except ImportError:
+                return False
             shell = win32com.client.Dispatch("WScript.Shell")
             
             # Get Start Menu path
@@ -1430,8 +1440,8 @@ class LoginWindow(ctk.CTkToplevel):
         bg.place(x=0, y=0, relwidth=1, relheight=1)
         
         # Content frame
-        content = ctk.CTkFrame(self, fg_color=COLOR_CARD, corner_radius=20)
-        content.place(relx=0.5, rely=0.5, anchor="center", width=400, height=500)
+        content = ctk.CTkFrame(self, fg_color=COLOR_CARD, corner_radius=20, width=400, height=500)
+        content.place(relx=0.5, rely=0.5, anchor="center")
         
         # Logo
         ctk.CTkLabel(content, text="⚔", font=("Segoe UI Emoji", 48),
@@ -1912,8 +1922,8 @@ class P2PWalletApp(ctk.CTk):
         if hasattr(sys, "_MEIPASS"):
             threading.Thread(target=self._create_desktop_icon, daemon=True).start()
         
-        # Start the fork node on launch
-        threading.Thread(target=self._start_node, daemon=True).start()
+        # Start the fork node on launch (schedule on main thread to avoid Tkinter main-loop error)
+        self.after(0, self._start_node)
         
         # === Main layout: sidebar + content ===
         main_pane = ctk.CTkFrame(self, fg_color="transparent")
@@ -2028,14 +2038,14 @@ class P2PWalletApp(ctk.CTk):
         self.show_login_window()
     
     def _start_node(self):
-        """Start the fork node RPC server."""
+        """Start the fork node RPC server (must be called from main thread)."""
         started = self.node_manager.start()
         if started:
-            self.after(0, lambda: self.node_status_indicator.configure(
-                text="● Node: Running", text_color=COLOR_SUCCESS))
+            self.node_status_indicator.configure(
+                text="● Node: Running", text_color=COLOR_SUCCESS)
         else:
-            self.after(0, lambda: self.node_status_indicator.configure(
-                text="◌ Node: Failed", text_color=COLOR_ERROR))
+            self.node_status_indicator.configure(
+                text="◌ Node: Failed", text_color=COLOR_ERROR)
     
     def on_wallet_opened(self):
         """Called when wallet is successfully opened."""

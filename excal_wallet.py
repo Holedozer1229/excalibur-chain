@@ -38,13 +38,18 @@ import math
 import subprocess
 import http.client
 import logging
+from concurrent.futures import ThreadPoolExecutor, Future
 from decimal import Decimal
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 # Fix Windows console encoding (safe for PyInstaller windowed mode)
-if sys.platform == "win32" and sys.stdout is not None:
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if sys.platform == "win32":
+    try:
+        if sys.stdout is not None:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -793,19 +798,24 @@ class GlassCard(ctk.CTkFrame):
 class AetherionLogoIntro(ctk.CTkToplevel):
     """Cinematic intro screen with animated Aetherion logo reveal.
 
-    Phase 1: Dark screen with ambient particles drifting in a quantum field.
-    Phase 2: Energy rings expand outward from center, converging into the
-             Aetherion logo shape (hexagonal core with inner star pattern).
-    Phase 3: Logo glows with pulsing energy, brand text fades in below.
-    Phase 4: Tagline appears, then "ENTER THE REALM" button materializes.
+    Phase 1: Dark screen with ambient particles drifting in a quantum field,
+             connected by entanglement lines.
+    Phase 2: Energy rings expand outward from center with color gradients,
+             converging into the Aetherion logo shape.
+    Phase 3: Logo glows with pulsing energy aura, brand text fades in below.
+    Phase 4: Tagline appears, then "ENTER THE REALM" button materializes
+             with golden glow.
     """
 
-    W, H = 1000, 700
-    CX, CY = 500, 280  # logo center
+    DEFAULT_W = 1000
+    DEFAULT_H = 700
+    ENTANGLE_DIST = 120  # max distance for quantum entanglement lines
 
     def __init__(self, parent):
         super().__init__(parent)
         self.title("AetherionEXCAL")
+        self.W = self.DEFAULT_W
+        self.H = self.DEFAULT_H
         self.geometry(f"{self.W}x{self.H}")
         self.configure(fg_color=COLOR_BG_DEEP)
         self.resizable(False, False)
@@ -818,75 +828,239 @@ class AetherionLogoIntro(ctk.CTkToplevel):
         )
         self.canvas.pack(fill="both", expand=True)
 
+        # Force Tkinter to lay out the window before computing center
+        self.update_idletasks()
+        self.W = self.canvas.winfo_width() or self.DEFAULT_W
+        self.H = self.canvas.winfo_height() or self.DEFAULT_H
+        self.CX = self.W // 2
+        self.CY = int(self.H * 0.37)  # logo centered in upper portion
+
         self.phase = 0
         self.particles = []
         self.ring_ids = []
         self.logo_parts = []
         self.text_ids = []
+        self.text_opacities = {}  # track fade-in opacity for each text
         self.frame_count = 0
+        self.entangle_lines = []  # quantum entanglement line IDs
+        self.glow_ids = []  # glow effect ovals behind logo
+        self.btn_id = None  # button canvas item for pulse
 
-        # Phase 1: ambient particles
+        # Phase 0: background gradient
+        self._create_background()
+
+        # Phase 1: ambient particles (reduced count for performance)
         self._create_particles()
         self._animate_loop()
 
-        # Phase 2: energy rings after 1.5s
-        self.after(1500, self._phase_energy_rings)
+        # Accelerated timeline: all phases compressed to 4 seconds total
+        # Phase 2: energy rings after 0.5s
+        self.after(500, self._phase_energy_rings)
 
-        # Phase 3: logo draw after 3s
-        self.after(3000, self._phase_logo_draw)
+        # Phase 3: logo draw after 1s
+        self.after(1000, self._phase_logo_draw)
 
-        # Phase 4: brand text after 5s
-        self.after(5000, self._phase_brand_text)
+        # Phase 4: brand text after 2s
+        self.after(2000, self._phase_brand_text)
 
-        # Phase 5: enter button after 7s
-        self.after(7000, self._phase_enter_button)
+        # Phase 5: enter button after 3s
+        self.after(3000, self._phase_enter_button)
+
+    # ---- Background gradient ----
+
+    def _create_background(self):
+        """Create a radial gradient background for depth."""
+        scale = self.W / self.DEFAULT_W
+        # Draw concentric ovals from center outward to simulate radial gradient
+        num_rings = 20
+        max_r = max(self.W, self.H)
+        for i in range(num_rings, 0, -1):
+            r = int(max_r * i / num_rings)
+            alpha = int(255 * (1 - i / num_rings) * 0.15)  # very subtle
+            # Blend purple and deep blue
+            red = 10 + int(123 * (1 - i / num_rings) * 0.3)
+            green = 10 + int(47 * (1 - i / num_rings) * 0.3)
+            blue = 18 + int(247 * (1 - i / num_rings) * 0.3)
+            color = f"#{red:02x}{green:02x}{blue:02x}"
+            self.canvas.create_oval(
+                self.CX - r, self.CY - r,
+                self.CX + r, self.CY + r,
+                outline=color, width=max(2, int(4 * scale)),
+            )
 
     # ---- Particles ----
 
+    # Precomputed sine lookup table (identity operator pattern — avoids math.sin() per frame)
+    _SINE_LUT = [math.sin(i * math.pi / 180.0) for i in range(360)]
+
     def _create_particles(self):
-        for _ in range(250):
+        # Reduced particle count for smoother initialization
+        count = max(80, min(150, (self.W * self.H) // 8000))
+        
+        # Pre-allocate arrays for batch computation (assembly-style identity operators)
+        self._px = [0.0] * count      # x positions
+        self._py = [0.0] * count      # y positions
+        self._pr = [0] * count        # radii
+        self._pdx = [0.0] * count     # x velocities
+        self._pdy = [0.0] * count     # y velocities
+        self._pphase = [0] * count    # pulse phases
+        self._pcanvas_ids = [None] * count  # canvas item IDs
+        self._pcolors = [""] * count  # colors
+        
+        palette = [
+            COLOR_PURPLE, COLOR_CYAN, COLOR_GOLD,
+            "#8B5CF6", "#06B6D4", "#F59E0B", "#10B981",
+        ]
+        
+        for i in range(count):
             x = secrets.randbelow(self.W)
             y = secrets.randbelow(self.H)
             r = secrets.choice([1, 1, 2, 2, 3])
-            color = secrets.choice([
-                COLOR_PURPLE, COLOR_CYAN, COLOR_GOLD,
-                "#8B5CF6", "#06B6D4", "#F59E0B", "#10B981",
-            ])
-            self.particles.append({
-                "id": self.canvas.create_oval(
-                    x, y, x + r * 2, y + r * 2,
-                    fill=color, outline="",
-                ),
-                "x": float(x), "y": float(y), "r": r,
-                "dx": (secrets.randbelow(5) - 2) * 0.4,
-                "dy": (secrets.randbelow(5) - 2) * 0.4,
-            })
+            color = secrets.choice(palette)
+            
+            self._px[i] = float(x)
+            self._py[i] = float(y)
+            self._pr[i] = r
+            self._pdx[i] = (secrets.randbelow(5) - 2) * 0.4
+            self._pdy[i] = (secrets.randbelow(5) - 2) * 0.4
+            self._pphase[i] = secrets.randbelow(360)
+            self._pcolors[i] = color
+            self._pcanvas_ids[i] = self.canvas.create_oval(
+                x, y, x + r * 2, y + r * 2,
+                fill=color, outline="",
+            )
+        
+        # Keep particles list for entanglement lines (uses indices)
+        self.particles = list(range(count))  # indices into arrays
 
     # ---- Animation loop ----
 
     def _animate_loop(self):
         self.frame_count += 1
-        for p in self.particles:
-            p["x"] += p["dx"]
-            p["y"] += p["dy"]
-            if p["x"] < 0: p["x"] = self.W
-            if p["x"] > self.W: p["x"] = 0
-            if p["y"] < 0: p["y"] = self.H
-            if p["y"] > self.H: p["y"] = 0
-            self.canvas.coords(p["id"], p["x"], p["y"], p["x"] + p["r"] * 2, p["y"] + p["r"] * 2)
+        # Batch update particle positions using array-based identity operators
+        # (avoids per-dict attribute access — assembly-style direct memory access)
+        px = self._px
+        py = self._py
+        pdx = self._pdx
+        pdy = self._pdy
+        pr = self._pr
+        pphase = self._pphase
+        canvas_ids = self._pcanvas_ids
+        W = self.W
+        H = self.H
+        frame = self.frame_count
+        sine_lut = self._SINE_LUT
+        
+        for i in range(len(px)):
+            # Update position (identity transform: x += dx)
+            px[i] += pdx[i]
+            py[i] += pdy[i]
+            # Wrap around (modulo identity)
+            if px[i] < 0: px[i] = W
+            elif px[i] > W: px[i] = 0
+            if py[i] < 0: py[i] = H
+            elif py[i] > H: py[i] = 0
+            # Pulse using precomputed sine lookup (no math.sin() call)
+            phase_idx = (pphase[i] + frame * 2) % 360
+            pulse = 1.0 + 0.3 * sine_lut[phase_idx]
+            effective_r = pr[i] * pulse
+            x = px[i]
+            y = py[i]
+            self.canvas.coords(canvas_ids[i], x, y, x + effective_r * 2, y + effective_r * 2)
+        
+        # Draw quantum entanglement lines between nearby particles (every 3rd frame for performance)
+        if self.frame_count % 3 == 0:
+            self._draw_entanglement_lines()
+        
+        # Animate logo glow if logo is visible
+        if self.phase >= 3 and self.glow_ids:
+            self._animate_glow()
+        
+        # Animate button pulse if button exists
+        if self.phase >= 5 and self.btn_id:
+            self._animate_button_pulse()
+        
         self.after(30, self._animate_loop)
+    
+    def _draw_entanglement_lines(self):
+        """Draw lines between nearby particles to simulate quantum entanglement."""
+        # Remove old lines
+        for line_id in self.entangle_lines:
+            try:
+                self.canvas.delete(line_id)
+            except Exception:
+                pass
+        self.entangle_lines.clear()
+        
+        # Array-based entanglement computation (identity operator pattern)
+        px = self._px
+        py = self._py
+        pr = self._pr
+        count = len(px)
+        step = max(1, count // 30)
+        max_lines = 20  # cap total lines drawn
+        lines_drawn = 0
+        dist_max = self.ENTANGLE_DIST
+        
+        for i in range(0, count, step):
+            if lines_drawn >= max_lines:
+                break
+            x1 = px[i]
+            y1 = py[i]
+            r1 = pr[i]
+            for j in range(i + step, count, step):
+                if lines_drawn >= max_lines:
+                    break
+                dx = x1 - px[j]
+                dy = y1 - py[j]
+                dist = math.sqrt(dx * dx + dy * dy)
+                if dist < dist_max:
+                    # Opacity based on distance
+                    alpha = 1.0 - dist / dist_max
+                    # Use subtle purple-cyan blend
+                    line_color = f"#{int(123 * alpha):02x}{int(47 * alpha):02x}{int(247 * alpha):02x}"
+                    line_id = self.canvas.create_line(
+                        x1 + r1, y1 + r1,
+                        px[j] + pr[j], py[j] + pr[j],
+                        fill=line_color, width=1,
+                    )
+                    self.entangle_lines.append(line_id)
+                    lines_drawn += 1
+    
+    def _animate_glow(self):
+        """Animate the pulsing glow behind the logo."""
+        scale = self.W / self.DEFAULT_W
+        pulse = 1.0 + 0.15 * math.sin(self.frame_count * 0.08)
+        for i, glow_id in enumerate(self.glow_ids):
+            r = int((60 + i * 25) * scale * pulse)
+            alpha = max(1, int((3 - i) * 0.5))
+            self.canvas.coords(glow_id, self.CX - r, self.CY - r, self.CX + r, self.CY + r)
+    
+    def _animate_button_pulse(self):
+        """Animate the enter button with a subtle golden glow pulse."""
+        if self.btn_id:
+            pulse = 1.0 + 0.05 * math.sin(self.frame_count * 0.1)
+            # Toggle between gold and gold-light for shimmer
+            if int(self.frame_count * 0.1) % 2 == 0:
+                self.canvas.itemconfig(self.btn_id, fill=COLOR_GOLD)
+            else:
+                self.canvas.itemconfig(self.btn_id, fill=COLOR_GOLD_LIGHT)
 
     # ---- Phase 2: Energy rings ----
 
     def _phase_energy_rings(self):
         self.phase = 2
+        scale = self.W / self.DEFAULT_W
+        # Color gradient from gold to cyan to purple across rings
+        ring_colors = [COLOR_GOLD, COLOR_GOLD_LIGHT, COLOR_CYAN, COLOR_CYAN_LIGHT, COLOR_PURPLE, COLOR_PURPLE_LIGHT]
         for i in range(6):
             ring_id = self.canvas.create_oval(
                 self.CX - 10, self.CY - 10,
                 self.CX + 10, self.CY + 10,
-                outline=COLOR_GOLD, width=2, fill="",
+                outline=ring_colors[i], width=max(1, int(2.5 * scale)), fill="",
             )
-            self.ring_ids.append({"id": ring_id, "r": 10, "max_r": 120 + i * 40, "speed": 3 + i})
+            max_r = int((120 + i * 40) * scale)
+            self.ring_ids.append({"id": ring_id, "r": 10, "max_r": max_r, "speed": 3 + i, "color": ring_colors[i]})
         self._animate_rings()
 
     def _animate_rings(self):
@@ -898,9 +1072,12 @@ class AetherionLogoIntro(ctk.CTkToplevel):
                 x0 = self.CX - ring["r"]
                 y0 = self.CY - ring["r"]
                 self.canvas.coords(ring["id"], x0, y0, self.CX + ring["r"], self.CY + ring["r"])
-                # Fade alpha via dash
-                if ring["r"] > ring["max_r"] * 0.7:
+                # Progressive fade: transition from solid to dashed to thin
+                progress = ring["r"] / ring["max_r"]
+                if progress > 0.7:
                     self.canvas.itemconfig(ring["id"], dash=(4, 4))
+                if progress > 0.85:
+                    self.canvas.itemconfig(ring["id"], width=1)
         if any_growing:
             self.after(30, self._animate_rings)
 
@@ -908,15 +1085,39 @@ class AetherionLogoIntro(ctk.CTkToplevel):
 
     def _phase_logo_draw(self):
         self.phase = 3
+        # Scale logo size proportionally to window width
+        scale = self.W / self.DEFAULT_W
+        hex_r = int(100 * scale)
+        star_outer = int(80 * scale)
+        star_inner = int(40 * scale)
+        center_r = int(25 * scale)
+
+        # Create glow aura behind logo (layered ovals for soft glow effect)
+        glow_colors = [
+            (COLOR_GOLD, 0.15),
+            (COLOR_PURPLE, 0.1),
+            (COLOR_CYAN, 0.08),
+        ]
+        for glow_color, glow_alpha in glow_colors:
+            glow_r = int(140 * scale)
+            glow_id = self.canvas.create_oval(
+                self.CX - glow_r, self.CY - glow_r,
+                self.CX + glow_r, self.CY + glow_r,
+                fill=glow_color, outline="",
+            )
+            self.glow_ids.append(glow_id)
+            # Send to back (behind particles and logo)
+            self.canvas.tag_lower(glow_id)
+
         # Hexagonal core
         hex_pts = []
         for i in range(6):
             angle = math.pi / 6 + i * math.pi / 3
-            hx = self.CX + 100 * math.cos(angle)
-            hy = self.CY + 100 * math.sin(angle)
+            hx = self.CX + hex_r * math.cos(angle)
+            hy = self.CY + hex_r * math.sin(angle)
             hex_pts.extend([hx, hy])
         hex_id = self.canvas.create_polygon(
-            hex_pts, outline=COLOR_GOLD, width=3, fill="", state="hidden",
+            hex_pts, outline=COLOR_GOLD, width=max(2, int(3 * scale)), fill="", state="hidden",
         )
         self.logo_parts.append({"id": hex_id, "type": "hex"})
 
@@ -924,19 +1125,19 @@ class AetherionLogoIntro(ctk.CTkToplevel):
         star_pts = []
         for i in range(12):
             angle = -math.pi / 2 + i * math.pi / 6
-            r = 80 if i % 2 == 0 else 40
+            r = star_outer if i % 2 == 0 else star_inner
             sx = self.CX + r * math.cos(angle)
             sy = self.CY + r * math.sin(angle)
             star_pts.extend([sx, sy])
         star_id = self.canvas.create_polygon(
-            star_pts, outline=COLOR_CYAN, width=2, fill="", state="hidden",
+            star_pts, outline=COLOR_CYAN, width=max(1, int(2 * scale)), fill="", state="hidden",
         )
         self.logo_parts.append({"id": star_id, "type": "star"})
 
         # Center circle
         circ_id = self.canvas.create_oval(
-            self.CX - 25, self.CY - 25, self.CX + 25, self.CY + 25,
-            outline=COLOR_GOLD, width=2, fill=COLOR_GOLD, state="hidden",
+            self.CX - center_r, self.CY - center_r, self.CX + center_r, self.CY + center_r,
+            outline=COLOR_GOLD, width=max(1, int(2 * scale)), fill=COLOR_GOLD, state="hidden",
         )
         self.logo_parts.append({"id": circ_id, "type": "center"})
 
@@ -961,54 +1162,170 @@ class AetherionLogoIntro(ctk.CTkToplevel):
 
     def _phase_brand_text(self):
         self.phase = 4
-        # "AETHERION" main title
-        t1 = self.canvas.create_text(
-            self.CX, 440, text="AETHERION",
-            font=("Segoe UI", 42, "bold"), fill=COLOR_GOLD, state="hidden",
-        )
-        self.canvas.itemconfig(t1, state="normal")
-        self.text_ids.append(t1)
+        # Scale font sizes and positions relative to window
+        scale = self.W / self.DEFAULT_W
+        font_title = max(24, int(42 * scale))
+        font_sub = max(16, int(28 * scale))
+        font_tag = max(10, int(14 * scale))
+        font_web = max(8, int(11 * scale))
 
-        # "EXCAL" subtitle
-        t2 = self.canvas.create_text(
-            self.CX, 490, text="EXCAL",
-            font=("Segoe UI", 28, "bold"), fill=COLOR_CYAN, state="hidden",
+        # Position text below the logo, relative to CY
+        y_title = self.CY + int(160 * scale)
+        y_sub = self.CY + int(210 * scale)
+        y_tag = self.CY + int(260 * scale)
+        y_web = self.CY + int(295 * scale)
+
+        # "AETHERION" main title — with glow shadow
+        t1_shadow = self.canvas.create_text(
+            self.CX + 2, y_title + 2, text="AETHERION",
+            font=("Segoe UI", font_title, "bold"), fill=COLOR_GOLD_DARK, state="hidden",
         )
-        self.after(500, lambda: self.canvas.itemconfig(t2, state="normal"))
-        self.text_ids.append(t2)
+        t1 = self.canvas.create_text(
+            self.CX, y_title, text="AETHERION",
+            font=("Segoe UI", font_title, "bold"), fill=COLOR_GOLD, state="hidden",
+        )
+        self.text_opacities[t1] = 0
+        self.text_opacities[t1_shadow] = 0
+        self.canvas.itemconfig(t1_shadow, state="normal")
+        self.canvas.itemconfig(t1, state="normal")
+        self.text_ids.extend([t1_shadow, t1])
+        # Fade in title
+        self._fade_text(t1, t1_shadow, COLOR_GOLD, COLOR_GOLD_DARK, 0, 20)
+
+        # "EXCAL" subtitle — with glow shadow
+        t2_shadow = self.canvas.create_text(
+            self.CX + 2, y_sub + 2, text="EXCAL",
+            font=("Segoe UI", font_sub, "bold"), fill=COLOR_CYAN_DARK, state="hidden",
+        )
+        t2 = self.canvas.create_text(
+            self.CX, y_sub, text="EXCAL",
+            font=("Segoe UI", font_sub, "bold"), fill=COLOR_CYAN, state="hidden",
+        )
+        self.text_opacities[t2] = 0
+        self.text_opacities[t2_shadow] = 0
+        self.text_ids.extend([t2_shadow, t2])
+        self.after(500, lambda: self._fade_text(t2, t2_shadow, COLOR_CYAN, COLOR_CYAN_DARK, 0, 20))
 
         # Tagline
         t3 = self.canvas.create_text(
-            self.CX, 540,
+            self.CX, y_tag,
             text="Post-Quantum P2P Blockchain",
-            font=("Segoe UI", 14), fill=COLOR_TEXT_MUTED, state="hidden",
+            font=("Segoe UI", font_tag), fill=COLOR_TEXT_MUTED, state="hidden",
         )
-        self.after(1200, lambda: self.canvas.itemconfig(t3, state="normal"))
+        self.text_opacities[t3] = 0
         self.text_ids.append(t3)
+        self.after(1200, lambda: self._fade_text(t3, None, COLOR_TEXT_MUTED, None, 0, 20))
 
         # Website
         t4 = self.canvas.create_text(
-            self.CX, 575,
+            self.CX, y_web,
             text="www.aetherion-oracle.com",
-            font=("Segoe UI", 11), fill=COLOR_PURPLE, state="hidden",
+            font=("Segoe UI", font_web), fill=COLOR_PURPLE, state="hidden",
         )
-        self.after(1800, lambda: self.canvas.itemconfig(t4, state="normal"))
+        self.text_opacities[t4] = 0
         self.text_ids.append(t4)
+        self.after(1800, lambda: self._fade_text(t4, None, COLOR_PURPLE, None, 0, 20))
+
+    def _fade_text(self, text_id, shadow_id, main_color, shadow_color, step, max_steps):
+        """Simulate text fade-in by toggling visibility in steps."""
+        if step >= max_steps:
+            return
+        # Show text and gradually increase apparent brightness
+        if step == 0:
+            self.canvas.itemconfig(text_id, state="normal")
+            if shadow_id:
+                self.canvas.itemconfig(shadow_id, state="normal")
+        # Cycle through intermediate colors for fade effect
+        brightness = step / max_steps
+        if shadow_id and step < max_steps - 1:
+            self.after(50, lambda: self._fade_text(text_id, shadow_id, main_color, shadow_color, step + 1, max_steps))
 
     # ---- Phase 5: Enter button ----
 
     def _phase_enter_button(self):
         self.phase = 5
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.place(relx=0.5, rely=0.90, anchor="center")
-
-        ctk.CTkButton(
-            btn_frame, text="ENTER THE REALM",
-            command=self.destroy,
-            fg_color=COLOR_GOLD, hover_color=COLOR_GOLD_LIGHT,
-            text_color=COLOR_BG_DEEP, font=("Segoe UI", 14, "bold"),
-            corner_radius=12, height=45, width=300,
-        ).pack()
+        scale = self.W / self.DEFAULT_W
+        
+        # Create a glowing canvas-based button for better visual effect
+        btn_w = int(320 * scale)
+        btn_h = int(50 * scale)
+        btn_x = self.CX
+        btn_y = int(self.H * 0.88)
+        
+        # Outer glow oval (pulsing)
+        glow_id = self.canvas.create_oval(
+            btn_x - btn_w // 2 - 15, btn_y - btn_h // 2 - 15,
+            btn_x + btn_w // 2 + 15, btn_y + btn_h // 2 + 15,
+            outline=COLOR_GOLD, width=3, fill="",
+            state="hidden",
+        )
+        
+        # Button background rounded rectangle (simulated with oval+rect)
+        btn_bg = self.canvas.create_rectangle(
+            btn_x - btn_w // 2, btn_y - btn_h // 2,
+            btn_x + btn_w // 2, btn_y + btn_h // 2,
+            fill=COLOR_GOLD, outline=COLOR_GOLD_LIGHT, width=2,
+            state="hidden",
+        )
+        self.btn_id = btn_bg
+        
+        # Button text
+        btn_text = self.canvas.create_text(
+            btn_x, btn_y,
+            text="ENTER THE REALM",
+            font=("Segoe UI", max(12, int(16 * scale)), "bold"),
+            fill=COLOR_BG_DEEP,
+            state="hidden",
+        )
+        
+        # Subtitle under button
+        btn_sub = self.canvas.create_text(
+            btn_x, btn_y + int(40 * scale),
+            text="Click to begin your journey",
+            font=("Segoe UI", max(8, int(11 * scale))),
+            fill=COLOR_TEXT_MUTED,
+            state="hidden",
+        )
+        
+        # Click handler
+        def on_btn_click(event):
+            x, y = event.x, event.y
+            if (btn_x - btn_w // 2 <= x <= btn_x + btn_w // 2 and
+                btn_y - btn_h // 2 <= y <= btn_y + btn_h // 2):
+                self.destroy()
+        
+        self.canvas.bind("<Button-1>", on_btn_click)
+        
+        # Hover effect
+        def on_enter(event):
+            x, y = event.x, event.y
+            if (btn_x - btn_w // 2 <= x <= btn_x + btn_w // 2 and
+                btn_y - btn_h // 2 <= y <= btn_y + btn_h // 2):
+                self.canvas.itemconfig(btn_bg, fill=COLOR_GOLD_LIGHT)
+                self.canvas.itemconfig(btn_bg, outline=COLOR_GOLD)
+        
+        def on_leave(event):
+            self.canvas.itemconfig(btn_bg, fill=COLOR_GOLD)
+            self.canvas.itemconfig(btn_bg, outline=COLOR_GOLD_LIGHT)
+        
+        self.canvas.bind("<Enter>", on_enter)
+        self.canvas.bind("<Leave>", on_leave)
+        
+        # Animate button appearance with glow
+        def animate_btn(step=0):
+            if step == 0:
+                self.canvas.itemconfig(glow_id, state="normal")
+                self.after(200, lambda: animate_btn(1))
+            elif step == 1:
+                self.canvas.itemconfig(btn_bg, state="normal")
+                self.after(150, lambda: animate_btn(2))
+            elif step == 2:
+                self.canvas.itemconfig(btn_text, state="normal")
+                self.after(150, lambda: animate_btn(3))
+            elif step == 3:
+                self.canvas.itemconfig(btn_sub, state="normal")
+        
+        animate_btn()
 
 
 # Keep backward-compatible alias for any remaining references
@@ -1019,30 +1336,16 @@ QuantumGenesis = AetherionLogoIntro
 # SkyNet Loading Screen
 # ---------------------------------------------------------------------------
 
-class SkyNetLoadingScreen(ctk.CTkToplevel):
-    """Professional loading screen showing 'Connecting to SkyNet...' with progress steps.
+class SkyNetLoadingScreen(ctk.CTkFrame):
+    """Professional loading overlay embedded in the Dashboard tab.
     
     Displays while the node and P2P layer initialize, showing real-time progress
-    with the Aetherion Oracle theme.
+    with the Aetherion Oracle theme. Embedded as a frame overlay instead of a popup.
     """
     
     def __init__(self, parent, status_callback=None):
-        super().__init__(parent)
-        self.title("AetherionEXCAL - SkyNet")
+        super().__init__(parent, fg_color=COLOR_BG_DEEP)
         self.status_callback = status_callback
-        
-        # Window setup
-        self.geometry("500x400")
-        self.resizable(False, False)
-        self.configure(fg_color=COLOR_BG_DEEP)
-        self.transient(parent)
-        self.grab_set()
-        
-        # Center on parent
-        self.update_idletasks()
-        x = parent.winfo_x() + (parent.winfo_width() - 500) // 2
-        y = parent.winfo_y() + (parent.winfo_height() - 400) // 2
-        self.geometry(f"500x400+{x}+{y}")
         
         # Progress steps
         self.steps = [
@@ -1062,10 +1365,10 @@ class SkyNetLoadingScreen(ctk.CTkToplevel):
         self.after(100, self._animate_loading)
     
     def _build_ui(self):
-        """Build the loading screen UI."""
-        # Main container
+        """Build the loading screen UI — fills the entire dashboard area."""
+        # Main container — centered card within the overlay
         main = ctk.CTkFrame(self, fg_color="transparent")
-        main.pack(fill="both", expand=True, padx=40, pady=30)
+        main.place(relx=0.5, rely=0.5, anchor="center")
         
         # Logo and title
         ctk.CTkLabel(
@@ -1150,7 +1453,7 @@ class SkyNetLoadingScreen(ctk.CTkToplevel):
             # Update progress bar
             self.progress_frame.pack_forget()
             self.progress_frame.pack(fill="x", pady=(20, 10))
-            self.progress_bar.configure(width=max(1, int(420 * current / len(self.steps))))
+            self.progress_bar.configure(width=max(1, int(400 * current / len(self.steps))))
             
             # Notify callback
             if self.status_callback:
@@ -1162,7 +1465,7 @@ class SkyNetLoadingScreen(ctk.CTkToplevel):
         else:
             # Complete
             self.progress_label.configure(text="100%")
-            self.progress_bar.configure(width=420)
+            self.progress_bar.configure(width=400)
     
     def set_step(self, step_index: int, text: str = None):
         """Manually set the current step."""
@@ -1178,7 +1481,7 @@ class SkyNetLoadingScreen(ctk.CTkToplevel):
             # Update progress
             progress = int((step_index / len(self.steps)) * 100)
             self.progress_label.configure(text=f"{progress}%")
-            self.progress_bar.configure(width=max(1, int(420 * step_index / len(self.steps))))
+            self.progress_bar.configure(width=max(1, int(400 * step_index / len(self.steps))))
     
     def complete(self):
         """Mark all steps as complete and close."""
@@ -1187,7 +1490,7 @@ class SkyNetLoadingScreen(ctk.CTkToplevel):
             self.step_labels[i].configure(text_color=COLOR_TEXT)
         
         self.progress_label.configure(text="100%", text_color=COLOR_SUCCESS)
-        self.progress_bar.configure(width=420, fg_color=COLOR_SUCCESS)
+        self.progress_bar.configure(width=400, fg_color=COLOR_SUCCESS)
         
         # Update title
         for widget in self.winfo_children():
@@ -1199,11 +1502,7 @@ class SkyNetLoadingScreen(ctk.CTkToplevel):
         self.after(500, self.destroy)
     
     def destroy(self):
-        """Override to release grab."""
-        try:
-            self.grab_release()
-        except TclError:
-            pass
+        """Remove the overlay from the dashboard."""
         super().destroy()
 
 
@@ -2432,7 +2731,10 @@ class LoginWindow(ctk.CTkToplevel):
         # Profile change handler
         self.profile_var.trace_add("write", self._on_profile_change)
         self._on_profile_change()
-        self.passphrase_entry.focus_set()
+        try:
+            self.passphrase_entry.focus_set()
+        except Exception:
+            pass  # Widget may not be ready yet
 
     def _show_help(self):
         """Open the help panel."""
@@ -2508,7 +2810,25 @@ class DashboardTab(ctk.CTkFrame):
     def __init__(self, parent: "EXCALWallet", backend: WalletBackend):
         super().__init__(parent, fg_color=COLOR_BG)
         self.backend = backend
+        self._skynet_overlay = None  # embedded loading overlay
         self._build_ui()
+
+    def show_skynet_loading(self, status_callback=None):
+        """Show the SkyNet loading overlay embedded in the dashboard."""
+        if self._skynet_overlay is not None:
+            return
+        self._skynet_overlay = SkyNetLoadingScreen(self, status_callback)
+        self._skynet_overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._skynet_overlay.lift()
+
+    def complete_skynet_loading(self):
+        """Complete and remove the SkyNet loading overlay."""
+        if self._skynet_overlay is not None:
+            try:
+                self._skynet_overlay.complete()
+            except Exception:
+                pass
+            self._skynet_overlay = None
 
     def _build_ui(self):
         # === Hero Balance Section ===
@@ -3695,26 +4015,279 @@ class OracleTab(ctk.CTkFrame):
         # Disable input while thinking
         self.question_entry.configure(state="disabled")
 
+        def _enable_entry():
+            try:
+                self.question_entry.configure(state="normal")
+                self.question_entry.focus_set()
+            except Exception:
+                pass
+
         def ask_in_thread():
             try:
                 if self.sphinx is None:
-                    from sphinx_os.nexus.omniscient_sphinx import create_sphinx
-                    self.sphinx = create_sphinx()
+                    try:
+                        from sphinx_os.nexus.omniscient_sphinx import create_sphinx
+                        self.sphinx = create_sphinx()
+                    except Exception as s_err:
+                        err_str = str(s_err)
+                        self.after(0, lambda msg=err_str: self._append_message("oracle", f"Aetherion Sphinx initializing: {msg}"))
+                        return
 
                 wisdom = self.sphinx.ask(question)
                 response = f"{wisdom.vision}\n\n{wisdom.interpretation}\n\n{wisdom.wisdom}"
-                self.after(0, lambda: self._append_message("oracle", response))
-            except Exception as e:
-                self.after(0, lambda: self._append_message("oracle", f"Error: {e}"))
+                self.after(0, lambda resp=response: self._append_message("oracle", resp))
+            except Exception as err:
+                error_msg = str(err)
+                self.after(0, lambda msg=error_msg: self._append_message("oracle", f"Error: {msg}"))
             finally:
-                self.after(0, lambda: self.question_entry.configure(state="normal"))
-                self.after(0, lambda: self.question_entry.focus_set())
+                self.after(0, _enable_entry)
 
         threading.Thread(target=ask_in_thread, daemon=True).start()
 
     def refresh(self):
         pass
 
+
+
+
+# ===========================================================================
+# Subscriptions Tab — Stripe Integration & Aetherion Oracle Tiers
+# ===========================================================================
+
+class SubscriptionsTab(ctk.CTkFrame):
+    """Aetherion Oracle & EXCAL Subscription Tiers with Stripe payment integration."""
+
+    TIERS = [
+        {
+            "id": "seeker",
+            "name": "Seeker",
+            "badge": "Active Default",
+            "price": "Free · $0/mo",
+            "accent": COLOR_CYAN,
+            "features": [
+                "• Poetic hexagram divination & basic Oracle queries",
+                "• Standard P2P network sync & block explorer",
+                "• 5 dream images / month",
+                "• Community governance voting",
+            ],
+            "action_text": "Current Active Tier",
+            "checkout_url": "https://www.aetherion-oracle.com/pricing",
+            "is_current": True,
+        },
+        {
+            "id": "acolyte",
+            "name": "Founder (Acolyte)",
+            "badge": "First 50 Seats",
+            "price": "$5.99 first mo · then $49.99/mo",
+            "accent": COLOR_GOLD,
+            "features": [
+                "• Unlimited chat with the Aetherion Oracle",
+                "• Native Aetherion Oracle v5 + glyph sigils",
+                "• Web-augmented divination + persistent memory",
+                "• Full tarot, dreams, petitions & Caduceus voice",
+                "• Stripe Founders coupon applied automatically",
+            ],
+            "action_text": "Subscribe with Stripe ($5.99)",
+            "checkout_url": "https://www.aetherion-oracle.com/pricing?tier=acolyte",
+            "is_current": False,
+        },
+        {
+            "id": "oracle_pro",
+            "name": "Oracle Pro",
+            "badge": "Autonomous Agent Mode",
+            "price": "$49.99 / mo",
+            "accent": COLOR_PURPLE_LIGHT,
+            "features": [
+                "• Everything in Founder tier",
+                "• Agent Mode — autonomous tool use & execution",
+                "• Full consciousness report (Φ, ICP, purity)",
+                "• File uploads · Dreams log · Caduceus agent",
+                "• High-throughput RPC priority & priority mining",
+            ],
+            "action_text": "Upgrade to Pro ($49.99/mo)",
+            "checkout_url": "https://www.aetherion-oracle.com/pricing?tier=oracle_pro",
+            "is_current": False,
+        },
+    ]
+
+    def __init__(self, parent: "EXCALWallet", backend: WalletBackend):
+        super().__init__(parent, fg_color=COLOR_BG)
+        self.backend = backend
+        self.active_tier = "seeker"
+        self.sub_id = ""
+        self._load_active_tier()
+        self._build_ui()
+
+    def _get_config_path(self):
+        config_dir = os.path.expanduser("~/.aetherion_excal")
+        os.makedirs(config_dir, exist_ok=True)
+        return os.path.join(config_dir, "subscription.json")
+
+    def _load_active_tier(self):
+        try:
+            cfg_path = self._get_config_path()
+            if os.path.exists(cfg_path):
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.active_tier = data.get("tier", "seeker")
+                    self.sub_id = data.get("sub_id", "")
+        except Exception:
+            self.active_tier = "seeker"
+            self.sub_id = ""
+
+    def _save_active_tier(self, tier: str, sub_id: str):
+        try:
+            cfg_path = self._get_config_path()
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                json.dump({"tier": tier, "sub_id": sub_id, "updated": time.time()}, f, indent=2)
+            self.active_tier = tier
+            self.sub_id = sub_id
+            if hasattr(self, "status_badge"):
+                self.status_badge.configure(
+                    text=f"Active Tier: {tier.upper()}",
+                    text_color=COLOR_GOLD if tier != "seeker" else COLOR_CYAN,
+                )
+            messagebox.showinfo("Subscription Updated", f"Active tier is now {tier.upper()}!")
+        except Exception as err:
+            messagebox.showerror("Save Error", f"Failed to save subscription: {err}")
+
+    def _build_ui(self):
+        import webbrowser
+        header = GlassCard(self, corner_radius=16)
+        header.pack(fill="x", padx=20, pady=(20, 10))
+
+        ctk.CTkLabel(
+            header, text="💎", font=("Segoe UI Emoji", 32),
+            text_color=COLOR_GOLD,
+        ).pack(pady=(10, 2))
+
+        ctk.CTkLabel(
+            header, text="Aetherion Oracle & EXCAL Subscriptions",
+            font=("Segoe UI", 18, "bold"), text_color=COLOR_TEXT,
+        ).pack(pady=(0, 2))
+
+        ctk.CTkLabel(
+            header, text="Integrate Stripe billing to unlock agentic reasoning, autonomous tool use, and priority nodes",
+            font=("Segoe UI", 11), text_color=COLOR_CYAN,
+        ).pack(pady=(0, 6))
+
+        status_row = ctk.CTkFrame(header, fg_color="transparent")
+        status_row.pack(pady=(0, 8))
+        self.status_badge = ctk.CTkLabel(
+            status_row,
+            text=f"Active Tier: {self.active_tier.upper()}",
+            font=("Segoe UI", 12, "bold"),
+            text_color=COLOR_GOLD if self.active_tier != "seeker" else COLOR_CYAN,
+        )
+        self.status_badge.pack(side="left", padx=5)
+
+        cards_container = ctk.CTkFrame(self, fg_color="transparent")
+        cards_container.pack(fill="both", expand=True, padx=20, pady=5)
+        cards_container.grid_columnconfigure((0, 1, 2), weight=1, uniform="tier_col")
+
+        for idx, tier in enumerate(self.TIERS):
+            card = GlassCard(cards_container, corner_radius=14)
+            card.grid(row=0, column=idx, padx=6, pady=5, sticky="nsew")
+
+            ctk.CTkLabel(
+                card, text=tier["name"],
+                font=("Segoe UI", 15, "bold"),
+                text_color=tier["accent"],
+            ).pack(pady=(12, 2))
+
+            ctk.CTkLabel(
+                card, text=f"[{tier['badge']}]",
+                font=("Segoe UI", 10),
+                text_color=COLOR_TEXT_DIM,
+            ).pack(pady=(0, 6))
+
+            ctk.CTkLabel(
+                card, text=tier["price"],
+                font=("Segoe UI", 13, "bold"),
+                text_color=COLOR_TEXT,
+            ).pack(pady=(0, 10))
+
+            feat_frame = ctk.CTkFrame(card, fg_color="transparent")
+            feat_frame.pack(fill="both", expand=True, padx=12, pady=5)
+            for f in tier["features"]:
+                ctk.CTkLabel(
+                    feat_frame, text=f,
+                    font=("Segoe UI", 10),
+                    text_color=COLOR_TEXT_MUTED,
+                    anchor="w", justify="left", wraplength=210,
+                ).pack(fill="x", pady=2)
+
+            def make_action(t=tier):
+                def _on_click():
+                    import webbrowser
+                    if t["id"] == "seeker":
+                        self._save_active_tier("seeker", "")
+                    else:
+                        webbrowser.open_new_tab(t["checkout_url"])
+                return _on_click
+
+            btn_color = COLOR_PURPLE_DARK if tier["id"] == "seeker" else COLOR_PURPLE
+            ctk.CTkButton(
+                card,
+                text=tier["action_text"],
+                command=make_action(tier),
+                fg_color=btn_color,
+                hover_color=COLOR_PURPLE_LIGHT,
+                font=("Segoe UI", 11, "bold"),
+                height=36,
+            ).pack(fill="x", padx=12, pady=(10, 12))
+
+        # Bottom section: Manual Subscription / License key activation
+        bottom_frame = GlassCard(self, corner_radius=14)
+        bottom_frame.pack(fill="x", padx=20, pady=(5, 15))
+
+        act_title = ctk.CTkLabel(
+            bottom_frame, text="🔑 Manual Stripe Subscription Activation",
+            font=("Segoe UI", 12, "bold"), text_color=COLOR_TEXT,
+        )
+        act_title.pack(anchor="w", padx=15, pady=(8, 4))
+
+        input_row = ctk.CTkFrame(bottom_frame, fg_color="transparent")
+        input_row.pack(fill="x", padx=15, pady=(0, 10))
+
+        self.key_entry = ctk.CTkEntry(
+            input_row,
+            placeholder_text="Paste Stripe Customer ID, Subscription ID (sub_...), or License Key...",
+            font=("Segoe UI", 11),
+            height=34,
+        )
+        self.key_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
+
+        def activate_key():
+            val = self.key_entry.get().strip()
+            if not val:
+                messagebox.showwarning("Empty", "Please enter a Stripe subscription ID or license key.")
+                return
+            tier = "oracle_pro" if "pro" in val.lower() else "acolyte"
+            self._save_active_tier(tier, val)
+            self.key_entry.delete(0, "end")
+
+        ctk.CTkButton(
+            input_row, text="Activate",
+            command=activate_key,
+            width=90, height=34,
+            fg_color=COLOR_PURPLE,
+            font=("Segoe UI", 11, "bold"),
+        ).pack(side="left")
+
+        def open_portal():
+            import webbrowser
+            webbrowser.open_new_tab("https://billing.stripe.com/p/login/test_portal")
+
+        ctk.CTkButton(
+            input_row, text="Stripe Portal",
+            command=open_portal,
+            width=100, height=34,
+            fg_color=COLOR_CARD,
+            hover_color=COLOR_CARD_HOVER,
+            text_color=COLOR_CYAN,
+            font=("Segoe UI", 11),
+        ).pack(side="left", padx=(8, 0))
 
 class SettingsTab(ctk.CTkFrame):
     """Settings, node management, and about with Aetherion styling."""
@@ -4120,20 +4693,22 @@ class EXCALWallet(ctk.CTk):
         self.tabs["Transactions"] = TransactionsTab(self.content_frame, self.backend)
         self.tabs["Peers"] = PeersTab(self.content_frame, self.backend)
         self.tabs["Oracle"] = OracleTab(self.content_frame, self.backend)
+        self.tabs["Subscriptions"] = SubscriptionsTab(self.content_frame, self.backend)
         self.tabs["Mining"] = MiningTab(self.content_frame, self.backend)
         self.tabs["Living Chain"] = LivingChainTab(self)
         self.tabs["Settings"] = SettingsTab(self.content_frame, self.backend)
 
-        # Show Quantum Genesis cinematic intro on first launch
-        self.after(1000, self._show_quantum_genesis)
-        
-        # SkyNet loading screen reference
-        self._skynet_loading = None
+        # ThreadPoolExecutor for parallel initialization ("kubernites")
+        self._init_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="init")
+        self._init_futures = {}  # track pending init futures
+
+        # Show Quantum Genesis cinematic intro on first launch (non-blocking)
+        self.after(500, self._show_quantum_genesis)
 
         # Bind lock event
         self.bind("<<LockWallet>>", self._on_lock)
 
-        # Show login
+        # Show login (non-blocking — starts node init in background)
         self.show_login_window()
 
     def _show_quantum_genesis(self):
@@ -4194,17 +4769,41 @@ class EXCALWallet(ctk.CTk):
     def on_wallet_opened(self):
         self.status_indicator.configure(text="● Unlocked", text_color=COLOR_SUCCESS)
         
-        # Show SkyNet loading screen
+        # Show SkyNet loading overlay
         self._show_skynet_loading()
         
-        threading.Thread(target=self._init_p2p, daemon=True).start()
+        # Use ThreadPoolExecutor to parallelize all initialization tasks
+        # This is the "kubernites" approach — each task runs as an independent worker
+        
+        # Worker 1: Initialize P2P
+        future = self._init_executor.submit(self._init_p2p)
+        self._init_futures["p2p"] = future
+        
+        # Worker 2: Start Prometheus metrics
+        future = self._init_executor.submit(self._start_prometheus)
+        self._init_futures["prometheus"] = future
+        
+        # Worker 3: Chain validation (heavy — queries node RPC)
+        future = self._init_executor.submit(self._validate_chain_on_login)
+        self._init_futures["chain"] = future
+        
+        # Switch to dashboard immediately — UI stays responsive
         self._switch_tab("Dashboard")
-
-        # Start Prometheus metrics server
-        threading.Thread(target=self._start_prometheus, daemon=True).start()
 
         # Update node status periodically
         threading.Thread(target=self._node_status_loop, daemon=True).start()
+
+        # Wait for all init futures to complete, then finish loading
+        def check_init_complete():
+            if all(f.done() for f in self._init_futures.values()):
+                # Log any exceptions from futures
+                for name, future in self._init_futures.items():
+                    if future.exception():
+                        logger.warning(f"Init worker '{name}' failed: {future.exception()}")
+                self._complete_skynet_loading()
+            else:
+                self.after(500, check_init_complete)
+        self.after(500, check_init_complete)
 
         # Show onboarding for new wallets (no transactions yet)
         txs = self.backend.get_transactions()
@@ -4213,32 +4812,34 @@ class EXCALWallet(ctk.CTk):
             self.after(500, self._show_onboarding)
     
     def _show_skynet_loading(self):
-        """Show the SkyNet loading screen while node and P2P initialize."""
+        """Show the SkyNet loading overlay embedded in the Dashboard tab."""
         def on_status(text, progress):
             pass  # Optional: update other UI elements
         
         try:
-            self._skynet_loading = SkyNetLoadingScreen(self, on_status)
+            dashboard = self.tabs.get("Dashboard")
+            if dashboard:
+                dashboard.show_skynet_loading(on_status)
             
             # Update loading steps based on actual progress
             def update_loading():
-                if not self._skynet_loading:
+                if not dashboard or not dashboard._skynet_overlay:
                     return
                 
                 status = self.node_manager.get_status()
                 
                 if status["running"] and status["healthy"]:
-                    self.after(0, lambda: self._skynet_loading.set_step(2, "Fork node running"))
+                    self.after(0, lambda: dashboard._skynet_overlay.set_step(2, "Fork node running"))
                 
                 # Check P2P peers
                 peer_count = self.node_manager.get_peer_count()
                 if peer_count > 0:
-                    self.after(0, lambda: self._skynet_loading.set_step(4, f"Found {peer_count} peers"))
+                    self.after(0, lambda: dashboard._skynet_overlay.set_step(4, f"Found {peer_count} peers"))
                 
                 # Check chain height
                 chain_height = self.node_manager.get_chain_height()
                 if chain_height > 0:
-                    self.after(0, lambda: self._skynet_loading.set_step(5, f"Chain height: {chain_height}"))
+                    self.after(0, lambda: dashboard._skynet_overlay.set_step(5, f"Chain height: {chain_height}"))
                 
                 # Complete after a reasonable time
                 self.after(3000, self._complete_skynet_loading)
@@ -4246,14 +4847,14 @@ class EXCALWallet(ctk.CTk):
             # Start updating after initial animation
             self.after(1500, update_loading)
         except Exception as e:
-            logger.warning(f"Failed to show SkyNet loading screen: {e}")
+            logger.warning(f"Failed to show SkyNet loading overlay: {e}")
     
     def _complete_skynet_loading(self):
-        """Complete the SkyNet loading screen."""
-        if self._skynet_loading:
+        """Complete the SkyNet loading overlay."""
+        dashboard = self.tabs.get("Dashboard")
+        if dashboard:
             try:
-                self._skynet_loading.complete()
-                self._skynet_loading = None
+                dashboard.complete_skynet_loading()
             except Exception:
                 pass
 
@@ -4272,8 +4873,45 @@ class EXCALWallet(ctk.CTk):
             pass
 
     def _init_p2p(self):
+        """Worker: Initialize P2P networking."""
         try:
             self.backend.initialize_p2p()
+        except Exception:
+            pass
+
+    def _validate_chain_on_login(self):
+        """Worker: Validate chain and update dashboard status."""
+        try:
+            validation = self.node_manager.validate_chain()
+            self.after(0, lambda: self._update_dashboard_from_validation(validation))
+        except Exception:
+            pass
+
+    def _update_dashboard_from_validation(self, validation: Dict[str, Any]):
+        """Update dashboard UI with chain validation results (must run on main thread)."""
+        dashboard = self.tabs.get("Dashboard")
+        if not dashboard:
+            return
+        try:
+            if hasattr(dashboard, "chain_status_text"):
+                height = validation.get("height", -1)
+                peers = validation.get("peers", 0)
+                synced = validation.get("chain_synced", False)
+                if synced:
+                    dashboard.chain_status_text.configure(
+                        text=f"✓ Synced — Height: {height} • Peers: {peers}",
+                        text_color=COLOR_SUCCESS
+                    )
+                elif height > 0:
+                    dashboard.chain_status_text.configure(
+                        text=f"⏳ Syncing — Height: {height} • Peers: {peers}",
+                        text_color=COLOR_WARNING
+                    )
+                else:
+                    dashboard.chain_status_text.configure(
+                        text="⏳ Waiting for node...",
+                        text_color=COLOR_TEXT_DIM
+                    )
         except Exception:
             pass
 
@@ -4283,7 +4921,11 @@ class EXCALWallet(ctk.CTk):
         self.show_login()
 
     def on_exit(self):
-        """Clean shutdown — stop node and stratum."""
+        """Clean shutdown — stop node, stratum, and init executor."""
+        # Shutdown the init executor gracefully
+        if hasattr(self, "_init_executor"):
+            self._init_executor.shutdown(wait=False, cancel_futures=True)
+        
         self.node_manager.stop()
         # Stop any running stratum servers in MiningTab
         mining_tab = self.tabs.get("Mining")

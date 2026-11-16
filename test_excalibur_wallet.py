@@ -345,8 +345,10 @@ def test_knot():
                 "idx": 0, "value": 5 * SWORD, "lock": lock}]
     res = build_knot_lock_test(funding, priv, 1 * SWORD, 2, 3, 10,
                                0x80000000, 123456789, 1000)
+    from genesis_fork import knot_activation
+    act = knot_activation()
     check("knot lock tx validates at activation height",
-          res["validated_at_height"] == 100000)
+          res["validated_at_height"] == act)
     from txscript import txid_internal
     lock_prev = txid_internal(res["raw"])
     res2 = build_knot_spend_test(
@@ -354,7 +356,7 @@ def test_knot():
         123456789,
         lock_pkh_for_pubkey(keys.priv_to_pub_compressed(0x6666)), 1000)
     check("knot spend tx validates at activation height",
-          res2["validated_at_height"] == 100000)
+          res2["validated_at_height"] == act)
 
 
 def test_locks():
