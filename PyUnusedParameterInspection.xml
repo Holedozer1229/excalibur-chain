@@ -1,0 +1,184 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/base58_cipher_key.py</file>
+        <line>78</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/base58_cipher_key.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'cipher' value is not used</description>
+        <highlighted_element>cipher: dict</highlighted_element>
+        <language>Python</language>
+        <offset>55</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>242</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'private_key' value is not used</description>
+        <highlighted_element>private_key</highlighted_element>
+        <language>Python</language>
+        <offset>21</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>242</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'tx_data' value is not used</description>
+        <highlighted_element>tx_data</highlighted_element>
+        <language>Python</language>
+        <offset>34</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/claim_btc.py</file>
+        <line>54</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/claim_btc.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'api_base' value is not used</description>
+        <highlighted_element>api_base=&quot;https://mempool.space/api&quot;</highlighted_element>
+        <language>Python</language>
+        <offset>25</offset>
+        <length>36</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/metrics_wiring.py</file>
+        <line>205</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/metrics_wiring.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'peer_id' value is not used</description>
+        <highlighted_element>peer_id: str</highlighted_element>
+        <language>Python</language>
+        <offset>28</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>484</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'message' value is not used</description>
+        <highlighted_element>message: bytes</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py</file>
+        <line>686</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'max_attempts' value is not used</description>
+        <highlighted_element>max_attempts: int = 3</highlighted_element>
+        <language>Python</language>
+        <offset>29</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py</file>
+        <line>196</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'loan' value is not used</description>
+        <highlighted_element>loan</highlighted_element>
+        <language>Python</language>
+        <offset>21</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py</file>
+        <line>204</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'loan' value is not used</description>
+        <highlighted_element>loan</highlighted_element>
+        <language>Python</language>
+        <offset>21</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py</file>
+        <line>254</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'loan' value is not used</description>
+        <highlighted_element>loan</highlighted_element>
+        <language>Python</language>
+        <offset>21</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py</file>
+        <line>266</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'loan' value is not used</description>
+        <highlighted_element>loan</highlighted_element>
+        <language>Python</language>
+        <offset>21</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_p2p_layer.py</file>
+        <line>27</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_p2p_layer.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'block_hash' value is not used</description>
+        <highlighted_element>block_hash</highlighted_element>
+        <language>Python</language>
+        <offset>23</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/ternary_code.py</file>
+        <line>422</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/ternary_code.py"/>
+        <problem_class id="PyUnusedParameterInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused parameter
+        </problem_class>
+        <description>Parameter 'height' value is not used</description>
+        <highlighted_element>height: int = 6</highlighted_element>
+        <language>Python</language>
+        <offset>37</offset>
+        <length>15</length>
+    </problem>
+</problems>

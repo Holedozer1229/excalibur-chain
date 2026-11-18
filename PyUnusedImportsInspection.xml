@@ -1,0 +1,927 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/base58_cipher_key.py</file>
+        <line>14</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/base58_cipher_key.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import hashlib&lt;/code&gt;</description>
+        <highlighted_element>import hashlib</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>22</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import sys&lt;/code&gt;</description>
+        <highlighted_element>import sys</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/cross_encoding_cipher.py</file>
+        <line>215</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/cross_encoding_cipher.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import sys&lt;/code&gt;</description>
+        <highlighted_element>import sys</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/decode_burn_addresses.py</file>
+        <line>9</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/decode_burn_addresses.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import sys&lt;/code&gt;</description>
+        <highlighted_element>import sys</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_modern_consensus_defenses.py</file>
+        <line>12</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_modern_consensus_defenses.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import struct&lt;/code&gt;</description>
+        <highlighted_element>import struct</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_modern_consensus_defenses.py</file>
+        <line>13</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_modern_consensus_defenses.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import hashlib&lt;/code&gt;</description>
+        <highlighted_element>import hashlib</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_multi_chain_wallet.py</file>
+        <line>14</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_multi_chain_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import json&lt;/code&gt;</description>
+        <highlighted_element>import json</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_multi_chain_wallet.py</file>
+        <line>21</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_multi_chain_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;WalletGenerator&lt;/code&gt;</description>
+        <highlighted_element>WalletGenerator</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>15</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_multi_chain_wallet.py</file>
+        <line>22</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_multi_chain_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;BalanceMonitor&lt;/code&gt;</description>
+        <highlighted_element>BalanceMonitor</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_multi_chain_wallet.py</file>
+        <line>23</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_multi_chain_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;TransactionAlert&lt;/code&gt;</description>
+        <highlighted_element>TransactionAlert</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_nexus.py</file>
+        <line>29</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_nexus.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;NexusConfig&lt;/code&gt;</description>
+        <highlighted_element>NexusConfig</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/deploy.py</file>
+        <line>11</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/deploy.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import os&lt;/code&gt;</description>
+        <highlighted_element>import os</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>34</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import hashlib&lt;/code&gt;</description>
+        <highlighted_element>import hashlib</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>35</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import struct&lt;/code&gt;</description>
+        <highlighted_element>import struct</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>40</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;field&lt;/code&gt;</description>
+        <highlighted_element>field</highlighted_element>
+        <language>Python</language>
+        <offset>35</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>41</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;Optional&lt;/code&gt;</description>
+        <highlighted_element>Optional</highlighted_element>
+        <language>Python</language>
+        <offset>31</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>41</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;Tuple&lt;/code&gt;</description>
+        <highlighted_element>Tuple</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>77</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;N as SECP_N&lt;/code&gt;</description>
+        <highlighted_element>N as SECP_N</highlighted_element>
+        <language>Python</language>
+        <offset>35</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>77</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;G as SECP_G&lt;/code&gt;</description>
+        <highlighted_element>G as SECP_G</highlighted_element>
+        <language>Python</language>
+        <offset>48</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>77</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;_add&lt;/code&gt;</description>
+        <highlighted_element>_add</highlighted_element>
+        <language>Python</language>
+        <offset>61</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>77</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;_mul&lt;/code&gt;</description>
+        <highlighted_element>_mul</highlighted_element>
+        <language>Python</language>
+        <offset>67</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>40</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import time&lt;/code&gt;</description>
+        <highlighted_element>import time</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>31</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import struct&lt;/code&gt;</description>
+        <highlighted_element>import struct</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>38</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;parse_tx&lt;/code&gt;</description>
+        <highlighted_element>parse_tx</highlighted_element>
+        <language>Python</language>
+        <offset>30</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>38</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;sighash_all&lt;/code&gt;</description>
+        <highlighted_element>sighash_all</highlighted_element>
+        <language>Python</language>
+        <offset>53</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>39</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;SIGHASH_ALL&lt;/code&gt;</description>
+        <highlighted_element>SIGHASH_ALL</highlighted_element>
+        <language>Python</language>
+        <offset>22</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>39</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;lock_type&lt;/code&gt;</description>
+        <highlighted_element>lock_type</highlighted_element>
+        <language>Python</language>
+        <offset>35</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>39</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;hash160&lt;/code&gt;</description>
+        <highlighted_element>hash160</highlighted_element>
+        <language>Python</language>
+        <offset>46</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>43</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;parse_knot_witness&lt;/code&gt;</description>
+        <highlighted_element>parse_knot_witness</highlighted_element>
+        <language>Python</language>
+        <offset>22</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>43</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;KNOT_WITNESS_LEN&lt;/code&gt;</description>
+        <highlighted_element>KNOT_WITNESS_LEN</highlighted_element>
+        <language>Python</language>
+        <offset>42</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/quantum_p2p_glue.py</file>
+        <line>40</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/quantum_p2p_glue.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import socket&lt;/code&gt;</description>
+        <highlighted_element>import socket</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/tests/test_deliver_seed_security.py</file>
+        <line>2</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/tests/test_deliver_seed_security.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import json&lt;/code&gt;</description>
+        <highlighted_element>import json</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/metrics_wiring.py</file>
+        <line>33</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/metrics_wiring.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;Callable&lt;/code&gt;</description>
+        <highlighted_element>Callable</highlighted_element>
+        <language>Python</language>
+        <offset>34</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/bonding_curve.py</file>
+        <line>39</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/bonding_curve.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;field&lt;/code&gt;</description>
+        <highlighted_element>field</highlighted_element>
+        <language>Python</language>
+        <offset>35</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/bonding_curve.py</file>
+        <line>40</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/bonding_curve.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;Any&lt;/code&gt;</description>
+        <highlighted_element>Any</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/btc_accumulator.py</file>
+        <line>8</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/btc_accumulator.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;field&lt;/code&gt;</description>
+        <highlighted_element>field</highlighted_element>
+        <language>Python</language>
+        <offset>35</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>46</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;field&lt;/code&gt;</description>
+        <highlighted_element>field</highlighted_element>
+        <language>Python</language>
+        <offset>35</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>22</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import asyncio&lt;/code&gt;</description>
+        <highlighted_element>import asyncio</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>32</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;from pathlib import Path&lt;/code&gt;</description>
+        <highlighted_element>from pathlib import Path</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>24</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/pirate_burn_claim.py</file>
+        <line>10</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/pirate_burn_claim.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;Dict&lt;/code&gt;</description>
+        <highlighted_element>Dict</highlighted_element>
+        <language>Python</language>
+        <offset>19</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py</file>
+        <line>13</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_aave_flash_loan.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import time&lt;/code&gt;</description>
+        <highlighted_element>import time</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py</file>
+        <line>17</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import json&lt;/code&gt;</description>
+        <highlighted_element>import json</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py</file>
+        <line>22</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import time&lt;/code&gt;</description>
+        <highlighted_element>import time</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py</file>
+        <line>24</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;from pathlib import Path&lt;/code&gt;</description>
+        <highlighted_element>from pathlib import Path</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>24</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py</file>
+        <line>25</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;from unittest.mock import patch, MagicMock&lt;/code&gt;
+        </description>
+        <highlighted_element>from unittest.mock import patch, MagicMock</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>42</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_bip39_pictographic.py</file>
+        <line>18</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_bip39_pictographic.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import struct&lt;/code&gt;</description>
+        <highlighted_element>import struct</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_holographic_p2p.py</file>
+        <line>7</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_holographic_p2p.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import tempfile&lt;/code&gt;</description>
+        <highlighted_element>import tempfile</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>15</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_postgres_p2p.py</file>
+        <line>7</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_postgres_p2p.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import time&lt;/code&gt;</description>
+        <highlighted_element>import time</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_sumerian_decoding.py</file>
+        <line>15</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_sumerian_decoding.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import hashlib&lt;/code&gt;</description>
+        <highlighted_element>import hashlib</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_sumerian_decoding.py</file>
+        <line>16</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_sumerian_decoding.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import struct&lt;/code&gt;</description>
+        <highlighted_element>import struct</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>26</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import cmath&lt;/code&gt;</description>
+        <highlighted_element>import cmath</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>11</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import asyncio&lt;/code&gt;</description>
+        <highlighted_element>import asyncio</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>12</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import http.client&lt;/code&gt;</description>
+        <highlighted_element>import http.client</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>18</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import threading&lt;/code&gt;</description>
+        <highlighted_element>import threading</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>15</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import socket&lt;/code&gt;</description>
+        <highlighted_element>import socket</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>16</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import struct&lt;/code&gt;</description>
+        <highlighted_element>import struct</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>19</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import threading&lt;/code&gt;</description>
+        <highlighted_element>import threading</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>22</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;from http.server import HTTPServer&lt;/code&gt;</description>
+        <highlighted_element>from http.server import HTTPServer</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>34</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>30</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;BeaconHandler&lt;/code&gt;</description>
+        <highlighted_element>BeaconHandler</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>32</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;DEFAULT_MULTICAST_PORT&lt;/code&gt;</description>
+        <highlighted_element>DEFAULT_MULTICAST_PORT</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>22</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>33</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;DEFAULT_MULTICAST_GROUP&lt;/code&gt;</description>
+        <highlighted_element>DEFAULT_MULTICAST_GROUP</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>23</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>34</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;DEFAULT_BROADCAST_PORT&lt;/code&gt;</description>
+        <highlighted_element>DEFAULT_BROADCAST_PORT</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>22</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_beacon.py</file>
+        <line>36</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_beacon.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;HEARTBEAT_INTERVAL&lt;/code&gt;</description>
+        <highlighted_element>HEARTBEAT_INTERVAL</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_client.py</file>
+        <line>4</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_client.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;import json&lt;/code&gt;</description>
+        <highlighted_element>import json</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_sponsors_validation.py</file>
+        <line>17</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_sponsors_validation.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;log&lt;/code&gt;</description>
+        <highlighted_element>log</highlighted_element>
+        <language>Python</language>
+        <offset>40</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/verify_dr_time_three_chains.py</file>
+        <line>20</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/verify_dr_time_three_chains.py"/>
+        <problem_class id="PyUnusedImportsInspection" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">
+            Unused imports
+        </problem_class>
+        <description>Unused import statement &lt;code&gt;from datetime import datetime&lt;/code&gt;</description>
+        <highlighted_element>from datetime import datetime</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>29</length>
+    </problem>
+</problems>

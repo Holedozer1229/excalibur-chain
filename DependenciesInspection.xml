@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/requirements.txt</file>
+        <line>33</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/requirements.txt"/>
+        <problem_class id="DependenciesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Dependency is
+            not satisfied or outdated
+        </problem_class>
+        <description>'numpy' version 2.5.4 is outdated (latest: 2.5.5)</description>
+        <highlighted_element>numpy</highlighted_element>
+        <language>Requirements</language>
+        <offset>0</offset>
+        <length>5</length>
+    </problem>
+</problems>

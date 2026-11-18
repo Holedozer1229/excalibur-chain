@@ -6,7 +6,6 @@ the character sequences represent. For bech32, each char = 5-bit value.
 For Base58, each char = value in Base58 alphabet.
 """
 
-import sys
 import hashlib
 
 # ---------------------------------------------------------------- Base58 decoding

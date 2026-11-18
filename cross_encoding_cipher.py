@@ -212,8 +212,6 @@ Differences: 9-7=2, 7-4=3, 4-2=2, 2-0=2, 0-(-1)=1
 This is getting complex. Let me just create the cipher mapping the user described.
 """
 
-import sys
-
 # ---------------------------------------------------------------- Alphabets
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 BECH32_ALPHABET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"

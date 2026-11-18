@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>633</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyUnusedFunctionInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused function
+        </problem_class>
+        <description>Local function '_cleanup' is not used</description>
+        <highlighted_element>_cleanup</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>8</length>
+    </problem>
+</problems>

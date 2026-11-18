@@ -1,0 +1,156 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/convert_logo.py</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/convert_logo.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'PIL' is not listed in the project requirements</description>
+        <highlighted_element>PIL</highlighted_element>
+        <language>Python</language>
+        <offset>5</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/keys.py</file>
+        <line>27</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/keys.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'secp256k1' is not listed in the project requirements</description>
+        <highlighted_element>secp256k1</highlighted_element>
+        <language>Python</language>
+        <offset>7</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/keys.py</file>
+        <line>28</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/keys.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'txscript' is not listed in the project requirements</description>
+        <highlighted_element>txscript</highlighted_element>
+        <language>Python</language>
+        <offset>5</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/locks.py</file>
+        <line>28</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/locks.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'txscript' is not listed in the project requirements</description>
+        <highlighted_element>txscript</highlighted_element>
+        <language>Python</language>
+        <offset>5</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/locks.py</file>
+        <line>36</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/locks.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'secp256k1' is not listed in the project requirements</description>
+        <highlighted_element>secp256k1</highlighted_element>
+        <language>Python</language>
+        <offset>7</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py</file>
+        <line>42</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'txscript' is not listed in the project requirements</description>
+        <highlighted_element>txscript</highlighted_element>
+        <language>Python</language>
+        <offset>5</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py</file>
+        <line>135</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'p2p' is not listed in the project requirements</description>
+        <highlighted_element>p2p</highlighted_element>
+        <language>Python</language>
+        <offset>9</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/claim_btc.py</file>
+        <line>78</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/claim_btc.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'secp256k1' is not listed in the project requirements</description>
+        <highlighted_element>secp256k1</highlighted_element>
+        <language>Python</language>
+        <offset>9</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/claim_btc.py</file>
+        <line>146</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/claim_btc.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'txscript' is not listed in the project requirements</description>
+        <highlighted_element>txscript</highlighted_element>
+        <language>Python</language>
+        <offset>9</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/claim_btc.py</file>
+        <line>147</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/claim_btc.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'secp256k1' is not listed in the project requirements</description>
+        <highlighted_element>secp256k1</highlighted_element>
+        <language>Python</language>
+        <offset>9</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_postgres_p2p.py</file>
+        <line>13</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_postgres_p2p.py"/>
+        <problem_class id="PyPackageRequirementsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Unsatisfied package requirements
+        </problem_class>
+        <description>Package containing module 'nexus' is not listed in the project requirements</description>
+        <highlighted_element>nexus</highlighted_element>
+        <language>Python</language>
+        <offset>5</offset>
+        <length>5</length>
+    </problem>
+</problems>

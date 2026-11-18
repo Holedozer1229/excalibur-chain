@@ -1,0 +1,1249 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/bip32_messerene_derivations.py</file>
+        <line>35</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/bip32_messerene_derivations.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 35-38</description>
+        <highlighted_element>if p1 is None: return p2</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>24</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/bip32_messerene_derivations.py</file>
+        <line>59</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/bip32_messerene_derivations.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 59-90</description>
+        <highlighted_element>def h160(b):</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>29</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 29-70</description>
+        <highlighted_element>BECH32_ALPHABET = &quot;qpzry9x8gf2tvdw0s3jn54khce6mua7l&quot;</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>52</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>82</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 82-85</description>
+        <highlighted_element>combined = bech32_hrp_expand(hrp) + converted</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>45</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>96</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 96-99</description>
+        <highlighted_element>combined = bech32_hrp_expand(hrp) + data</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>40</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>130</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 130-142</description>
+        <highlighted_element>&quot;&quot;&quot;Encode bytes to Base58 string.&quot;&quot;&quot;</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>36</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>187</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 187-200</description>
+        <highlighted_element>&quot;&quot;&quot;Encode integer as Bitcoin script number.&quot;&quot;&quot;
+        </highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>46</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>204</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 204-211</description>
+        <highlighted_element>&quot;&quot;&quot;Decode Bitcoin script number to integer.&quot;&quot;&quot;
+        </highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>46</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>268</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 268-281</description>
+        <highlighted_element>&quot;&quot;&quot;Calculate LEFT and RIGHT cipher values for Base58 position p.
+        </highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>64</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>286</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 286-294</description>
+        <highlighted_element>user_pattern = {</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/decode_burn_addresses.py</file>
+        <line>17</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/decode_burn_addresses.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 17-29</description>
+        <highlighted_element>&quot;&quot;&quot;Decode a Base58 string to raw bytes (no checksum validation).&quot;&quot;&quot;</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>67</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/decode_burn_addresses.py</file>
+        <line>37</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/decode_burn_addresses.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 37-41</description>
+        <highlighted_element>version = raw[0]</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/decode_burn_addresses.py</file>
+        <line>56</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/decode_burn_addresses.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 56-91</description>
+        <highlighted_element>_BECH32 = &quot;qpzry9x8gf2tvdw0s3jn54khce6mua7l&quot;</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>44</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/decode_burn_addresses.py</file>
+        <line>96</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/decode_burn_addresses.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 96-106</description>
+        <highlighted_element>addr = addr.lower()</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>19</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_multi_chain_wallet.py</file>
+        <line>101</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_multi_chain_wallet.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 101-109</description>
+        <highlighted_element>print()</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_multi_chain_wallet.py</file>
+        <line>115</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_multi_chain_wallet.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 115-123</description>
+        <highlighted_element>print()</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_multi_chain_wallet.py</file>
+        <line>129</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_multi_chain_wallet.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 129-137</description>
+        <highlighted_element>print()</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_nexus.py</file>
+        <line>17</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_nexus.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 17-25</description>
+        <highlighted_element>if sys.platform == &quot;win32&quot;:</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>27</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>47</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 47-66</description>
+        <highlighted_element>GENESIS_HASH =
+            &quot;000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f&quot;
+        </highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>81</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>68</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 68-75</description>
+        <highlighted_element>GENESIS_GEMATRIA = [7, 3, 8, 300, 4, 8, 60, 200, 4, 10, 200, 50, 30, 40, 50, 50,
+        </highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>80</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/bip39.py</file>
+        <line>55</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/bip39.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 55-61</description>
+        <highlighted_element>data |= h[0] &gt;&gt; (8 - cs_bits)</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>29</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py</file>
+        <line>63</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 63-69</description>
+        <highlighted_element>entries = data.get(&quot;seeds&quot;, []) if isinstance(data, dict) else data
+        </highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>67</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/file_locks.py</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/file_locks.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 1-44</description>
+        <highlighted_element>&quot;&quot;&quot;Small cross-platform advisory file lock for wallet state files.&quot;&quot;&quot;</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>69</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_dr_time_seed.py</file>
+        <line>82</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_dr_time_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 82-95</description>
+        <highlighted_element>found = False</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_dr_time_seed.py</file>
+        <line>127</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_dr_time_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 127-139</description>
+        <highlighted_element>for label, seed in extra:</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>25</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_ramanujan_seed.py</file>
+        <line>17</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_ramanujan_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 17-23</description>
+        <highlighted_element>if n &lt; 2: return False</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>22</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_ramanujan_seed.py</file>
+        <line>46</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_ramanujan_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 46-52</description>
+        <highlighted_element>n = len(ram_primes) + 1</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>23</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_ramanujan_seed.py</file>
+        <line>151</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_ramanujan_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 151-155</description>
+        <highlighted_element>n = len(ram_primes) + 1</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>23</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_ramanujan_seed.py</file>
+        <line>206</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_ramanujan_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 206-214</description>
+        <highlighted_element>with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>68</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>25</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 25-40</description>
+        <highlighted_element>def sigma_11(n):</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>72</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 72-76</description>
+        <highlighted_element>capacity = 3 ** height</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>22</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>31</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 31-46</description>
+        <highlighted_element>def sigma_11(n):</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>100</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 100-107</description>
+        <highlighted_element>for length in [4, 8]:</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>110</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 110-117</description>
+        <highlighted_element>for length in [4, 8]:</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>223</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 223-230</description>
+        <highlighted_element>tau_byte_formats = []</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>233</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 233-240</description>
+        <highlighted_element>prime_byte_formats = []</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>23</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>243</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 243-250</description>
+        <highlighted_element>mod_byte_formats = []</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>253</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 253-261</description>
+        <highlighted_element>for tb, tl in tau_byte_formats:</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>31</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>263</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 263-269</description>
+        <highlighted_element>for tb, tl in tau_byte_formats:</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>31</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>317</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 317-327</description>
+        <highlighted_element>for length in [4, 8]:</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>333</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 333-343</description>
+        <highlighted_element>for length in [4, 8]:</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>435</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 435-440</description>
+        <highlighted_element>for tb, tl in tau_byte_formats[:4]: # Just 4-byte formats</highlighted_element>
+        <language>Python</language>
+        <offset>16</offset>
+        <length>58</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>461</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 461-466</description>
+        <highlighted_element>for tb, tl in tau_byte_formats[:4]:</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>35</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>539</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 539-557</description>
+        <highlighted_element>if len(seed) != 32:</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>19</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_seed.py</file>
+        <line>95</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 95-108</description>
+        <highlighted_element>found = False</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_seed.py</file>
+        <line>116</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_seed.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 116-124</description>
+        <highlighted_element>for label, seed in candidates:</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>30</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>102</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 102-113</description>
+        <highlighted_element>if index &gt;= BIP32_HARDENED_OFFSET:</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>34</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/electron/main.js</file>
+        <line>62</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/electron/main.js"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 62-80</description>
+        <highlighted_element>try {</highlighted_element>
+        <language>ECMAScript 6</language>
+        <offset>4</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/electron/main.js</file>
+        <line>84</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/electron/main.js"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 84-107</description>
+        <highlighted_element>app.whenReady().then(() =&gt; {</highlighted_element>
+        <language>ECMAScript 6</language>
+        <offset>0</offset>
+        <length>28</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/public/electron.js</file>
+        <line>62</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/public/electron.js"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 62-80</description>
+        <highlighted_element>try {</highlighted_element>
+        <language>ECMAScript 6</language>
+        <offset>4</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/public/electron.js</file>
+        <line>84</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/public/electron.js"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 84-107</description>
+        <highlighted_element>app.whenReady().then(() =&gt; {</highlighted_element>
+        <language>ECMAScript 6</language>
+        <offset>0</offset>
+        <length>28</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>354</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 354-364</description>
+        <highlighted_element>print(f&quot; TXID: {res['txid']}&quot;)</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>31</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/messerene_operator.py</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/messerene_operator.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 1-120</description>
+        <highlighted_element>#!/usr/bin/env python3</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>22</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/rebuild_dr_time_proof.py</file>
+        <line>84</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/rebuild_dr_time_proof.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 84-98</description>
+        <highlighted_element>def double_sha256(data: bytes) -&gt; bytes:</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>40</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>8</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 8-33</description>
+        <highlighted_element>P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+        </highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>70</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>49</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 49-56</description>
+        <highlighted_element>for i in range(k.bit_length() - 1, -1, -1):</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>43</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>59</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 59-68</description>
+        <highlighted_element>def priv_to_pub(d):</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>19</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>87</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 87-142</description>
+        <highlighted_element>def _rfc6979(priv, h):</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>22</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>170</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 170-192</description>
+        <highlighted_element>def sign(priv, h):</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/claim_btc.py</file>
+        <line>84</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/claim_btc.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 84-87</description>
+        <highlighted_element>if n &lt; 0xfd: return bytes([n])</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>30</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>53</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 53-111</description>
+        <highlighted_element>P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+        </highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>70</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>577</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 577-591</description>
+        <highlighted_element>dkg = FrostDKG(num_participants, threshold)</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>43</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>100</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 100-112</description>
+        <highlighted_element>&quot;&quot;&quot;Load peers from the persistent database.&quot;&quot;&quot;
+        </highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>46</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>152</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 152-161</description>
+        <highlighted_element>sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        </highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>75</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>225</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 225-242</description>
+        <highlighted_element>&quot;&quot;&quot;Register a peer with the bootstrap server.&quot;&quot;&quot;
+        </highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>48</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>245</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 245-265</description>
+        <highlighted_element>&quot;&quot;&quot;Get peers for a discovery response.&quot;&quot;&quot;
+        </highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>41</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>280</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 280-286</description>
+        <highlighted_element>now = time.time()</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>17</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>371</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 371-377</description>
+        <highlighted_element>content_length = int(self.headers.get(&quot;Content-Length&quot;, 0))</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>59</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>393</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 393-406</description>
+        <highlighted_element>&quot;&quot;&quot;Handle POST /unregister&quot;&quot;&quot;</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>29</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>604</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 604-612</description>
+        <highlighted_element>peer_key = f&quot;{peer.get('host', '')}:{peer.get('port', 9433)}&quot;
+        </highlighted_element>
+        <language>Python</language>
+        <offset>32</offset>
+        <length>61</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>614</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 614-623</description>
+        <highlighted_element># Respond to registration with our known peers</highlighted_element>
+        <language>Python</language>
+        <offset>28</offset>
+        <length>46</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/pirate_burn_claim.py</file>
+        <line>85</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/pirate_burn_claim.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 85-96</description>
+        <highlighted_element>num = int.from_bytes(payload, 'big')</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>36</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py</file>
+        <line>250</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 250-258</description>
+        <highlighted_element>swap = self.protocol.create_swap(</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>33</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py</file>
+        <line>287</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 287-295</description>
+        <highlighted_element>swap = self.protocol.create_swap(</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>33</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py</file>
+        <line>337</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 337-345</description>
+        <highlighted_element>swap = self.protocol.create_swap(</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>33</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py</file>
+        <line>543</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_atomic_swap.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 543-551</description>
+        <highlighted_element>swap = self.protocol.create_swap(</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>33</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>109</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 109-149</description>
+        <highlighted_element>for sweep in range(max_iter):</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>29</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>237</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 237-244</description>
+        <highlighted_element>if len(pos_evals) &gt;= 3:</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>23</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>631</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 631-638</description>
+        <highlighted_element>if len(pos) &gt;= 3:</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>17</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>40</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 40-54</description>
+        <highlighted_element>gf.use_network(&quot;fork&quot;)</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>22</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>129</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 129-142</description>
+        <highlighted_element>tmpdir = tempfile.mkdtemp()</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>27</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>153</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 153-165</description>
+        <highlighted_element>tmpdir = tempfile.mkdtemp()</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>27</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>176</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 176-188</description>
+        <highlighted_element>tmpdir = tempfile.mkdtemp()</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>27</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>205</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 205-217</description>
+        <highlighted_element>tmpdir = tempfile.mkdtemp()</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>27</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>224</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 224-236</description>
+        <highlighted_element>tmpdir = tempfile.mkdtemp()</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>27</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_p2p_chain_height.py</file>
+        <line>243</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_p2p_chain_height.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 243-255</description>
+        <highlighted_element>tmpdir = tempfile.mkdtemp()</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>27</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/txpq.py</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/txpq.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 1-129</description>
+        <highlighted_element>&quot;&quot;&quot;txpq.py — Q-Day witness codec for the Genesis Fork (staged package).
+        </highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>71</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/verify_dr_time_three_chains.py</file>
+        <line>57</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/verify_dr_time_three_chains.py"/>
+        <problem_class id="DuplicatedCode" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Duplicated code
+            fragment
+        </problem_class>
+        <description>Duplicate code: lines 57-71</description>
+        <highlighted_element>def double_sha256(data: bytes) -&gt; bytes:</highlighted_element>
+        <language>Python</language>
+        <offset>0</offset>
+        <length>40</length>
+    </problem>
+</problems>

@@ -1,0 +1,17 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>214</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptValidateTypes" severity="ERROR" attribute_key="ERRORS_ATTRIBUTES">Type mismatch
+        </problem_class>
+        <description>Assigned expression type number | PeerInfo[] | MempoolInfo | undefined is not assignable to type
+            number
+        </description>
+        <highlighted_element>blockCount.status === 'fulfilled' ? blockCount.value : undefined</highlighted_element>
+        <language>TypeScript</language>
+        <offset>26</offset>
+        <length>64</length>
+    </problem>
+</problems>

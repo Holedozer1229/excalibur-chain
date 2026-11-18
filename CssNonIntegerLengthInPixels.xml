@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/oneshot.html</file>
+        <line>14</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/oneshot.html"/>
+        <problem_class id="CssNonIntegerLengthInPixels" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Non-integer length in pixels
+        </problem_class>
+        <description>Float px values may render differently on different browsers</description>
+        <highlighted_element>12.5</highlighted_element>
+        <language>CSS</language>
+        <offset>56</offset>
+        <length>4</length>
+    </problem>
+</problems>

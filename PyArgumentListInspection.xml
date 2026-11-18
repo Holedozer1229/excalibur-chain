@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_ramanujan_seed.py</file>
+        <line>137</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_ramanujan_seed.py"/>
+        <problem_class id="PyArgumentListInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            call arguments
+        </problem_class>
+        <description>Unexpected argument</description>
+        <highlighted_element>seed</highlighted_element>
+        <language>Python</language>
+        <offset>72</offset>
+        <length>4</length>
+    </problem>
+</problems>

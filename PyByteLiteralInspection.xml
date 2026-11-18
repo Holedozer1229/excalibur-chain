@@ -1,0 +1,17 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_dr_time_seed.py</file>
+        <line>53</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_dr_time_seed.py"/>
+        <problem_class id="PyByteLiteralInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">A byte literal
+            contains a non-ASCII character
+        </problem_class>
+        <description>Byte literal contains characters &gt; 255</description>
+        <highlighted_element>b&quot;Dr. Time: Bitcoin bad block 74638 \u2014 the value-overflow block&quot;
+        </highlighted_element>
+        <language>Python</language>
+        <offset>94</offset>
+        <length>68</length>
+    </problem>
+</problems>

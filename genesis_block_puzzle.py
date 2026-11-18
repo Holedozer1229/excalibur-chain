@@ -37,7 +37,6 @@ USAGE
 import hashlib
 import hmac
 import struct
-import time
 import sys
 import os
 

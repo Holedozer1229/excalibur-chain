@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/verify_dr_time_three_chains.py</file>
+        <line>500</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/verify_dr_time_three_chains.py"/>
+        <problem_class id="PyDictCreationInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Dictionary
+            initialization can be replaced with a literal
+        </problem_class>
+        <description>This dictionary creation could be rewritten as a dictionary literal</description>
+        <highlighted_element>all_results = {}</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>16</length>
+    </problem>
+</problems>

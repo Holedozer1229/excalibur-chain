@@ -1,0 +1,226 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_modern_consensus_defenses.py</file>
+        <line>57</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_modern_consensus_defenses.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>MAX_MONEY</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_nexus.py</file>
+        <line>54</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_nexus.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>H</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_nexus.py</file>
+        <line>208</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_nexus.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>H</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>92</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>I</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>110</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>I</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/claim_btc.py</file>
+        <line>145</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/claim_btc.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Lowercase variable imported as non-lowercase</description>
+        <highlighted_element>H</highlighted_element>
+        <language>Python</language>
+        <offset>23</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>325</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Function name should be lowercase</description>
+        <highlighted_element>do_GET</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>338</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Function name should be lowercase</description>
+        <highlighted_element>do_POST</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/pirate_burn_claim.py</file>
+        <line>80</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/pirate_burn_claim.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>BASE58</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>77</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>H</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>88</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Argument name should be lowercase</description>
+        <highlighted_element>H: list</highlighted_element>
+        <language>Python</language>
+        <offset>23</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>98</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Argument name should be lowercase</description>
+        <highlighted_element>H: list</highlighted_element>
+        <language>Python</language>
+        <offset>23</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>106</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>A</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>166</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>H</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>201</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>H</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>605</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyPep8NamingInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">PEP 8 naming
+            convention violation
+        </problem_class>
+        <description>Variable in function should be lowercase</description>
+        <highlighted_element>H</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>1</length>
+    </problem>
+</problems>

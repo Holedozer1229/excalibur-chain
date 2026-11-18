@@ -1,0 +1,58 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/electron/main.js</file>
+        <line>25</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/electron/main.js"/>
+        <problem_class id="JSIgnoredPromiseFromCall" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Result of
+            method call returning a promise is ignored
+        </problem_class>
+        <description>Promise returned from loadURL is ignored</description>
+        <highlighted_element>loadURL</highlighted_element>
+        <language>JavaScript</language>
+        <offset>15</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/electron/main.js</file>
+        <line>28</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/electron/main.js"/>
+        <problem_class id="JSIgnoredPromiseFromCall" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Result of
+            method call returning a promise is ignored
+        </problem_class>
+        <description>Promise returned from loadFile is ignored</description>
+        <highlighted_element>loadFile</highlighted_element>
+        <language>JavaScript</language>
+        <offset>15</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/public/electron.js</file>
+        <line>25</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/public/electron.js"/>
+        <problem_class id="JSIgnoredPromiseFromCall" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Result of
+            method call returning a promise is ignored
+        </problem_class>
+        <description>Promise returned from loadURL is ignored</description>
+        <highlighted_element>loadURL</highlighted_element>
+        <language>JavaScript</language>
+        <offset>15</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/public/electron.js</file>
+        <line>28</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/public/electron.js"/>
+        <problem_class id="JSIgnoredPromiseFromCall" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Result of
+            method call returning a promise is ignored
+        </problem_class>
+        <description>Promise returned from loadFile is ignored</description>
+        <highlighted_element>loadFile</highlighted_element>
+        <language>JavaScript</language>
+        <offset>15</offset>
+        <length>8</length>
+    </problem>
+</problems>

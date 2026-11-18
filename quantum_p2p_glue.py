@@ -37,7 +37,6 @@ import hmac
 import json
 import logging
 import os
-import socket
 import struct
 import threading
 import time

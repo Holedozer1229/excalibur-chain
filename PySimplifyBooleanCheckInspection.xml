@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/deliver_seed.py</file>
+        <line>146</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/deliver_seed.py"/>
+        <problem_class id="PySimplifyBooleanCheckInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant boolean variable check
+        </problem_class>
+        <description>Expression can be simplified</description>
+        <highlighted_element>status.get(&quot;confirmed&quot;) is not True</highlighted_element>
+        <language>Python</language>
+        <offset>7</offset>
+        <length>35</length>
+    </problem>
+</problems>

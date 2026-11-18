@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>388</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyListCreationInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">List
+            initialization can be replaced with a literal
+        </problem_class>
+        <description>Multi-step list initialization can be replaced with a list literal</description>
+        <highlighted_element>eigenvalues = []</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>16</length>
+    </problem>
+</problems>

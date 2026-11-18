@@ -1,0 +1,30 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py</file>
+        <line>559</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py"/>
+        <problem_class id="PyChainedComparisonsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Too
+            complex chained comparisons
+        </problem_class>
+        <description>Simplify chained comparison</description>
+        <highlighted_element>msg.ttl &gt; 0 and (now - msg.timestamp) &gt; msg.ttl</highlighted_element>
+        <language>Python</language>
+        <offset>15</offset>
+        <length>47</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py</file>
+        <line>888</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py"/>
+        <problem_class id="PyChainedComparisonsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Too
+            complex chained comparisons
+        </problem_class>
+        <description>Simplify chained comparison</description>
+        <highlighted_element>msg.ttl &gt; 0 and (now - msg.timestamp) &gt; msg.ttl</highlighted_element>
+        <language>Python</language>
+        <offset>15</offset>
+        <length>47</length>
+    </problem>
+</problems>

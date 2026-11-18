@@ -1,0 +1,282 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/bip32_messerene_derivations.py</file>
+        <line>285</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/bip32_messerene_derivations.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'status' value is not used</description>
+        <highlighted_element>status</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>55</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'acc' value is not used</description>
+        <highlighted_element>acc</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/decode_burn_addresses.py</file>
+        <line>76</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/decode_burn_addresses.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'acc' value is not used</description>
+        <highlighted_element>acc</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_nexus.py</file>
+        <line>103</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_nexus.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'msg' value is not used</description>
+        <highlighted_element>msg</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_nexus.py</file>
+        <line>176</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_nexus.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'state' value is not used</description>
+        <highlighted_element>state</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>250</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'error' value is not used</description>
+        <highlighted_element>error</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>294</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'det' value is not used</description>
+        <highlighted_element>det</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>443</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'graph_bound' value is not used</description>
+        <highlighted_element>graph_bound</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>342</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'e' value is not used</description>
+        <highlighted_element>e</highlighted_element>
+        <language>Python</language>
+        <offset>40</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>181</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'actual_fee' value is not used</description>
+        <highlighted_element>actual_fee</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/quantum_p2p_glue.py</file>
+        <line>300</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/quantum_p2p_glue.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'bits' value is not used</description>
+        <highlighted_element>bits</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/deliver_seed.py</file>
+        <line>388</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/deliver_seed.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'by_tag' value is not used</description>
+        <highlighted_element>by_tag</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/redeploy_lot.py</file>
+        <line>51</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/redeploy_lot.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'group_key_xonly' value is not used</description>
+        <highlighted_element>group_key_xonly</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>15</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sign_and_sweep.py</file>
+        <line>111</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sign_and_sweep.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'acc' value is not used</description>
+        <highlighted_element>acc</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/bonding_curve.py</file>
+        <line>230</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/bonding_curve.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'fee_on_output' value is not used</description>
+        <highlighted_element>fee_on_output</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>501</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'resp' value is not used</description>
+        <highlighted_element>resp</highlighted_element>
+        <language>Python</language>
+        <offset>59</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_self_organizing_treasury.py</file>
+        <line>126</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_self_organizing_treasury.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'deployments' value is not used</description>
+        <highlighted_element>deployments</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>107</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'eigenvalues' value is not used</description>
+        <highlighted_element>eigenvalues</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>587</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'zeros' value is not used</description>
+        <highlighted_element>zeros</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>642</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyUnusedLocalVariableInspection" severity="WEAK WARNING"
+                       attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused local symbols
+        </problem_class>
+        <description>Local variable 'bk_spectrum' value is not used</description>
+        <highlighted_element>bk_spectrum</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>11</length>
+    </problem>
+</problems>

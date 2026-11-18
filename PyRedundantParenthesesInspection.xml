@@ -1,0 +1,170 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/bip32_messerene_derivations.py</file>
+        <line>44</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/bip32_messerene_derivations.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(x3, (m * (x1 - x3) - y1) % P_FIELD)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>36</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>163</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(x, y)</highlighted_element>
+        <language>Python</language>
+        <offset>15</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>248</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(self.a, self.b, self.c, self.d)</highlighted_element>
+        <language>Python</language>
+        <offset>15</offset>
+        <length>32</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>273</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(1, 0)</highlighted_element>
+        <language>Python</language>
+        <offset>15</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>274</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(num % P, den % P)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>429</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(gap, eigenvalues)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>60</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(10 + 139 * n_in + 30 * n_out)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>30</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/messerene_operator.py</file>
+        <line>48</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/messerene_operator.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(x3, (m * (x1 - x3) - y1) % P_FIELD)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>36</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/quantum_p2p_glue.py</file>
+        <line>328</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/quantum_p2p_glue.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(self._latest_beacon, self._latest_timestamp)</highlighted_element>
+        <language>Python</language>
+        <offset>19</offset>
+        <length>45</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>33</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(x3, (lam * (x1 - x3) - y1) % P)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>32</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>84</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(x, y)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>83</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="PyRedundantParenthesesInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Redundant parentheses
+        </problem_class>
+        <description>Remove redundant parentheses</description>
+        <highlighted_element>(x3, (lam * (x1 - x3) - y1) % P)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>32</length>
+    </problem>
+</problems>

@@ -1,0 +1,436 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>88</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>99</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>109</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/digital_wizard.py</file>
+        <line>124</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/digital_wizard.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_dr_time_seed.py</file>
+        <line>94</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_dr_time_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_dr_time_seed.py</file>
+        <line>138</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_dr_time_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>15</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_ramanujan_seed.py</file>
+        <line>215</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_ramanujan_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>200</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>215</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>357</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>229</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>239</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>249</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>326</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>342</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>363</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>376</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>389</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>407</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>441</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>559</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_seed.py</file>
+        <line>107</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_seed.py</file>
+        <line>123</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/fork_child.py</file>
+        <line>42</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/fork_child.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>15</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/fork_child.py</file>
+        <line>76</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/fork_child.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>7</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/fork_child.py</file>
+        <line>110</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/fork_child.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>7</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>342</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>27</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>390</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>16</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>392</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>except</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/deliver_seed.py</file>
+        <line>93</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/deliver_seed.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>322</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyBroadExceptionInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Overly
+            broad 'except' clause
+        </problem_class>
+        <description>Too broad exception clause</description>
+        <highlighted_element>Exception</highlighted_element>
+        <language>Python</language>
+        <offset>15</offset>
+        <length>9</length>
+    </problem>
+</problems>

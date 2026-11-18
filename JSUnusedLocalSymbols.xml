@@ -1,0 +1,170 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/electron/main.js</file>
+        <line>36</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/electron/main.js"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused function startPythonBackend</description>
+        <highlighted_element>startPythonBackend</highlighted_element>
+        <language>JavaScript</language>
+        <offset>9</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/public/electron.js</file>
+        <line>36</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/public/electron.js"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused function startPythonBackend</description>
+        <highlighted_element>startPythonBackend</highlighted_element>
+        <language>JavaScript</language>
+        <offset>9</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/hilbert_polya.html</file>
+        <line>199</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/hilbert_polya.html"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused parameter idx</description>
+        <highlighted_element>idx</highlighted_element>
+        <language>JavaScript</language>
+        <offset>39</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/hilbert_polya.html</file>
+        <line>273</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/hilbert_polya.html"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused parameter gue</description>
+        <highlighted_element>gue</highlighted_element>
+        <language>JavaScript</language>
+        <offset>39</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/skynet-p2p.js</file>
+        <line>254</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/skynet-p2p.js"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused parameter rinfo</description>
+        <highlighted_element>rinfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>27</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/skynet-p2p.js</file>
+        <line>312</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/skynet-p2p.js"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused constant nodeId</description>
+        <highlighted_element>nodeId</highlighted_element>
+        <language>JavaScript</language>
+        <offset>20</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>331</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused constant block</description>
+        <highlighted_element>block</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>346</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused parameter client</description>
+        <highlighted_element>client</highlighted_element>
+        <language>JavaScript</language>
+        <offset>4</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>347</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused parameter params</description>
+        <highlighted_element>params</highlighted_element>
+        <language>JavaScript</language>
+        <offset>4</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>70</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused field config</description>
+        <highlighted_element>config</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>71</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused field requestId</description>
+        <highlighted_element>requestId</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>82</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedLocalSymbols" severity="WARNING" attribute_key="NOT_USED_ELEMENT_ATTRIBUTES">Unused
+            local symbol
+        </problem_class>
+        <description>Unused method sendRequest</description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+</problems>
