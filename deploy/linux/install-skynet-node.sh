@@ -49,7 +49,9 @@ id excal >/dev/null 2>&1 || useradd --system --home-dir "$DATA_DIR" --shell /usr
 install -d -o excal -g excal -m 0750 "$DATA_DIR"
 install -o excal -g excal -m 0640 "$REPO_DIR/chain.jsonl" "$DATA_DIR/chain.jsonl"
 python3 -m venv "$REPO_DIR/.venv"
-"$REPO_DIR/.venv/bin/python" -m pip install 'cryptography>=41' 'prometheus-client>=0.20,<1'
+"$REPO_DIR/.venv/bin/python" -m pip install \
+  'cryptography>=41' 'prometheus-client>=0.20,<1' \
+  'aiortc>=1.9,<2' 'zeroconf>=0.132,<1'
 
 cat > "$ENV_FILE" <<EOF
 EXCAL_CHAIN_FILE=$DATA_DIR/chain.jsonl

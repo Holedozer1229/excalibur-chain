@@ -1,4 +1,5 @@
 import asyncio
+import importlib.util
 import socket
 import time
 import unittest
@@ -130,13 +131,15 @@ class TestP2PWire(unittest.TestCase):
 class TestP2PHandshake(unittest.TestCase):
     def test_seed_and_inbound_peer_complete_handshake(self):
         first = P2PNode(
-            EmptyChain(), listen_host="127.0.0.1", listen_port=unused_port()
+            EmptyChain(), listen_host="127.0.0.1", listen_port=unused_port(),
+            enable_mdns=False,
         )
         second = P2PNode(
             EmptyChain(),
             seed_peers=[("127.0.0.1", first.listen_port)],
             listen_host="127.0.0.1",
             listen_port=unused_port(),
+            enable_mdns=False,
         )
         try:
             first.start()
@@ -163,6 +166,52 @@ class TestP2PHandshake(unittest.TestCase):
             self.assertTrue(
                 next(iter(first.peers.values())).score.services & NODE_EREPR_V2
             )
+        finally:
+            second.stop()
+            first.stop()
+
+    @unittest.skipUnless(importlib.util.find_spec("aiortc"), "aiortc is not installed")
+    def test_webrtc_data_channel_carries_p2p_messages(self):
+        first = P2PNode(
+            EmptyChain(), listen_host="127.0.0.1", listen_port=unused_port(),
+            enable_mdns=False,
+        )
+        second = P2PNode(
+            EmptyChain(),
+            seed_peers=[("127.0.0.1", first.listen_port)],
+            listen_host="127.0.0.1",
+            listen_port=unused_port(),
+            enable_mdns=False,
+        )
+        try:
+            first.start()
+            second.start()
+            deadline = time.time() + 20
+            while time.time() < deadline:
+                peers = list(first.peers.values()) + list(second.peers.values())
+                if len(peers) == 2 and all(
+                    peer._rtc_channel and peer._rtc_channel.readyState == "open"
+                    for peer in peers
+                ):
+                    break
+                time.sleep(0.05)
+
+            peers = list(first.peers.values()) + list(second.peers.values())
+            self.assertEqual(len(peers), 2)
+            self.assertTrue(all(
+                peer._rtc_channel and peer._rtc_channel.readyState == "open"
+                for peer in peers
+            ))
+
+            sender = next(iter(first.peers.values()))
+            sender._pong_time = time.time()
+            asyncio.run_coroutine_threadsafe(
+                sender._send("ping", b"testping"), first._loop
+            ).result(timeout=2)
+            deadline = time.time() + 5
+            while time.time() < deadline and sender.score.latency_count == 0:
+                time.sleep(0.05)
+            self.assertGreater(sender.score.latency_count, 0)
         finally:
             second.stop()
             first.stop()

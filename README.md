@@ -143,8 +143,9 @@ Aetherion-Excalibur is raising on a **$1.5M SAFE, $8M post-money cap, 20% discou
 | Local IPFS | Optional Kubo node; API and gateway bound to localhost, content pinning supported |
 | Fork Node | Built-in RPC server (port 9432), auto-starts on launch |
 | P2P Database | Persistent SQLite database — peers, txs, blocks survive restart |
+| WebRTC + mDNS | WebRTC data channels negotiated over P2P TCP, plus local mDNS peer discovery |
 | Bootstrap Server | Auto-discovery server (port 9435) — nodes find each other |
-| UDP Multicast | LAN peer discovery — no hardcoded IPs needed |
+| UDP Multicast | Beacon LAN peer discovery — no hardcoded IPs needed |
 | EREPR P2P | Quantum-inspired gossip protocol — entanglement bonds, no DHT |
 | CPU Mining | Multi-threaded SHA-256d mining with thread control |
 | GPU Mining | Stratum server for external GPU miners (T-Rex, GMiner, etc.) |

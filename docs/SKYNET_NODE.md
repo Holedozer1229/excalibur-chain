@@ -131,6 +131,15 @@ not be forwarded or exposed to the public internet. Users behind NAT can make
 outbound P2P connections without router changes; port forwarding 9433 is
 optional and allows other peers to initiate connections.
 
+The P2P node also discovers peers on the same LAN using DNS-SD/mDNS and
+negotiates WebRTC data channels with supporting peers over the existing TCP
+peer connection. The TCP connection remains available for signaling and
+fallback. Install the project requirements to enable both features. mDNS is
+limited to the local network and may be blocked by guest Wi-Fi or network
+policy; WebRTC connectivity can also be restricted by NAT/firewall rules, in
+which case P2P falls back to TCP. Public seed nodes still need their reachable
+TCP 9433 endpoint and configured seed addresses.
+
 DistroSea can be opened from the [SkyNet Node Pages portal](./skynet-node.html)
 to experiment with Linux in a browser session, but it is not a persistent
 public seed. Session lifetime, persistent storage, and inbound P2P connectivity

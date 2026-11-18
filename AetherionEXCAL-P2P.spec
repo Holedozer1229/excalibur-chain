@@ -46,6 +46,9 @@ a = Analysis(
         'holo_wallet',
         'fork_node',
         'genesis_fork',
+        'p2p_transports',
+        'aiortc',
+        'zeroconf',
         
         # Mining
         'stratum_miner',

@@ -77,6 +77,7 @@ Pure Python, stdlib only. Uses asyncio for non-blocking I/O.
 """
 import asyncio
 import hashlib
+import importlib.util
 import ipaddress
 import json
 import logging
@@ -107,6 +108,7 @@ NODE_EREPR = 0x10
 NODE_SWAP = 0x20
 NODE_GAME = 0x40  # Camelot game gossip support
 NODE_EREPR_V2 = 0x80  # EREPR envelope with origin, expiry, and hop limit
+NODE_WEBRTC = 0x100  # Supports WebRTC data channels
 
 # Message limits
 MAX_INV_SIZE = 50000
@@ -202,6 +204,8 @@ RATE_LIMIT = {
     "swap": 10,
     # Camelot game gossip
     "camelot": 60,
+    "rtc_offer": 5,
+    "rtc_answer": 5,
 }
 
 # Reputation scoring
@@ -385,6 +389,11 @@ class PeerHandler:
         self._task = None
         self._version_received = False
         self.target_addr = None
+        self.remote_nonce = None
+        self._rtc_pc = None
+        self._rtc_channel = None
+        self._rtc_buf = b""
+        self._rtc_offer_started = False
 
     async def handshake(self):
         """Send our version and wait for verack."""
@@ -396,9 +405,11 @@ class PeerHandler:
 
     def _build_version(self):
         version = struct.pack("<i", 70016)  # protocol version
+        services = NODE_NETWORK | NODE_P2P_V2 | NODE_EREPR | NODE_SWAP | NODE_GAME | NODE_EREPR_V2
+        if self.node.enable_webrtc:
+            services |= NODE_WEBRTC
         services = struct.pack(
-            "<Q", NODE_NETWORK | NODE_P2P_V2 | NODE_EREPR | NODE_SWAP
-            | NODE_GAME | NODE_EREPR_V2
+            "<Q", services
         )
         timestamp = struct.pack("<q", int(time.time()))
         ip = self.node._pack_ip(self.node.advertise_host)
@@ -469,6 +480,8 @@ class PeerHandler:
             "swap": self._on_swap,
             # Camelot game gossip
             "camelot": self._on_camelot,
+            "rtc_offer": self._on_rtc_offer,
+            "rtc_answer": self._on_rtc_answer,
         }
 
         handler = handlers.get(cmd)
@@ -492,6 +505,7 @@ class PeerHandler:
         user_agent = payload[81:user_agent_end]
         self.score.version = version
         self.score.services = services
+        self.remote_nonce = nonce
         self.score.user_agent = user_agent.decode("utf-8", errors="replace")
         self._version_received = True
         remote_ip = self.node._unpack_ip(payload[54:70])
@@ -512,6 +526,7 @@ class PeerHandler:
             raise ValueError("verack received before version")
         logger.info(f"[{self.peer_id}] verack received")
         self.node._on_peer_ready(self.peer_id)
+        await self._maybe_start_webrtc()
 
     async def _on_ping(self, payload: bytes):
         if len(payload) >= 8:
@@ -720,18 +735,164 @@ class PeerHandler:
     async def _on_camelot(self, payload: bytes):
         await self.node._on_camelot(self.peer_id, payload)
 
+    async def _maybe_start_webrtc(self):
+        if (
+            not self.node.enable_webrtc
+            or not self.remote_nonce
+            or not self.score.services & NODE_WEBRTC
+            or self._rtc_offer_started
+            or self.nonce >= self.remote_nonce
+        ):
+            return
+        self._rtc_offer_started = True
+        try:
+            from aiortc import RTCPeerConnection, RTCSessionDescription
+
+            pc = RTCPeerConnection()
+            self._rtc_pc = pc
+            self._bind_rtc_peer(pc)
+            pc.createDataChannel("excal-p2p-v1", ordered=True)
+            offer = await pc.createOffer()
+            await pc.setLocalDescription(offer)
+            await self._send_signal("rtc_offer", {
+                "type": pc.localDescription.type,
+                "sdp": pc.localDescription.sdp,
+            })
+        except (ImportError, OSError, ValueError, RuntimeError) as exc:
+            logger.warning("[%s] WebRTC offer failed; keeping TCP transport: %s", self.peer_id, exc)
+            await self._close_rtc()
+
+    async def _on_rtc_offer(self, payload):
+        if not self.node.enable_webrtc or not self.score.services & NODE_WEBRTC:
+            return
+        if self._rtc_pc is not None or len(payload) > 128_000:
+            raise ValueError("unexpected or oversized WebRTC offer")
+        try:
+            from aiortc import RTCPeerConnection, RTCSessionDescription
+
+            description = json.loads(payload.decode("utf-8"))
+            if description.get("type") != "offer" or not isinstance(description.get("sdp"), str):
+                raise ValueError("invalid WebRTC offer")
+            pc = RTCPeerConnection()
+            self._rtc_pc = pc
+            self._bind_rtc_peer(pc)
+            await pc.setRemoteDescription(RTCSessionDescription(
+                sdp=description["sdp"], type="offer"
+            ))
+            answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
+            await self._send_signal("rtc_answer", {
+                "type": pc.localDescription.type,
+                "sdp": pc.localDescription.sdp,
+            })
+        except (ImportError, UnicodeDecodeError, json.JSONDecodeError,
+                OSError, ValueError, RuntimeError) as exc:
+            logger.warning("[%s] WebRTC offer rejected; keeping TCP transport: %s", self.peer_id, exc)
+            await self._close_rtc()
+
+    async def _on_rtc_answer(self, payload):
+        if self._rtc_pc is None or len(payload) > 128_000:
+            raise ValueError("unexpected or oversized WebRTC answer")
+        try:
+            from aiortc import RTCSessionDescription
+
+            description = json.loads(payload.decode("utf-8"))
+            if description.get("type") != "answer" or not isinstance(description.get("sdp"), str):
+                raise ValueError("invalid WebRTC answer")
+            await self._rtc_pc.setRemoteDescription(RTCSessionDescription(
+                sdp=description["sdp"], type="answer"
+            ))
+        except (ImportError, UnicodeDecodeError, json.JSONDecodeError,
+                OSError, ValueError, RuntimeError) as exc:
+            logger.warning("[%s] WebRTC answer rejected; keeping TCP transport: %s", self.peer_id, exc)
+            await self._close_rtc()
+
+    def _bind_rtc_peer(self, pc):
+        @pc.on("datachannel")
+        def on_datachannel(channel):
+            self._bind_rtc_channel(channel)
+
+        @pc.on("connectionstatechange")
+        async def on_connectionstatechange():
+            if pc.connectionState in ("failed", "closed"):
+                await self._close_rtc()
+
+    def _bind_rtc_channel(self, channel):
+        if channel.label != "excal-p2p-v1":
+            channel.close()
+            return
+        self._rtc_channel = channel
+
+        @channel.on("message")
+        def on_message(data):
+            if not isinstance(data, bytes):
+                logger.warning("[%s] ignored non-binary WebRTC frame", self.peer_id)
+                return
+            self._rtc_buf += data
+            if len(self._rtc_buf) > MAX_MESSAGE_SIZE + 24:
+                logger.warning("[%s] WebRTC receive buffer exceeded limit", self.peer_id)
+                channel.close()
+                return
+            while self._rtc_buf:
+                try:
+                    cmd, payload = decode_message(self._rtc_buf)
+                except ValueError as exc:
+                    logger.warning("[%s] invalid WebRTC frame: %s", self.peer_id, exc)
+                    channel.close()
+                    return
+                if cmd is None:
+                    break
+                consumed = 4 + CMD_LEN + 4 + len(payload) + CHECKSUM_LEN
+                self._rtc_buf = self._rtc_buf[consumed:]
+                task = self.node._loop.create_task(self._handle_message(cmd, payload))
+                task.add_done_callback(self._log_rtc_task_error)
+
+    @staticmethod
+    def _log_rtc_task_error(task):
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc:
+            logger.warning("WebRTC message handling failed: %s", exc)
+
+    async def _send_signal(self, cmd, payload):
+        encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        await self._send_tcp(cmd, encoded)
+
+    async def _send_tcp(self, cmd, payload):
+        msg = encode_message(cmd, payload)
+        self.writer.write(msg)
+        await self.writer.drain()
+
     async def _send(self, cmd: str, payload: bytes):
         """Send a message to this peer."""
         try:
             msg = encode_message(cmd, payload)
+            if (
+                cmd not in {"version", "verack", "rtc_offer", "rtc_answer"}
+                and self._rtc_channel is not None
+                and self._rtc_channel.readyState == "open"
+            ):
+                self._rtc_channel.send(msg)
+                return
             self.writer.write(msg)
             await self.writer.drain()
         except (ConnectionResetError, OSError) as e:
             logger.warning(f"[{self.peer_id}] send error: {e}")
             self._close()
 
+    async def _close_rtc(self):
+        pc = self._rtc_pc
+        self._rtc_pc = None
+        self._rtc_channel = None
+        self._rtc_buf = b""
+        if pc is not None:
+            await pc.close()
+
     def _close(self):
         """Close the connection."""
+        if self._rtc_pc is not None and self.node._loop and self.node._loop.is_running():
+            self.node._loop.create_task(self._close_rtc())
         if self.writer.is_closing():
             return
         try:
@@ -755,7 +916,8 @@ class P2PNode:
 
     def __init__(self, chain_store, rpc_port=9432, seed_peers=None,
                  listen_host="0.0.0.0", listen_port=None,
-                 advertise_host=None, allow_private_peers=None):
+                 advertise_host=None, allow_private_peers=None,
+                 enable_webrtc=True, enable_mdns=True):
         self.chain_store = chain_store
         self.rpc_port = rpc_port
         self.listen_host = listen_host
@@ -765,6 +927,10 @@ class P2PNode:
             os.environ.get("FORK_P2P_ALLOW_PRIVATE", "0").lower() in {"1", "true", "yes"}
             if allow_private_peers is None else allow_private_peers
         )
+        self.enable_webrtc = bool(enable_webrtc and importlib.util.find_spec("aiortc"))
+        self.enable_mdns = bool(enable_mdns)
+        self._mdns_discovery = None
+        self._mdns_addrs = set()
         self.seed_peers = [
             (str(host), int(port)) for host, port in (seed_peers or [])
             if host and 0 < int(port) <= 65535
@@ -972,6 +1138,20 @@ class P2PNode:
             self.listen_port
         )
         self.listen_port = self._server.sockets[0].getsockname()[1]
+        if self.enable_mdns:
+            try:
+                from p2p_transports import LocalPeerDiscovery
+
+                self._mdns_discovery = LocalPeerDiscovery(
+                    self._node_id, self.listen_port, self._on_mdns_peer
+                )
+                self._mdns_discovery.start()
+                logger.info("mDNS peer discovery active on port %s", self.listen_port)
+            except (ImportError, OSError, RuntimeError) as exc:
+                self._mdns_discovery = None
+                logger.warning("mDNS discovery unavailable; continuing without it: %s", exc)
+        if not self.enable_webrtc:
+            logger.info("WebRTC unavailable or disabled; using TCP P2P transport")
         self._ready.set()
         async with self._server:
             # Connect to seed peers
@@ -992,6 +1172,29 @@ class P2PNode:
             await self._server.wait_closed()
             for peer in list(self.peers.values()):
                 peer._close()
+            if self._mdns_discovery is not None:
+                self._mdns_discovery.close()
+                self._mdns_discovery = None
+
+    def _on_mdns_peer(self, host, port, remote_node_id):
+        if not self._loop or not self._loop.is_running():
+            return
+        self._loop.call_soon_threadsafe(
+            self._schedule_mdns_connection, host, port, remote_node_id
+        )
+
+    def _schedule_mdns_connection(self, host, port, remote_node_id):
+        if remote_node_id == self._node_id.hex():
+            return
+        try:
+            address = (str(ipaddress.ip_address(host)), int(port))
+        except (TypeError, ValueError):
+            return
+        if not 0 < address[1] <= 65535:
+            return
+        self._mdns_addrs.add(address)
+        if self._running and not self._has_connection_to(address):
+            self._loop.create_task(self._connect_to(address))
 
     async def _accept_connection(self, reader, writer):
         """Accept an incoming peer connection."""
@@ -1060,6 +1263,7 @@ class P2PNode:
         # the target peer count is reached. A failed first seed must not starve
         # all later seeds.
         candidates = list(self.seed_peers)
+        candidates.extend(self._mdns_addrs)
         candidates.extend((host, port) for host, port, _ in reversed(self.known_addrs))
         active = sum(1 for peer in self.peers.values() if not peer.score.is_banned)
         slots = max(0, min(IDEAL_PEERS, MAX_PEERS) - active)
@@ -1069,7 +1273,11 @@ class P2PNode:
                 break
             if self._has_connection_to(address):
                 continue
-            if address not in self.seed_peers and not self._may_dial_advertised(*address):
+            if (
+                address not in self.seed_peers
+                and address not in self._mdns_addrs
+                and not self._may_dial_advertised(*address)
+            ):
                 continue
             self._loop.create_task(self._connect_to(address))
             scheduled += 1

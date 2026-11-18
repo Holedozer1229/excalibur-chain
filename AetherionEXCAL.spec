@@ -45,6 +45,9 @@ a = Analysis(
         'holo_wallet',
         # Fork node — starts automatically with wallet
         'fork_node',
+        'p2p_transports',
+        'aiortc',
+        'zeroconf',
         'genesis_fork',
         # Stratum miner — integrated GPU mining
         'stratum_miner',
