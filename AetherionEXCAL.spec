@@ -31,6 +31,11 @@ import os
 # Blockers
 # ---------------------------------------------------------------------------
 block_cipher = None
+platform_excludes = (
+    ['darkdetect._mac_detect']
+    if sys.platform == 'win32'
+    else ['win32com', 'pythoncom']
+)
 
 # ---------------------------------------------------------------------------
 # Assembly — the main wallet script
@@ -248,7 +253,7 @@ a = Analysis(
         'setuptools',
         'pip',
         'ensurepip',
-    ],
+    ] + platform_excludes,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

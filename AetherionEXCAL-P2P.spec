@@ -19,6 +19,23 @@ import os
 # Blockers
 # ---------------------------------------------------------------------------
 block_cipher = None
+platform_excludes = (
+    ['darkdetect._mac_detect']
+    if sys.platform == 'win32'
+    else ['win32com', 'pythoncom']
+)
+windows_com_hiddenimports = (
+    [
+        'win32com',
+        'win32com.client',
+        'win32com.shell',
+        'win32com.shell.shell',
+        'win32com.shell.shellcon',
+        'pythoncom',
+    ]
+    if sys.platform == 'win32'
+    else []
+)
 
 # ---------------------------------------------------------------------------
 # Logo icon (if available) — __file__ not set in spec, use cwd
@@ -139,15 +156,7 @@ a = Analysis(
         'excalibur_wallet',
         'excalibur_wallet.bip39',
         'excalibur_wallet.keys',
-        
-        # Windows COM for desktop shortcuts (optional)
-        'win32com',
-        'win32com.client',
-        'win32com.shell',
-        'win32com.shell.shell',
-        'win32com.shell.shellcon',
-        'pythoncom',
-    ],
+    ] + windows_com_hiddenimports,
     hookspath=['hooks'],
     hooksconfig={},
     runtime_hooks=[],
@@ -158,7 +167,7 @@ a = Analysis(
         'pip',
         'ensurepip',
         'unittest',
-    ],
+    ] + platform_excludes,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
