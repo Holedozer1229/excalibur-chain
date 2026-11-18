@@ -31,6 +31,8 @@ import os
 # Blockers
 # ---------------------------------------------------------------------------
 block_cipher = None
+icon_path = os.path.join(os.getcwd(), 'assets', 'aetherion-logo.ico')
+app_icon = icon_path if sys.platform == 'win32' and os.path.exists(icon_path) else None
 platform_excludes = (
     ['darkdetect._mac_detect']
     if sys.platform == 'win32'
@@ -285,6 +287,7 @@ if sys.platform == 'win32':
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
+        icon=app_icon,
     )
 else:
     # macOS / Linux

@@ -42,7 +42,7 @@ windows_com_hiddenimports = (
 # ---------------------------------------------------------------------------
 base_dir = os.getcwd()
 icon_path = os.path.join(base_dir, "logo.jpeg")
-ico_path = os.path.join(base_dir, "logo.ico")
+ico_path = os.path.join(base_dir, "assets", "aetherion-logo.ico")
 if os.path.exists(ico_path):
     app_icon = ico_path
 elif os.path.exists(icon_path):

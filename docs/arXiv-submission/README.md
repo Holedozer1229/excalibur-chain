@@ -8,7 +8,7 @@ This package contains the LaTeX source for the manuscript:
 
 by Travis Dale Jones (Aetherion Research Laboratory)
 
-Date: November 17, 2026
+Date: November 18, 2026
 
 ## Compilation
 
