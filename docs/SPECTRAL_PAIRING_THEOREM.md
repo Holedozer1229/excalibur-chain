@@ -1,6 +1,6 @@
 # The Spectral Pairing Theorem: A Unified Framework Connecting the Riemann Zeros, Hyperbolic Geometry, and Quantum Information
 
-**Author:** Gregory J.  
+**Author:** Travis Dale Jones
 **Affiliation:** Aetherion Research Laboratory  
 **Date:** November 17, 2026  
 **arXiv:** [To be assigned]  
