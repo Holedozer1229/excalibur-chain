@@ -6,7 +6,7 @@ This package contains the LaTeX source for the manuscript:
 
 **The Spectral Pairing Theorem: A Unified Framework Connecting the Riemann Zeros, Hyperbolic Geometry, and Quantum Information**
 
-by Gregory J. (Aetherion Research Laboratory)
+by Travis Dale Jones (Aetherion Research Laboratory)
 
 Date: November 17, 2026
 
