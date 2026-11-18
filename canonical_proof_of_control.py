@@ -52,7 +52,7 @@ def bech32_hrp_expand(hrp):
 
 def bech32_convertbits(data, frm, to, pad=True):
     """Convert between bit-width encodings."""
-    acc = val = 0
+    val = 0
     bits = 0
     out = []
     maxv = (1 << to) - 1

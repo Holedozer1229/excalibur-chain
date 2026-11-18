@@ -99,7 +99,7 @@ def demo_individual_components():
         p2p.connect_peer(f"peer_{i}")
     
     # Send a message
-    msg = p2p.send_message("peer_0", "block_proposal", {
+    p2p.send_message("peer_0", "block_proposal", {
         "height": 1,
         "hash": "abc123",
     })
@@ -172,7 +172,7 @@ def demo_nexus_orchestrator():
     # Run unified steps
     print("\n▶ Running unified Nexus steps...")
     for step in range(10):
-        state = nexus.step()
+        nexus.step()
     
     print(f"   Steps completed:    10")
     print(f"   Current phase:      {nexus.state.phase.value}")

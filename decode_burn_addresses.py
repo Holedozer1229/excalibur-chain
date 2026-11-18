@@ -72,7 +72,7 @@ def _hrp_expand(hrp):
 
 
 def _convertbits(data, frm, to, pad=True):
-    acc = val = 0
+    val = 0
     bits = 0
     out = []
     maxv = (1 << to) - 1
