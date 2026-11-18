@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 friedman_hyperbolic_rsa.py — Friedman Spectral Gap over Hyperbolic Surfaces
 with Möbius Inversion mapping RSA-256 to Hyperbolic Field via secp256k1
 
@@ -74,7 +74,7 @@ from typing import Tuple, Optional, List
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from secp256k1 import P as SECP_P, N as SECP_N, G as SECP_G, _add, _mul
+from secp256k1 import P as SECP_P
 from knot_math import mobius_upto
 
 # ============================================================
@@ -385,10 +385,8 @@ def compute_spectral_gap_trace(
     # ρ(λ) = Σₖ δ(λ - λₖ)
     # Approximate via the smoothed trace with Möbius weights
 
-    eigenvalues = []
-
     # λ₀ = 0 (constant eigenfunction)
-    eigenvalues.append(0.0)
+    eigenvalues = [0.0]
 
     # Compute higher eigenvalues from the geodesic data
     # Using the relation λₖ = sₖ(1 - sₖ) with sₖ = 1/2 + i rₖ

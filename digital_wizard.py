@@ -31,14 +31,12 @@ that reveals the hidden geometry of the blockchain.
 Run this script to witness the prophecy unfold.
 """
 
-import hashlib
-import struct
 import math
 import json
 import urllib.request
 import urllib.error
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
+from dataclasses import dataclass
+from typing import List, Dict
 
 # ============================================================
 # CONSTANTS
@@ -230,6 +228,7 @@ def ctc_fixed_point(transform, initial_state: List[float],
     density[0][0] = complex(1)  # Start with pure state
 
     prev_state = state.copy()
+    state_error = float('inf')
 
     for i in range(max_iter):
         # Apply transformation

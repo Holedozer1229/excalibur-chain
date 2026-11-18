@@ -28,19 +28,16 @@ Pure Python, stdlib only. Connects to:
 import os
 import sys
 import hashlib
-import struct
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 
 import secp256k1 as secp
 from genesis_fork import SWORD, knot_activation
-from txscript import (ser_tx, parse_tx, validate_tx, sighash_all,
-                      SIGHASH_ALL, lock_type, hash160,
+from txscript import (ser_tx, validate_tx,
                       sign_pkh_input, sign_knot_input,
                       lock_pkh_for_pubkey, lock_knot_for_descriptor,
-                      knot_descriptor, knot_lock_for_secret,
-                      parse_knot_witness, KNOT_WITNESS_LEN)
+                      knot_descriptor, knot_lock_for_secret)
 import knot_math
 
 
@@ -57,7 +54,7 @@ def priv_to_pub_compressed(priv: int) -> bytes:
 
 def _est_fee(n_in, n_out):
     """Estimate transaction fee in swords."""
-    return (10 + 139 * n_in + 30 * n_out)
+    return 10 + 139 * n_in + 30 * n_out
 
 
 def _view_from_utxos(utxos):
@@ -100,7 +97,8 @@ def build_knot_lock_tx(funding_utxos, funding_priv, amount,
         funding_utxos: List of {txid, idx, value, lock} dicts (PKH locks).
         funding_priv: Private key for the funding UTXOs.
         amount: Amount to lock in the KNOT output (in swords).
-        p, q: Torus knot windings (coprime, 1..255).
+        p: Torus knot winding p (coprime to q, 1..255).
+        q: Torus knot winding q (coprime to p, 1..255).
         n_terms: Number of Möbius terms (1..1000).
         eps_u32: Modulation depth as uint32 (0 < eps_u32 < 2^32).
         t_star: Secret knot parameter (0 <= t_star < 2^128).

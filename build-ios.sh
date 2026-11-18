@@ -30,6 +30,7 @@ IOSAPP_DIR="iosapp"
 
 echo "========================================"
 echo "  ${APP_NAME} iOS Build"
+echo "  Version: ${APP_VERSION}"
 echo "  Mode: ${BUILD_MODE}"
 echo "  Bundle ID: ${BUNDLE_ID}"
 echo "========================================"

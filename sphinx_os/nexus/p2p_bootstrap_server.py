@@ -19,7 +19,6 @@ Usage:
     server = BootstrapServer(port=9435)
     server.start()
 """
-import asyncio
 import hashlib
 import json
 import logging
@@ -29,7 +28,6 @@ import threading
 import time
 import uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 from .postgres_p2p import P2PDatabase
@@ -148,6 +146,7 @@ class BootstrapServer:
     
     def _run_multicast(self):
         """Run the UDP multicast listener for LAN discovery."""
+        sock = None
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -172,10 +171,11 @@ class BootstrapServer:
         except OSError as e:
             logger.warning(f"Failed to start multicast: {e}")
         finally:
-            try:
-                sock.close()
-            except OSError:
-                pass
+            if sock is not None:
+                try:
+                    sock.close()
+                except OSError:
+                    pass
     
     def _handle_multicast_message(self, data: bytes, addr: tuple):
         """Handle a UDP multicast message."""

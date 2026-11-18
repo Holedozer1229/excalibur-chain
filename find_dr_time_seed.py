@@ -50,7 +50,7 @@ candidates = [
     ("SHA256('Dr. Time: 184,467,440,737.09551616 BTC from nothing')", hashlib.sha256(b"Dr. Time: 184,467,440,737.09551616 BTC from nothing").digest()),
     ("SHA256('Dr. Time: Bitcoin bad block 74638')", hashlib.sha256(b"Dr. Time: Bitcoin bad block 74638").digest()),
     ("SHA256('Dr. Time: Bitcoin bad block 74638 header')", hashlib.sha256(b"Dr. Time: Bitcoin bad block 74638 header").digest()),
-    ("SHA256('Dr. Time: Bitcoin bad block 74638 — the value-overflow block')", hashlib.sha256(b"Dr. Time: Bitcoin bad block 74638 \u2014 the value-overflow block").digest()),
+    ("SHA256('Dr. Time: Bitcoin bad block 74638 — the value-overflow block')", hashlib.sha256("Dr. Time: Bitcoin bad block 74638 — the value-overflow block".encode('utf-8')).digest()),
     ("SHA256('Dr. Time: the value-overflow block')", hashlib.sha256(b"Dr. Time: the value-overflow block").digest()),
     ("SHA256('Dr. Time: the 2010 value-overflow block')", hashlib.sha256(b"Dr. Time: the 2010 value-overflow block").digest()),
     ("SHA256('Dr. Time: 2010')", hashlib.sha256(b"Dr. Time: 2010").digest()),

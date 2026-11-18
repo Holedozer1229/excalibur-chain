@@ -17,7 +17,6 @@ import sys
 import os
 import json
 import hashlib
-from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -158,6 +157,7 @@ def verify_fork_chain():
     if FORK_BLOCK_3CHAINS in markers:
         rec = markers[FORK_BLOCK_3CHAINS]
         found = False
+        coinbase_bytes = b""
         txs = rec.get("txs", [])
         if txs:
             coinbase_bytes = bytes.fromhex(txs[0])
@@ -497,25 +497,14 @@ def main():
     print("  184,467,440,737.09551616 BTC from nothing")
     print("=" * 78)
 
-    all_results = {}
-
-    # 1. Trifold signature
-    all_results["trifold"] = verify_trifold_signature()
-
-    # 2. Lineage
-    all_results["lineage"] = verify_lineage()
-
-    # 3. Scope
-    all_results["scope"] = verify_scope()
-
-    # 4. Chain 1: EXCAL fork
-    all_results["chain1_fork"] = verify_fork_chain()
-
-    # 5. Chain 2: testnet4
-    all_results["chain2_testnet4"] = verify_testnet4()
-
-    # 6. Chain 3: mainnet
-    all_results["chain3_mainnet"] = verify_mainnet()
+    all_results = {
+        "trifold": verify_trifold_signature(),
+        "lineage": verify_lineage(),
+        "scope": verify_scope(),
+        "chain1_fork": verify_fork_chain(),
+        "chain2_testnet4": verify_testnet4(),
+        "chain3_mainnet": verify_mainnet(),
+    }
 
     # Final verdict
     section("FINAL VERDICT")
