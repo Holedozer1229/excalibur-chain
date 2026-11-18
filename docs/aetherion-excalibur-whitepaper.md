@@ -3,7 +3,7 @@
 **Whitepaper v1.0 — 14 November 2026**
 
 **Project:** Aetherion-Excalibur · **Asset:** EXCAL (native L1 coin)
-**Authors:** Travis Dale Jones (Lux), Founder; Gregory Hien, Partner
+**Author:** Travis Dale Jones (Lux), Founder
 **Status:** Live chain. Every number in this paper was verified against the
 live chain or a live public RPC on 14 November 2026, or is labelled as a
 design statement. Nothing in this paper is simulated, demo, or testnet
@@ -259,7 +259,6 @@ paper covers EXCAL; URUU's own documentation is in the project repository.
 
 - **Travis Dale Jones (Lux)** — Founder, Blanco, Texas. Designed the
   fork, the lockbox, Trifold, and the mining operation.
-- **Gregory Hien** — Partner.
 - Development is public on GitHub under Holedozer1229. There is no
   anonymous team member and no advisor list to disclose.
 

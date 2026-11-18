@@ -39,7 +39,7 @@ def markdown_to_latex(md_content):
     
     # LaTeX preamble
     latex = r"""%% The Spectral Pairing Theorem: A Unified Framework Connecting the Riemann Zeros, Hyperbolic Geometry, and Quantum Information
-%% Author: Gregory J.
+%% Author: Travis Dale Jones
 %% Date: """ + datetime.now().strftime('%B %d, %Y') + r"""
 
 \documentclass[11pt,letterpaper]{article}
@@ -68,7 +68,7 @@ def markdown_to_latex(md_content):
     filecolor=magenta,      
     urlcolor=cyan,
     pdftitle={The Spectral Pairing Theorem},
-    pdfauthor={Gregory J.},
+    pdfauthor={Travis Dale Jones},
     pdfsubject={Riemann Hypothesis, Montgomery pair correlation, Cayley graph Laplacian, scalar wave},
     pdfkeywords={Riemann Hypothesis, Montgomery pair correlation, Cayley graph Laplacian, scalar wave, Hilbert-Pólya conjecture, GUE statistics, topological quantum field theory, AdS/CFT correspondence}
 }
@@ -82,7 +82,7 @@ def markdown_to_latex(md_content):
 \newtheorem{remark}[theorem]{Remark}
 
 \title{The Spectral Pairing Theorem: A Unified Framework Connecting the Riemann Zeros, Hyperbolic Geometry, and Quantum Information}
-\author{Gregory J.}
+\author{Travis Dale Jones}
 \affiliation{Aetherion Research Laboratory}
 \date{""" + datetime.now().strftime('%B %d, %Y') + r"""}
 
@@ -315,7 +315,7 @@ This package contains the LaTeX source for the manuscript:
 
 **The Spectral Pairing Theorem: A Unified Framework Connecting the Riemann Zeros, Hyperbolic Geometry, and Quantum Information**
 
-by Gregory J. (Aetherion Research Laboratory)
+by Travis Dale Jones (Aetherion Research Laboratory)
 
 Date: {datetime.now().strftime('%B %d, %Y')}
 
