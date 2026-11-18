@@ -16,6 +16,7 @@ from p2p_layer import (
     decode_message,
     encode_message,
 )
+from p2p_transports import LocalPeerDiscovery
 
 
 class EmptyChain:
@@ -57,6 +58,36 @@ class TestP2PWire(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "message too large"):
             decode_message(oversized)
+
+    def test_mdns_discovery_accepts_valid_lan_peers(self):
+        found = []
+        discovery = LocalPeerDiscovery(
+            b"local-node", 9433,
+            lambda host, port, node_id: found.append((host, port, node_id)),
+        )
+        discovery._added_state = "Added"
+        discovery._updated_state = "Updated"
+
+        class Info:
+            properties = {
+                b"protocol": b"excal-p2p-v1",
+                b"node_id": b"remote-node",
+            }
+            port = 9434
+
+            def parsed_addresses(self):
+                return ["192.168.1.25", "127.0.0.1"]
+
+        class ZeroconfStub:
+            @staticmethod
+            def get_service_info(service_type, name, timeout):
+                return Info()
+
+        discovery._on_change(
+            ZeroconfStub(), "_excal-p2p._tcp.local.", "remote._excal-p2p._tcp.local.",
+            "Added",
+        )
+        self.assertEqual(found, [("192.168.1.25", 9434, "remote-node")])
 
     def test_full_block_body_is_parsed_and_sent_to_consensus_store(self):
         store = BlockCaptureChain()

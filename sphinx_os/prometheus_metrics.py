@@ -403,6 +403,27 @@ class PrometheusMetrics:
             registry=self._registry,
         )
 
+        # --- Caduceus State Tunnel Metrics ---
+        self.caduceus_tunnels_active = Gauge(
+            'excalibur_caduceus_tunnels_active',
+            'Number of active Caduceus cross-chain state tunnels',
+            registry=self._registry,
+        )
+
+        self.caduceus_capsules_verified = Counter(
+            'excalibur_caduceus_capsules_verified_total',
+            'Total Caduceus cross-chain capsules verified',
+            labelnames=['canon', 'status'],
+            registry=self._registry,
+        )
+
+        self.caduceus_tunnel_latency = Histogram(
+            'excalibur_caduceus_tunnel_latency_seconds',
+            'Caduceus tunnel state verification and transfer latency',
+            buckets=[0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0],
+            registry=self._registry,
+        )
+
         self._initialized = True
 
     def _create_stubs(self):
@@ -428,6 +449,9 @@ class PrometheusMetrics:
         self.p2p_peer_latency = _NoOp()
         self.transactions_total = _NoOp()
         self.transaction_amount = _NoOp()
+        self.caduceus_tunnels_active = _NoOp()
+        self.caduceus_capsules_verified = _NoOp()
+        self.caduceus_tunnel_latency = _NoOp()
         self.transaction_latency = _NoOp()
         self.gossip_messages_sent = _NoOp()
         self.gossip_messages_received = _NoOp()

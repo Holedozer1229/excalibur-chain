@@ -751,7 +751,9 @@ class PeerHandler:
             pc = RTCPeerConnection()
             self._rtc_pc = pc
             self._bind_rtc_peer(pc)
-            pc.createDataChannel("excal-p2p-v1", ordered=True)
+            self._bind_rtc_channel(
+                pc.createDataChannel("excal-p2p-v1", ordered=True)
+            )
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
             await self._send_signal("rtc_offer", {
@@ -931,6 +933,7 @@ class P2PNode:
         self.enable_mdns = bool(enable_mdns)
         self._mdns_discovery = None
         self._mdns_addrs = set()
+        self._mdns_peer_addrs = {}
         self.seed_peers = [
             (str(host), int(port)) for host, port in (seed_peers or [])
             if host and 0 < int(port) <= 65535
@@ -1138,6 +1141,7 @@ class P2PNode:
             self.listen_port
         )
         self.listen_port = self._server.sockets[0].getsockname()[1]
+        self._ready.set()
         if self.enable_mdns:
             try:
                 from p2p_transports import LocalPeerDiscovery
@@ -1145,14 +1149,15 @@ class P2PNode:
                 self._mdns_discovery = LocalPeerDiscovery(
                     self._node_id, self.listen_port, self._on_mdns_peer
                 )
-                self._mdns_discovery.start()
+                await asyncio.to_thread(self._mdns_discovery.start)
                 logger.info("mDNS peer discovery active on port %s", self.listen_port)
             except (ImportError, OSError, RuntimeError) as exc:
+                if self._mdns_discovery is not None:
+                    await asyncio.to_thread(self._mdns_discovery.close)
                 self._mdns_discovery = None
                 logger.warning("mDNS discovery unavailable; continuing without it: %s", exc)
         if not self.enable_webrtc:
             logger.info("WebRTC unavailable or disabled; using TCP P2P transport")
-        self._ready.set()
         async with self._server:
             # Connect to seed peers
             for seed in self.seed_peers:
@@ -1170,10 +1175,15 @@ class P2PNode:
                     await self._periodic_tasks()
             self._server.close()
             await self._server.wait_closed()
-            for peer in list(self.peers.values()):
+            peers = list(self.peers.values())
+            for peer in peers:
                 peer._close()
+            await asyncio.gather(
+                *(peer._close_rtc() for peer in peers),
+                return_exceptions=True,
+            )
             if self._mdns_discovery is not None:
-                self._mdns_discovery.close()
+                await asyncio.to_thread(self._mdns_discovery.close)
                 self._mdns_discovery = None
 
     def _on_mdns_peer(self, host, port, remote_node_id):
@@ -1184,7 +1194,14 @@ class P2PNode:
         )
 
     def _schedule_mdns_connection(self, host, port, remote_node_id):
-        if remote_node_id == self._node_id.hex():
+        local_node_id = self._node_id.hex()
+        if (
+            len(remote_node_id) != 64
+            or any(character not in "0123456789abcdef" for character in remote_node_id)
+            or remote_node_id == local_node_id
+            or local_node_id > remote_node_id
+            or remote_node_id in self._mdns_peer_addrs
+        ):
             return
         try:
             address = (str(ipaddress.ip_address(host)), int(port))
@@ -1192,6 +1209,7 @@ class P2PNode:
             return
         if not 0 < address[1] <= 65535:
             return
+        self._mdns_peer_addrs[remote_node_id] = address
         self._mdns_addrs.add(address)
         if self._running and not self._has_connection_to(address):
             self._loop.create_task(self._connect_to(address))
