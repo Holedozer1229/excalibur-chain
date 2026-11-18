@@ -89,9 +89,7 @@ def _watched(wallet):
 
 
 def _utxos_for_send(args, wallet):
-    """UTXOs + validation height for a send. Prefers the live node
-    RPC (indexed, current); falls back to the local chain scan.
-    Returns (utxos, height, source)."""
+    """Get spend candidates only from the node's validated UTXO state."""
     led = _ledger(args)
     locks = _watched(wallet)
     try:
@@ -99,20 +97,18 @@ def _utxos_for_send(args, wallet):
         utxos = []
         for lock_hex, b in balances.items():
             for u in b["utxos"]:
+                if u["pending_spend"]:
+                    continue
                 utxos.append({"txid": u["txid"], "vout": u["vout"],
                               "value": u["value"], "lock": lock_hex,
                               "coinbase": u["coinbase"],
                               "cb_h": u.get("cb_h", 0),
-                              "mature": u["mature"]})
+                              "mature": u["mature"],
+                              "pending_spend": False})
         return utxos, tip_height + 1, f"live node RPC (tip {tip_height})"
     except RpcError as e:
-        print(f"node RPC unavailable ({e}) — falling back to local "
-              f"chain scan", file=sys.stderr)
-    stats = led.sync_local(locks)
-    utxos = led.cached_utxos()
-    return utxos, stats["tip_height"] + 1, (
-        f"local chain scan (tip {stats['tip_height']}, "
-        f"{stats['new_records']} new records)")
+        raise SystemExit(
+            f"send refused: live node did not provide a validated UTXO set: {e}")
 
 
 def _lock_to_priv(wallet):
@@ -239,9 +235,13 @@ def cmd_wallet_balance(args):
             balances, (tip_h, _th) = led.balance_via_rpc(locks)
             mature = sum(b["mature"] for b in balances.values())
             immature = sum(b["immature"] for b in balances.values())
+            spendable = sum(b["spendable"] for b in balances.values())
+            pending = sum(b["pending_spend"] for b in balances.values())
             print(f"source: live node RPC (tip {tip_h})")
-            print(f"mature:   {_fmt_swords(mature)}")
+            print(f"spendable: {_fmt_swords(spendable)}")
+            print(f"mature confirmed: {_fmt_swords(mature)}")
             print(f"immature: {_fmt_swords(immature)} (coinbase < 100 conf)")
+            print(f"pending spend: {_fmt_swords(pending)}")
             print(f"total:    {_fmt_swords(mature + immature)}")
             return
         except RpcError as e:
@@ -267,8 +267,9 @@ def cmd_wallet_balance(args):
         return
     stats = led.sync_local(locks)
     bal = led.cached_balance()
-    print(f"source: local chain scan (tip {bal['tip_height']}, "
+    print(f"source: UNVALIDATED local chain scan (tip {bal['tip_height']}, "
           f"{stats['new_records']} new records this run)")
+    print("diagnostic only: this scan does not validate consensus or authorize spending")
     print(f"mature:   {_fmt_swords(bal['mature'])}")
     print(f"immature: {_fmt_swords(bal['immature'])} (coinbase < 100 conf)")
     print(f"total:    {_fmt_swords(bal['mature'] + bal['immature'])}")
@@ -285,10 +286,9 @@ def cmd_wallet_utxos(args):
             for u in b["utxos"]:
                 rows.append({**u, "lock": lock_hex})
         print(f"source: live node RPC (tip {tip_h})")
-    except RpcError:
-        stats = led.sync_local(locks)
-        rows = led.cached_utxos()
-        print(f"source: local chain scan (tip {stats['tip_height']})")
+    except RpcError as exc:
+        raise SystemExit(
+            f"UTXO listing refused: live node did not provide a validated UTXO set: {exc}")
     if args.lock:
         rows = [r for r in rows if r["lock"] == args.lock.lower()]
     rows.sort(key=lambda r: -r["value"])
@@ -298,6 +298,7 @@ def cmd_wallet_utxos(args):
     for r in rows:
         print(f"{r['txid']}:{r['vout']}  {_fmt_swords(r['value'])}  "
               f"{'mature' if r['mature'] else 'IMMATURE'}  "
+              f"{'PENDING-SPEND' if r.get('pending_spend', False) else 'unspent'}  "
               f"{'coinbase' if r['coinbase'] else 'payment'}  "
               f"lock {r['lock'][:12]}…")
 
@@ -543,23 +544,23 @@ def _parse_utxo_ref(s):
 def _find_wallet_utxo(args, wallet, txid, vout):
     led = _ledger(args)
     try:
-        balances, (_th, _t) = led.balance_via_rpc(_watched(wallet))
+        balances, (tip_height, _tip_hash) = led.balance_via_rpc(_watched(wallet))
         for lock_hex, b in balances.items():
             for u in b["utxos"]:
                 if u["txid"] == txid and u["vout"] == vout:
+                    if not u["mature"] or u["pending_spend"]:
+                        raise SystemExit(
+                            f"UTXO {txid}:{vout} is immature or already pending-spent")
                     return {"txid": txid, "vout": vout,
                             "value": u["value"], "lock": lock_hex,
                             "coinbase": u["coinbase"],
                             "cb_h": u.get("cb_h", 0),
-                            "mature": u["mature"]}
-    except RpcError:
-        pass
-    led.sync_local(_watched(wallet))
-    for r in led.cached_utxos():
-        if r["txid"] == txid and r["vout"] == vout:
-            return {"txid": txid, "vout": vout, "value": r["value"],
-                    "lock": r["lock"], "coinbase": r["coinbase"],
-                    "cb_h": r["cb_h"], "mature": r["mature"]}
+                            "mature": u["mature"],
+                            "tip_height": tip_height,
+                            "pending_spend": False}
+    except RpcError as exc:
+        raise SystemExit(
+            f"spend refused: live node did not provide a validated UTXO set: {exc}")
     raise SystemExit(f"UTXO {txid}:{vout} not found in this wallet")
 
 
@@ -603,11 +604,7 @@ def cmd_wallet_htlc_claim(args):
         dest_lock = parse_lock_hex(args.dest)
         secret = bytes.fromhex(args.secret)
         desc = bytes.fromhex(rec["descriptor"])
-        led = _ledger(args)
-        try:
-            height = led.rpc.tip()[0] + 1
-        except RpcError:
-            height = led._load_cache().get("tip_height", -1) + 1
+        height = entry["tip_height"] + 1
         # The claim key must be a wallet key.
         privs = _lock_to_priv(w)
         claim_pub = bytes.fromhex(rec["claim_pubkey"])
@@ -636,11 +633,7 @@ def cmd_wallet_htlc_refund(args):
     try:
         dest_lock = parse_lock_hex(args.dest)
         desc = bytes.fromhex(rec["descriptor"])
-        led = _ledger(args)
-        try:
-            height = led.rpc.tip()[0] + 1
-        except RpcError:
-            height = led._load_cache().get("tip_height", -1) + 1
+        height = entry["tip_height"] + 1
         from .keys import priv_to_pub_compressed
         refund_pub = bytes.fromhex(rec["refund_pubkey"])
         refund_priv = None
@@ -693,11 +686,7 @@ def _qhtlc_spend(args, mode):
     try:
         dest_lock = parse_lock_hex(args.dest)
         desc = bytes.fromhex(rec["descriptor"])
-        led = _ledger(args)
-        try:
-            height = led.rpc.tip()[0] + 1
-        except RpcError:
-            height = led._load_cache().get("tip_height", -1) + 1
+        height = entry["tip_height"] + 1
         key = w.trifold_key()
         if mode == "claim":
             secret = bytes.fromhex(args.secret)
@@ -732,11 +721,7 @@ def cmd_wallet_pqh_spend(args):
     entry = _find_wallet_utxo(args, w, txid, vout)
     try:
         dest_lock = parse_lock_hex(args.dest)
-        led = _ledger(args)
-        try:
-            height = led.rpc.tip()[0] + 1
-        except RpcError:
-            height = led._load_cache().get("tip_height", -1) + 1
+        height = entry["tip_height"] + 1
         res = build_pqh_spend(entry, dest_lock, args.fee,
                               w.trifold_key(), height)
     except (ValueError, TxBuildError, RuntimeError) as e:

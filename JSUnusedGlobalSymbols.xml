@@ -1,0 +1,422 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>236</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused property handleRequest</description>
+        <highlighted_element>handleRequest</highlighted_element>
+        <language>ECMAScript 6</language>
+        <offset>19</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>236</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused property proxyRequest</description>
+        <highlighted_element>proxyRequest</highlighted_element>
+        <language>ECMAScript 6</language>
+        <offset>34</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/electron/preload.js</file>
+        <line>6</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/electron/preload.js"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused property getPlatform</description>
+        <highlighted_element>getPlatform</highlighted_element>
+        <language>JavaScript</language>
+        <offset>2</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>121</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused constant PROTOCOL_VERSION</description>
+        <highlighted_element>PROTOCOL_VERSION</highlighted_element>
+        <language>JavaScript</language>
+        <offset>15</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>122</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused constant PROTOCOL_ID</description>
+        <highlighted_element>PROTOCOL_ID</highlighted_element>
+        <language>JavaScript</language>
+        <offset>15</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>182</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused function cosZeroScalarCut</description>
+        <highlighted_element>cosZeroScalarCut</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>208</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused function createTransfer</description>
+        <highlighted_element>createTransfer</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>245</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused function anchorTransfer</description>
+        <highlighted_element>anchorTransfer</highlighted_element>
+        <language>JavaScript</language>
+        <offset>24</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>261</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused function verifyTransfer</description>
+        <highlighted_element>verifyTransfer</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>272</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused function createOracleQuery</description>
+        <highlighted_element>createOracleQuery</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>17</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>287</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused function processOracleQuery</description>
+        <highlighted_element>processOracleQuery</highlighted_element>
+        <language>JavaScript</language>
+        <offset>24</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>387</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused function spectralGapContribution</description>
+        <highlighted_element>spectralGapContribution</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>23</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>397</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused function metaCausationCheck</description>
+        <highlighted_element>metaCausationCheck</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>421</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused default export</description>
+        <highlighted_element>export default</highlighted_element>
+        <language>TypeScript</language>
+        <offset>0</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>56</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused interface BalanceInfo</description>
+        <highlighted_element>BalanceInfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>17</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>128</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getBlockCount</description>
+        <highlighted_element>getBlockCount</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>132</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getBlockHash</description>
+        <highlighted_element>getBlockHash</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>136</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getBlock</description>
+        <highlighted_element>getBlock</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>141</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getBalance</description>
+        <highlighted_element>getBalance</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>147</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getMempoolInfo</description>
+        <highlighted_element>getMempoolInfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>151</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getMempoolTxids</description>
+        <highlighted_element>getMempoolTxids</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>15</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>156</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getPeerInfo</description>
+        <highlighted_element>getPeerInfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>160</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getNetworkInfo</description>
+        <highlighted_element>getNetworkInfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>169</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getMiningInfo</description>
+        <highlighted_element>getMiningInfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>174</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method sendRawTransaction</description>
+        <highlighted_element>sendRawTransaction</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>178</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getRawTransaction</description>
+        <highlighted_element>getRawTransaction</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>17</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>198</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused method getStatus</description>
+        <highlighted_element>getStatus</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>226</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused class ExcaliburRpcBrowserClient</description>
+        <highlighted_element>ExcaliburRpcBrowserClient</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>25</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>227</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused constructor constructor</description>
+        <highlighted_element>constructor</highlighted_element>
+        <language>JavaScript</language>
+        <offset>2</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>234</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="JSUnusedGlobalSymbols" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused global
+            symbol
+        </problem_class>
+        <description>Unused default export</description>
+        <highlighted_element>export default</highlighted_element>
+        <language>TypeScript</language>
+        <offset>0</offset>
+        <length>14</length>
+    </problem>
+</problems>

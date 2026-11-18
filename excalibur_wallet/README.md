@@ -8,9 +8,11 @@ separate, explicit, per-tx decision (`wallet broadcast --yes`).
   encrypted at rest (600,000-iteration PBKDF2). The mnemonic is shown
   once at creation and never again. Shamir's Secret Sharing (k-of-n)
   seed backup via `wallet split` / `wallet restore --shares`.
-- **Ledger:** balance/UTXOs/history from the live node RPC first,
-  falling back to a read-only scan of the local `chain.jsonl`, then to
-  a verified lightledger snapshot. P2P header sync (`ledger sync
+- **Ledger:** RPC balance and UTXO listings require the node's complete,
+  consensus-validated UTXO set. Sends use only that live view and refuse
+  to sign when it is unavailable. The local `chain.jsonl` scan is an
+  unvalidated diagnostic view; verified lightledger snapshots are
+  checkpoint-bound and may be stale. P2P header sync (`ledger sync
   --via p2p`) walks back from a peer with header PoW + Merkle checks.
 - **Aetherion QAI light ledger:** `checkpoint verify` checks the
   QAI-audited Trifold checkpoint attestations actually mined in the

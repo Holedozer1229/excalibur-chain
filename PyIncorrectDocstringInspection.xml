@@ -1,0 +1,30 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>92</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyIncorrectDocstringInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Incorrect docstring
+        </problem_class>
+        <description>Missing parameter p in docstring</description>
+        <highlighted_element>p</highlighted_element>
+        <language>Python</language>
+        <offset>23</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>92</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyIncorrectDocstringInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Incorrect docstring
+        </problem_class>
+        <description>Missing parameter q in docstring</description>
+        <highlighted_element>q</highlighted_element>
+        <language>Python</language>
+        <offset>26</offset>
+        <length>1</length>
+    </problem>
+</problems>

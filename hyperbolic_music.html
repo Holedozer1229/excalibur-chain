@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyperbolic Spectral Music</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 50%, #0c0c1d 100%);
+            color: #e0e0ff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #8888aa;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        button {
+            padding: 0.8rem 2rem;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #playBtn {
+            background: linear-gradient(135deg, #4ecdc4, #45b7d1);
+            color: #0c0c1d;
+            font-weight: bold;
+        }
+        #playBtn:hover { transform: scale(1.05); }
+        #stopBtn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            font-weight: bold;
+        }
+        #stopBtn:hover { transform: scale(1.05); }
+        #visualizer {
+            width: 800px;
+            height: 400px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        .info {
+            max-width: 800px;
+            background: rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        .info h2 { color: #4ecdc4; margin-bottom: 0.5rem; }
+        .info p { line-height: 1.6; color: #aaaacc; }
+        .formula {
+            background: rgba(0,0,0,0.4);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            color: #4ecdc4;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            max-width: 800px;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+        .stat-label {
+            color: #8888aa;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Hyperbolic Spectral Music</h1>
+    <p class="subtitle">Music generated from Friedman's spectral gap theorem on hyperbolic surfaces</p>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value">64</div>
+            <div class="stat-label">Eigenvalues</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">0.1875</div>
+            <div class="stat-label">Spectral Gap λ₁</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">16</div>
+            <div class="stat-label">Measures</div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button id="playBtn">▶ Play Composition</button>
+        <button id="stopBtn">⏹ Stop</button>
+    </div>
+    
+    <canvas id="visualizer"></canvas>
+    
+    <div class="info">
+        <h2>How It Works</h2>
+        <p>
+            This composition maps the <strong>spectrum of the Laplacian</strong> on a random 
+            hyperbolic surface to musical frequencies. Each eigenvalue λₖ = sₖ(1-sₖ) 
+            becomes a note, with the spectral gap λ₁ ≥ 3/16 ensuring harmonic separation.
+        </p>
+        <div class="formula">
+            λₖ = sₖ(1-sₖ) → f = 440 × 2^((λₖ × 12)/12) Hz
+        </div>
+        <p>
+            The <strong>Möbius function μ(n)</strong> provides counterpoint: positive values 
+            create harmonic reinforcement, negative values create dissonant tension, 
+            and zero values create rests — mirroring the square-free condition in number theory.
+        </p>
+        <div class="formula">
+            μ(n) &gt; 0 → Major intervals | μ(n) &lt; 0 → Minor intervals | μ(n) = 0 → Rest
+        </div>
+    </div>
+    
+    <script>
+        const midiEvents = [{"tick": 0, "type": "note_on", "channel": 0, "note": 72, "velocity": 80, "duration": 240}, {"tick": 0, "type": "note_on", "channel": 1, "note": 67, "velocity": 60, "duration": 240}, {"tick": 240, "type": "note_on", "channel": 0, "note": 72, "velocity": 80, "duration": 240}, {"tick": 240, "type": "note_on", "channel": 1, "note": 67, "velocity": 60, "duration": 240}, {"tick": 480, "type": "note_on", "channel": 0, "note": 72, "velocity": 80, "duration": 240}, {"tick": 480, "type": "note_on", "channel": 1, "note": 67, "velocity": 60, "duration": 240}, {"tick": 720, "type": "note_on", "channel": 0, "note": 71, "velocity": 80, "duration": 480}, {"tick": 1200, "type": "note_on", "channel": 0, "note": 71, "velocity": 80, "duration": 480}, {"tick": 1200, "type": "note_on", "channel": 1, "note": 66, "velocity": 60, "duration": 480}, {"tick": 1680, "type": "note_on", "channel": 0, "note": 71, "velocity": 80, "duration": 960}, {"tick": 1680, "type": "note_on", "channel": 1, "note": 66, "velocity": 60, "duration": 960}, {"tick": 2640, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 2640, "type": "note_on", "channel": 1, "note": 65, "velocity": 60, "duration": 960}, {"tick": 3600, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 4560, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 5520, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 5520, "type": "note_on", "channel": 1, "note": 65, "velocity": 60, "duration": 960}, {"tick": 6480, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 6480, "type": "note_on", "channel": 1, "note": 65, "velocity": 60, "duration": 960}, {"tick": 7440, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 8400, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 8400, "type": "note_on", "channel": 1, "note": 65, "velocity": 60, "duration": 960}, {"tick": 9360, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 9360, "type": "note_on", "channel": 1, "note": 65, "velocity": 60, "duration": 960}, {"tick": 10320, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 10320, "type": "note_on", "channel": 1, "note": 65, "velocity": 60, "duration": 960}, {"tick": 11280, "type": "note_on", "channel": 0, "note": 70, "velocity": 80, "duration": 960}, {"tick": 12240, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 12240, "type": "note_on", "channel": 1, "note": 64, "velocity": 60, "duration": 960}, {"tick": 13200, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 14160, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 14160, "type": "note_on", "channel": 1, "note": 64, "velocity": 60, "duration": 960}, {"tick": 15120, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 16080, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 16080, "type": "note_on", "channel": 1, "note": 64, "velocity": 60, "duration": 960}, {"tick": 17040, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 17040, "type": "note_on", "channel": 1, "note": 64, "velocity": 60, "duration": 960}, {"tick": 18000, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 18000, "type": "note_on", "channel": 1, "note": 64, "velocity": 60, "duration": 960}, {"tick": 18960, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 19920, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 20880, "type": "note_on", "channel": 0, "note": 69, "velocity": 80, "duration": 960}, {"tick": 20880, "type": "note_on", "channel": 1, "note": 64, "velocity": 60, "duration": 960}, {"tick": 21840, "type": "note_on", "channel": 0, "note": 68, "velocity": 80, "duration": 960}, {"tick": 22800, "type": "note_on", "channel": 0, "note": 68, "velocity": 80, "duration": 960}, {"tick": 23760, "type": "note_on", "channel": 0, "note": 68, "velocity": 80, "duration": 960}, {"tick": 23760, "type": "note_on", "channel": 1, "note": 63, "velocity": 60, "duration": 960}, {"tick": 24720, "type": "note_on", "channel": 0, "note": 68, "velocity": 80, "duration": 960}, {"tick": 24720, "type": "note_on", "channel": 1, "note": 63, "velocity": 60, "duration": 960}, {"tick": 25680, "type": "note_on", "channel": 0, "note": 68, "velocity": 80, "duration": 960}, {"tick": 25680, "type": "note_on", "channel": 1, "note": 63, "velocity": 60, "duration": 960}, {"tick": 26640, "type": "note_on", "channel": 0, "note": 68, "velocity": 80, "duration": 960}, {"tick": 27600, "type": "note_on", "channel": 0, "note": 68, "velocity": 80, "duration": 960}, {"tick": 27600, "type": "note_on", "channel": 1, "note": 63, "velocity": 60, "duration": 960}, {"tick": 28560, "type": "note_on", "channel": 0, "note": 67, "velocity": 80, "duration": 960}, {"tick": 28560, "type": "note_on", "channel": 1, "note": 62, "velocity": 60, "duration": 960}, {"tick": 29520, "type": "note_on", "channel": 0, "note": 67, "velocity": 80, "duration": 960}, {"tick": 29520, "type": "note_on", "channel": 1, "note": 62, "velocity": 60, "duration": 960}, {"tick": 30480, "type": "note_on", "channel": 0, "note": 67, "velocity": 80, "duration": 960}, {"tick": 31440, "type": "note_on", "channel": 0, "note": 67, "velocity": 80, "duration": 960}, {"tick": 31440, "type": "note_on", "channel": 1, "note": 62, "velocity": 60, "duration": 960}, {"tick": 32400, "type": "note_on", "channel": 0, "note": 67, "velocity": 80, "duration": 960}, {"tick": 32400, "type": "note_on", "channel": 1, "note": 62, "velocity": 60, "duration": 960}, {"tick": 33360, "type": "note_on", "channel": 0, "note": 67, "velocity": 80, "duration": 960}, {"tick": 33360, "type": "note_on", "channel": 1, "note": 62, "velocity": 60, "duration": 960}, {"tick": 34320, "type": "note_on", "channel": 0, "note": 67, "velocity": 80, "duration": 960}, {"tick": 35280, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 35280, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 36240, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 36240, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 37200, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 37200, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 38160, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 39120, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 40080, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 40080, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 41040, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 41040, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 42000, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 42960, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 43920, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 44880, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 44880, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 45840, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 46800, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 46800, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 47760, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 48720, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 48720, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 49680, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 50640, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 50640, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 51600, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 51600, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 52560, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 52560, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 53520, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 54480, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 54480, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 55440, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 55440, "type": "note_on", "channel": 1, "note": 61, "velocity": 60, "duration": 960}, {"tick": 56400, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}, {"tick": 57360, "type": "note_on", "channel": 0, "note": 66, "velocity": 80, "duration": 960}];
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 400;
+        
+        let audioCtx = null;
+        let isPlaying = false;
+        let animationId = null;
+        let currentTick = 0;
+        let startTime = 0;
+        
+        function midiToFreq(midi) {
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+        
+        function drawVisualization(tick) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw hyperbolic tiling background
+            ctx.strokeStyle = 'rgba(78, 205, 196, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i &lt; 20; i++) {
+                for (let j = 0; j &lt; 10; j++) {
+                    const x = i * 40 + Math.sin(j * 0.5 + tick * 0.001) * 10;
+                    const y = j * 40 + Math.cos(i * 0.5 + tick * 0.001) * 10;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 15, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw active notes
+            const activeNotes = midiEvents.filter(e => 
+                e.tick &lt;= tick && e.tick + e.duration &gt; tick
+            );
+            
+            activeNotes.forEach((note, idx) => {
+                const x = (note.tick / 1000) * 100 % canvas.width;
+                const y = canvas.height - (note.note / 127) * canvas.height;
+                const radius = 20 + (note.velocity / 255) * 30;
+                
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+                if (note.channel === 0) {
+                    gradient.addColorStop(0, 'rgba(78, 205, 196, 0.8)');
+                    gradient.addColorStop(1, 'rgba(78, 205, 196, 0)');
+                } else {
+                    gradient.addColorStop(0, 'rgba(255, 107, 107, 0.8)');
+                    gradient.addColorStop(1, 'rgba(255, 107, 107, 0)');
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        async function play() {
+            if (isPlaying) return;
+            isPlaying = true;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            startTime = audioCtx.currentTime;
+            currentTick = 0;
+            
+            const ticksPerSecond = 120 * 4 / 4;
+            
+            for (const event of midiEvents) {
+                const noteStart = event.tick / (120 * 4);
+                const noteDuration = event.duration / (120 * 4);
+                
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.frequency.value = midiToFreq(event.note);
+                osc.type = event.channel === 0 ? 'sine' : 'triangle';
+                
+                gain.gain.setValueAtTime(0, startTime + noteStart);
+                gain.gain.linearRampToValueAtTime(event.velocity / 255 * 0.3, startTime + noteStart + 0.05);
+                gain.gain.linearRampToValueAtTime(0, startTime + noteStart + noteDuration);
+                
+                osc.start(startTime + noteStart);
+                osc.stop(startTime + noteStart + noteDuration);
+            }
+            
+            // Animation loop
+            function animate() {
+                if (!isPlaying) return;
+                const elapsed = audioCtx.currentTime - startTime;
+                currentTick = elapsed * 120 * 4 / 4;
+                drawVisualization(currentTick);
+                animationId = requestAnimationFrame(animate);
+            }
+            animate();
+            
+            // Auto-stop
+            const totalDuration = midiEvents.length &gt; 0 
+                ? (midiEvents[midiEvents.length-1].tick + midiEvents[midiEvents.length-1].duration) / (120 * 4)
+                : 0;
+            setTimeout(() => {
+                stop();
+            }, totalDuration * 1000 + 1000);
+        }
+        
+        function stop() {
+            isPlaying = false;
+            if (animationId) cancelAnimationFrame(animationId);
+            if (audioCtx) {
+                audioCtx.close();
+                audioCtx = null;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        document.getElementById('playBtn').addEventListener('click', play);
+        document.getElementById('stopBtn').addEventListener('click', stop);
+        
+        // Initial draw
+        drawVisualization(0);
+    </script>
+</body>
+</html>

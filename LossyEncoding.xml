@@ -1,0 +1,32 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/CROSS_ENCODING_CIPHER.md</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/CROSS_ENCODING_CIPHER.md"/>
+        <problem_class id="LossyEncoding" severity="ERROR" attribute_key="ERRORS_ATTRIBUTES">Lossy encoding
+        </problem_class>
+        <description>The file was loaded in a wrong encoding: 'UTF-8'</description>
+        <highlighted_element># Cross-Encoding Cipher: Base58 &lt;-&gt; bech32 ## Formula For a character at Base58
+            position `p`: ```...
+        </highlighted_element>
+        <language>Markdown</language>
+        <offset>0</offset>
+        <length>2777</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/HEIGHTS.md</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/HEIGHTS.md"/>
+        <problem_class id="LossyEncoding" severity="ERROR" attribute_key="ERRORS_ATTRIBUTES">Lossy encoding
+        </problem_class>
+        <description>The file was loaded in a wrong encoding: 'UTF-8'</description>
+        <highlighted_element># Sponsored Heights � Live Inventory Fork tip **44454** � via checkpoint fallback � board
+            generated...
+        </highlighted_element>
+        <language>Markdown</language>
+        <offset>0</offset>
+        <length>5413</length>
+    </problem>
+</problems>

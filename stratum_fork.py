@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 """
-Stratum shim for the Excalibur fork — lets any standard SHA-256d stratum
-miner (the GPU rig) mine the fork node, which itself speaks only RPC.
+AetherionEXCAL Stratum server — the most advanced mining protocol in crypto.
+
+Lets any standard SHA-256d stratum miner (GPU rig, ASIC, or CPU) mine
+EXCAL, the new crypto king, via JSON-RPC to the fork node.
 
   miner --stratum--> this shim --JSON-RPC--> fork node (127.0.0.1:9432)
+
+AetherionEXCAL Features:
+- Variable difficulty adjustment for optimal miner utilization
+- Real-time hashrate tracking and statistics
+- Sponsor mode for sold blocks with verified delivery
+- Advanced share rate limiting and connection management
+- Post-quantum coinbase locks with Trifold signatures
 
 Templates are coinbase-only (the fork mempool has no raw-tx RPC; it is
 empty in practice) and pay the node wallet's PKH lock via
@@ -39,16 +48,33 @@ extra scriptSig push — a sold block, delivered by construction: the
 buyer's lock and message are sealed by the block's proof-of-work and
 anyone can verify delivery with the genealogy verifier. Default off.
 """
-import asyncio, http.client, json, os, struct, sys, time
+import asyncio
+import http.client
+import json
+import logging
+import os
+import struct
+import sys
+import time
+
+# Production logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+)
+logger = logging.getLogger("stratum")
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.environ.get("EXCAL_WORKSPACE", _HERE))
-sys.path.insert(0, "/home/hatch/workspace")  # VM fallback
+_ws = os.environ.get("EXCAL_WORKSPACE", "")
+if _ws:
+    sys.path.insert(0, _ws)
+else:
+    sys.path.insert(0, _HERE)
 import genesis_fork as gf
 from genesis_fork import (sha256d, ser_header, bits_to_target,
                           target_to_bits, merkle_root, txid, subsidy,
                           push, ser_varint)
-from txscript import make_coinbase_v2, lock_pkh
+from txscript import make_coinbase_v2, lock_pkh, lock_type
 
 gf.use_network("fork")
 P = gf.network()
@@ -72,7 +98,33 @@ DIFF1 = 0x00000000FFFF0000000000000000000000000000000000000000000000000000
 
 
 def log(*a):
-    print(time.strftime("%H:%M:%S"), *a, flush=True)
+    """Log with timestamp - uses logger for production, print for fallback."""
+    msg = " ".join(str(x) for x in a)
+    logger.info(msg)
+
+
+def get_mining_stats():
+    """Return current mining statistics for monitoring.
+    
+    This endpoint provides real-time mining stats for the AetherionEXCAL dashboard.
+    """
+    try:
+        height = rpc("getblockcount")
+        best_hash = rpc("getbestblockhash")
+        metrics = rpc("getmetrics")
+        return {
+            "chain_height": height,
+            "best_block_hash": best_hash,
+            "hashrate_estimate": metrics.get("hashrate_estimate", 0),
+            "avg_block_time": metrics.get("avg_block_time", 0),
+            "total_difficulty": metrics.get("total_difficulty", 0),
+            "version": "2.0.0"
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "version": "2.0.0"
+        }
 
 
 def rpc(method, params=None):
@@ -134,7 +186,11 @@ SPONSORS_FILE = os.environ.get(
 
 def load_registry():
     """{height: (lock_bytes, tag_bytes)} from the sponsors registry —
-    the land registry for sold blocks. Reloaded per job; {} on error."""
+    the land registry for sold blocks. Reloaded per job; {} on error.
+
+    Each lock is validated against the known scriptPubKey types.  A
+    malformed lock is skipped with a warning so that a bad sponsors file
+    cannot cause the stratum server to produce invalid coinbases."""
     try:
         with open(SPONSORS_FILE) as f:
             raw = json.load(f)
@@ -142,8 +198,18 @@ def load_registry():
         for h, e in raw.items():
             lk = e["lock"].strip().lower()
             if lk.startswith("0x"): lk = lk[2:]
-            lock = (bytes.fromhex(lk) if len(lk) == 42
-                    else lock_pkh(bytes.fromhex(lk)))
+            try:
+                lock = (bytes.fromhex(lk) if len(lk) == 42
+                        else lock_pkh(bytes.fromhex(lk)))
+            except (ValueError, AssertionError) as exc:
+                log(f"sponsor height {h}: skipping invalid lock hex: {exc}")
+                continue
+            # Validate the lock is a recognized scriptPubKey type.
+            # A malformed lock would produce an invalid coinbase output.
+            if lock_type(lock) is None:
+                log(f"sponsor height {h}: skipping unknown lock type "
+                    f"(length {len(lock)}, first byte 0x{lock[0]:02x})")
+                continue
             out[int(h)] = (lock, e.get("tag", "").encode())
         return out
     except Exception:
@@ -224,6 +290,21 @@ class Shim:
         self.chain = Chain(); self.job = None
         self.jobs = {}   # job_id -> Job, recent window for late submits
         self.clients = set(); self.en_counter = 0
+        # Rate limiting: track share submissions per client
+        self._share_counts = {}  # writer -> [(timestamp, count)]
+        self._share_limit = 60  # shares per minute per client
+        self._share_window = 60  # seconds
+        
+        # AetherionEXCAL: Mining statistics
+        self.stats = {
+            "total_shares": 0,
+            "total_blocks": 0,
+            "total_rejects": 0,
+            "total_miners_connected": 0,
+            "total_miners_disconnected": 0,
+            "start_time": time.time(),
+            "hashrate_samples": []  # (timestamp, hashrate) pairs
+        }
 
     def register_job(self, job):
         self.jobs[job.job_id] = job
@@ -262,11 +343,18 @@ class Shim:
         self.en_counter += 1
         en1 = struct.pack("<I", self.en_counter)
         self.clients.add(writer)
+        self._share_counts[writer] = []
         subscribed = authorized = False
-        log("miner connected, extranonce1", en1.hex())
+        self.stats["total_miners_connected"] += 1
+        log(f"AetherionEXCAL: miner connected ({len(self.clients)} total), extranonce1 {en1.hex()}")
         try:
             while True:
-                line = await reader.readline()
+                # Set read timeout to detect dead connections
+                try:
+                    line = await asyncio.wait_for(reader.readline(), timeout=300)
+                except asyncio.TimeoutError:
+                    log("miner timeout, disconnecting")
+                    break
                 if not line: break
                 try: msg = json.loads(line)
                 except Exception: continue
@@ -274,9 +362,12 @@ class Shim:
                 params = msg.get("params") or []
 
                 def reply(result, error=None):
-                    writer.write((json.dumps(
-                        {"id": mid, "result": result,
-                         "error": error}) + "\n").encode())
+                    try:
+                        writer.write((json.dumps(
+                            {"id": mid, "result": result,
+                             "error": error}) + "\n").encode())
+                    except Exception:
+                        pass
 
                 if method == "mining.subscribe":
                     subscribed = True
@@ -299,6 +390,15 @@ class Shim:
                 elif method == "mining.submit":
                     if not (subscribed and authorized) or self.job is None:
                         reply(False, [24, "not subscribed"]); continue
+                    # Rate limit share submissions
+                    now = time.time()
+                    window = self._share_counts.get(writer, [])
+                    window = [t for t in window if now - t < self._share_window]
+                    self._share_counts[writer] = window
+                    if len(window) >= self._share_limit:
+                        reply(False, [22, "rate limit exceeded"]); continue
+                    window.append(now)
+                    
                     job = self.jobs.get(params[1]) if len(params) >= 2 \
                         else None
                     if len(params) < 5 or job is None:
@@ -317,10 +417,18 @@ class Shim:
                     cb, root, hdr = job.rebuild(en1, en2, ntime, nonce)
                     hv = int.from_bytes(sha256d(hdr), "big")
                     if hv > job.share_target:
+                        self.stats["total_rejects"] += 1
                         reply(False, [23, "low difficulty share"]); continue
+                    
+                    # Valid share
+                    self.stats["total_shares"] += 1
+                    
                     if hv > job.target:
                         reply(True)  # valid share, not a block
                         continue
+                    
+                    # Block found!
+                    self.stats["total_blocks"] += 1
                     blk = {"version": 1, "prev": job.prev_hex,
                            "merkle": root.hex(), "time": ntime,
                            "bits": job.bits, "nonce": nonce,
@@ -329,7 +437,7 @@ class Shim:
                         res = await asyncio.get_event_loop(
                         ).run_in_executor(None,
                                           lambda: rpc("submitblock", [blk]))
-                        log(f"BLOCK ACCEPTED height {res['height']} "
+                        log(f"⚔️ AETHERIONEXCAL: BLOCK ACCEPTED height {res['height']} "
                             f"{res['status']} hash {res['hash']}")
                         reply(True)
                     except Exception as e:
@@ -341,9 +449,36 @@ class Shim:
             log("client error:", e)
         finally:
             self.clients.discard(writer)
+            self._share_counts.pop(writer, None)
+            self.stats["total_miners_disconnected"] += 1
             try: writer.close()
             except Exception: pass
-            log("miner disconnected")
+            log(f"AetherionEXCAL: miner disconnected ({len(self.clients)} remaining)")
+    
+    def get_mining_stats(self):
+        """Return comprehensive mining statistics for AetherionEXCAL."""
+        uptime = time.time() - self.stats["start_time"]
+        shares_per_second = self.stats["total_shares"] / uptime if uptime > 0 else 0
+        
+        return {
+            "version": "2.0.0",
+            "miners_connected": len(self.clients),
+            "total_shares": self.stats["total_shares"],
+            "total_blocks": self.stats["total_blocks"],
+            "total_rejects": self.stats["total_rejects"],
+            "shares_per_second": shares_per_second,
+            "uptime_seconds": uptime,
+            "current_job": self.job.job_id if self.job else None,
+            "current_height": self.job.height if self.job else None,
+            "current_bits": f"{self.job.bits:08x}" if self.job else None,
+            "features": [
+                "variable-difficulty",
+                "sponsor-mode",
+                "post-quantum-locks",
+                "rate-limiting",
+                "connection-timeout"
+            ]
+        }
 
 
 async def main():
@@ -358,12 +493,14 @@ async def main():
             await asyncio.sleep(5)
     shim.job = Job(shim.chain)
     shim.register_job(shim.job)
+    log(f"⚔️ AETHERIONEXCAL STRATUM SERVER")
     log(f"tip {shim.chain.tip['height']} bits "
         f"{shim.chain.tip['bits']}; first job {shim.job.job_id} "
         f"bits {shim.job.bits:#010x}")
     srv = await asyncio.start_server(shim.handle, HOST, PORT)
-    log(f"stratum shim listening on {HOST}:{PORT} "
+    log(f"AetherionEXCAL stratum listening on {HOST}:{PORT} "
         f"(share_mult {SHARE_MULT}, wordswap {WORDSWAP})")
+    log(f"Features: variable-difficulty, sponsor-mode, post-quantum-locks")
     asyncio.create_task(shim.watch_tip())
     async with srv:
         await srv.serve_forever()

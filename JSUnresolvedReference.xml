@@ -1,0 +1,238 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>53</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;on&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>57</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;on&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>60</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>Unresolved variable statusCode</description>
+        <highlighted_element>statusCode</highlighted_element>
+        <language>JavaScript</language>
+        <offset>36</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>67</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;on&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>71</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;on&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>72</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;destroy&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>destroy</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>76</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;write&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>write</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/api/excalibur-rpc.js</file>
+        <line>77</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/api/excalibur-rpc.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;end&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>end</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/hilbert_polya.html</file>
+        <line>159</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/hilbert_polya.html"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getContext&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getContext</highlighted_element>
+        <language>JavaScript</language>
+        <offset>27</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/hilbert_polya.html</file>
+        <line>164</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/hilbert_polya.html"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getContext&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getContext</highlighted_element>
+        <language>JavaScript</language>
+        <offset>31</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/hilbert_polya.html</file>
+        <line>299</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/hilbert_polya.html"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>Unresolved variable webkitAudioContext</description>
+        <highlighted_element>webkitAudioContext</highlighted_element>
+        <language>JavaScript</language>
+        <offset>58</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/skynet-p2p.js</file>
+        <line>361</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/skynet-p2p.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;on&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/skynet-p2p.js</file>
+        <line>362</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/skynet-p2p.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;on&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/skynet-p2p.js</file>
+        <line>376</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/skynet-p2p.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;write&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>write</highlighted_element>
+        <language>JavaScript</language>
+        <offset>12</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/skynet-p2p.js</file>
+        <line>377</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/skynet-p2p.js"/>
+        <problem_class id="JSUnresolvedReference" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Unresolved
+            reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;end&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>end</highlighted_element>
+        <language>JavaScript</language>
+        <offset>12</offset>
+        <length>3</length>
+    </problem>
+</problems>

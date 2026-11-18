@@ -1,0 +1,100 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py</file>
+        <line>135</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py"/>
+        <problem_class id="PyProtectedMemberInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Accessing a protected member of a class or a module
+        </problem_class>
+        <description>Access to a protected member _is_tailnet_host of a class</description>
+        <highlighted_element>_is_tailnet_host</highlighted_element>
+        <language>Python</language>
+        <offset>20</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py</file>
+        <line>135</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py"/>
+        <problem_class id="PyProtectedMemberInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Accessing a protected member of a class or a module
+        </problem_class>
+        <description>Access to a protected member _connect_via_tunnel_proxy of a class</description>
+        <highlighted_element>_connect_via_tunnel_proxy</highlighted_element>
+        <language>Python</language>
+        <offset>38</offset>
+        <length>25</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>366</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyProtectedMemberInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Accessing a protected member of a class or a module
+        </problem_class>
+        <description>Access to a protected member _node_id of a class</description>
+        <highlighted_element>self.server.bootstrap_server._node_id</highlighted_element>
+        <language>Python</language>
+        <offset>52</offset>
+        <length>37</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>386</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyProtectedMemberInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Accessing a protected member of a class or a module
+        </problem_class>
+        <description>Access to a protected member _register_peer of a class</description>
+        <highlighted_element>self.server.bootstrap_server._register_peer</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>43</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>400</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyProtectedMemberInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Accessing a protected member of a class or a module
+        </problem_class>
+        <description>Access to a protected member _lock of a class</description>
+        <highlighted_element>self.server.bootstrap_server._lock</highlighted_element>
+        <language>Python</language>
+        <offset>17</offset>
+        <length>34</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>401</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyProtectedMemberInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Accessing a protected member of a class or a module
+        </problem_class>
+        <description>Access to a protected member _peers of a class</description>
+        <highlighted_element>self.server.bootstrap_server._peers</highlighted_element>
+        <language>Python</language>
+        <offset>16</offset>
+        <length>35</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>708</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyProtectedMemberInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Accessing a protected member of a class or a module
+        </problem_class>
+        <description>Access to a protected member _node_id of a class</description>
+        <highlighted_element>server._node_id</highlighted_element>
+        <language>Python</language>
+        <offset>22</offset>
+        <length>15</length>
+    </problem>
+</problems>

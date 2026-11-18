@@ -167,6 +167,31 @@ def bridge_activation():
     """Bridge activation height for the currently selected network."""
     return _active.get("bridge_activation", BRIDGE_ACTIVATION)
 
+
+# --- KNOT lock upgrade (BUILT 2026-11-11, STAGED, NOT DEPLOYED) -----------
+# Height at which the KNOT lock (0x06 + hash160(descriptor), see
+# txscript.py) activates. The KNOT lock commits to a point on a
+# Mobius-modulated (p, q) torus knot; the spender reveals the secret
+# knot parameter t_star and the validator recomputes the point with
+# deterministic fixed-point arithmetic (knot_math.py) and checks its
+# SHA256 against the descriptor commitment.
+#
+# STAGED at 100000 (well above the live fork tip ~43,653 at build
+# time), NOT deployed to the live fork. KNOT outputs/spends are
+# rejected as non-standard below this height, exactly as QHTLC was
+# before its deployment. At deployment, on Lux's word, move this to
+# the next height above the live tip (HTLC/QHTLC-style buffer: a
+# dozen or so blocks ahead, never below a mined height, never at
+# the Golden Stone fusion height 50000). Do NOT activate it by
+# editing this file alone — deployment also needs the node
+# restarted on the patched code before the activation height.
+KNOT_ACTIVATION = 100000
+
+
+def knot_activation():
+    """KNOT activation height for the currently selected network."""
+    return _active.get("knot_activation", KNOT_ACTIVATION)
+
 _active = NETWORKS["testnet"]
 
 
@@ -558,7 +583,8 @@ def validate_block(blk, prev, height, chain, utxo=None, skip_pow=False,
 
     blk: {"version","prev","merkle","time","bits","nonce","txs":[raw..]}
     prev: parent header-dict. chain: ancestor header-dicts (for retarget).
-    utxo: if given, txs are fully validated against it at `height`.
+    utxo: if given, txs are fully validated against it at `height`; callers
+    must also supply the chain-wide `spent_pairs` state for block validation.
     skip_pow: omit the block's own proof-of-work check. Only the AuxPoW
     path (validate_auxpow) passes this, after substituting the parent
     block's work; every other caller gets the full check as before.

@@ -1,0 +1,44 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/HEIGHTS.md</file>
+        <line>144</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/HEIGHTS.md"/>
+        <problem_class id="MarkdownUnresolvedFileReference" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">
+            Unresolved file references
+        </problem_class>
+        <description>Cannot resolve file 'genealogy_verify.py'</description>
+        <highlighted_element>genealogy_verify.py</highlighted_element>
+        <language>Markdown</language>
+        <offset>22</offset>
+        <length>19</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/README.md</file>
+        <line>89</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/README.md"/>
+        <problem_class id="MarkdownUnresolvedFileReference" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">
+            Unresolved file references
+        </problem_class>
+        <description>Cannot resolve file 'pos28'</description>
+        <highlighted_element>pos28</highlighted_element>
+        <language>Markdown</language>
+        <offset>221</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/README.md</file>
+        <line>184</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/README.md"/>
+        <problem_class id="MarkdownUnresolvedFileReference" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">
+            Unresolved file references
+        </problem_class>
+        <description>Cannot resolve directory 'skynet-beacon'</description>
+        <highlighted_element>skynet-beacon</highlighted_element>
+        <language>Markdown</language>
+        <offset>74</offset>
+        <length>13</length>
+    </problem>
+</problems>

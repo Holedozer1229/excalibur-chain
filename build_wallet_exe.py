@@ -31,6 +31,8 @@ HIDDEN_IMPORTS = [
     "txpq",
     "knot_math",
     "trifold_lockbox",
+    "file_locks",
+    "spent_leaf_registry",
     "messerene_operator",
     "p2p",
     # Lazily imported by excalibur_wallet/cli.py (2026-11-14 audit D4):

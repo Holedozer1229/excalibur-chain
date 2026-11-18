@@ -3,7 +3,20 @@ Loads the live fork ChainState, exports the overlay snapshot at the tip,
 attests a checkpoint, verifies it, then tampers (drops one coinbase UTXO)
 and proves the fraud with an omission proof."""
 import sys, os, json, time
-sys.path.insert(0, '/home/hatch/workspace')
+
+# This test requires a full fork node ChainState on disk — it is designed
+# for the Linux VM environment. Skip gracefully on other platforms.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_WS = os.environ.get("EXCAL_WORKSPACE", os.path.dirname(_HERE))
+_CHAINDATA = os.path.join(_WS, "chaindata_fork")
+_LIGHT_LEDGER = os.path.join(_WS, "light-ledger")
+
+if not os.path.isdir(_CHAINDATA):
+    print(f"SKIP: chaindata_fork not found at {_CHAINDATA}")
+    print("Set EXCAL_WORKSPACE to the directory containing chaindata_fork, or run on the VM.")
+    sys.exit(0)
+
+sys.path.insert(0, _WS)
 from chainstate import ChainState
 import lightledger as ll
 
@@ -17,7 +30,7 @@ def dec_rec(r):
     return r
 
 t0 = time.time()
-cs = ChainState('/home/hatch/workspace/chaindata_fork', net='fork')
+cs = ChainState(_CHAINDATA, net='fork')
 cs.load()
 tip = cs.tips[0]
 print(f"LOADED tip={tip['height']} hash={tip['hash'][:16]}... "
@@ -30,8 +43,8 @@ else:  # plain dict: snapshot base not built on this VM, fork-only
 print(f"utxo-view: {'UtxoSet' if hasattr(u, 'overlay') else 'plain-dict'} spent_tombstones={len(spent)}", flush=True)
 print(f"overlay={len(overlay)} spent_tombstones={len(spent)}", flush=True)
 
-os.makedirs('/home/hatch/workspace/light-ledger', exist_ok=True)
-out = '/home/hatch/workspace/light-ledger/overlay_snapshot_test.jsonl.gz'
+os.makedirs(_LIGHT_LEDGER, exist_ok=True)
+out = os.path.join(_LIGHT_LEDGER, 'overlay_snapshot_test.jsonl.gz')
 man = ll.export_overlay(overlay, spent, tip['height'], tip['hash'],
                         tip['work'], out)
 print("MANIFEST " + json.dumps(man), flush=True)
@@ -70,7 +83,7 @@ except ValueError as e:
 # Fraud proof: the dropped coinbase UTXO was created by a confirmed block.
 cb_h = drop_entry[0][3]
 rec = None
-with open('/home/hatch/workspace/chaindata_fork/chain.jsonl') as f:
+with open(os.path.join(_CHAINDATA, 'chain.jsonl')) as f:
     for line in f:
         r = json.loads(line)
         if r["height"] == cb_h:

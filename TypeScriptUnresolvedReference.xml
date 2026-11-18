@@ -1,0 +1,2126 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>164</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;cos&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>cos</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>165</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sin&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sin</highlighted_element>
+        <language>JavaScript</language>
+        <offset>23</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>171</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable length</description>
+        <highlighted_element>length</highlighted_element>
+        <language>JavaScript</language>
+        <offset>23</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>183</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;cos&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>cos</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>193</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable timestamp</description>
+        <highlighted_element>timestamp</highlighted_element>
+        <language>JavaScript</language>
+        <offset>49</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>195</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;abs&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>abs</highlighted_element>
+        <language>JavaScript</language>
+        <offset>26</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>195</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable phi</description>
+        <highlighted_element>phi</highlighted_element>
+        <language>JavaScript</language>
+        <offset>40</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>195</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable phi</description>
+        <highlighted_element>phi</highlighted_element>
+        <language>JavaScript</language>
+        <offset>55</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>196</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;abs&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>abs</highlighted_element>
+        <language>JavaScript</language>
+        <offset>31</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>196</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable phiPrime</description>
+        <highlighted_element>phiPrime</highlighted_element>
+        <language>JavaScript</language>
+        <offset>45</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>196</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable phiPrime</description>
+        <highlighted_element>phiPrime</highlighted_element>
+        <language>JavaScript</language>
+        <offset>65</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>213</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;now&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>now</highlighted_element>
+        <language>JavaScript</language>
+        <offset>27</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>218</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable chainId</description>
+        <highlighted_element>chainId</highlighted_element>
+        <language>JavaScript</language>
+        <offset>31</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>238</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable hash</description>
+        <highlighted_element>hash</highlighted_element>
+        <language>JavaScript</language>
+        <offset>32</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>238</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable id</description>
+        <highlighted_element>id</highlighted_element>
+        <language>JavaScript</language>
+        <offset>57</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>249</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getBlockCount&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getBlockCount</highlighted_element>
+        <language>JavaScript</language>
+        <offset>36</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>252</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable excalAnchorBlock</description>
+        <highlighted_element>excalAnchorBlock</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>253</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable status</description>
+        <highlighted_element>status</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>262</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable scalarWaveSignature</description>
+        <highlighted_element>scalarWaveSignature</highlighted_element>
+        <language>JavaScript</language>
+        <offset>46</offset>
+        <length>19</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>280</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;now&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>now</highlighted_element>
+        <language>JavaScript</language>
+        <offset>22</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>293</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable type</description>
+        <highlighted_element>type</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>295</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable params</description>
+        <highlighted_element>params</highlighted_element>
+        <language>JavaScript</language>
+        <offset>52</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>298</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable params</description>
+        <highlighted_element>params</highlighted_element>
+        <language>JavaScript</language>
+        <offset>41</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>298</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable timestamp</description>
+        <highlighted_element>timestamp</highlighted_element>
+        <language>JavaScript</language>
+        <offset>48</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>298</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;now&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>now</highlighted_element>
+        <language>JavaScript</language>
+        <offset>66</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>301</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable params</description>
+        <highlighted_element>params</highlighted_element>
+        <language>JavaScript</language>
+        <offset>57</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>304</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getBlockCount&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getBlockCount</highlighted_element>
+        <language>JavaScript</language>
+        <offset>30</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>307</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getMempoolInfo&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getMempoolInfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>30</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>310</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable type</description>
+        <highlighted_element>type</highlighted_element>
+        <language>JavaScript</language>
+        <offset>53</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>313</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getBlockCount&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getBlockCount</highlighted_element>
+        <language>JavaScript</language>
+        <offset>37</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>314</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;now&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>now</highlighted_element>
+        <language>JavaScript</language>
+        <offset>45</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>317</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable queryId</description>
+        <highlighted_element>queryId</highlighted_element>
+        <language>JavaScript</language>
+        <offset>43</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>318</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable queryId</description>
+        <highlighted_element>queryId</highlighted_element>
+        <language>JavaScript</language>
+        <offset>21</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>329</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable height</description>
+        <highlighted_element>height</highlighted_element>
+        <language>JavaScript</language>
+        <offset>26</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>329</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getBlockCount&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getBlockCount</highlighted_element>
+        <language>JavaScript</language>
+        <offset>50</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>330</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getBlockHash&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getBlockHash</highlighted_element>
+        <language>JavaScript</language>
+        <offset>30</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>331</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getBlock&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getBlock</highlighted_element>
+        <language>JavaScript</language>
+        <offset>31</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>336</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;now&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>now</highlighted_element>
+        <language>JavaScript</language>
+        <offset>22</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>355</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;stringify&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>stringify</highlighted_element>
+        <language>JavaScript</language>
+        <offset>33</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>355</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;now&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>now</highlighted_element>
+        <language>JavaScript</language>
+        <offset>59</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>360</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;now&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>now</highlighted_element>
+        <language>JavaScript</language>
+        <offset>41</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>373</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable length</description>
+        <highlighted_element>length</highlighted_element>
+        <language>JavaScript</language>
+        <offset>28</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>374</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;charCodeAt&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>charCodeAt</highlighted_element>
+        <language>JavaScript</language>
+        <offset>23</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>378</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;abs&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>abs</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>378</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;toString&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>toString</highlighted_element>
+        <language>JavaScript</language>
+        <offset>26</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>378</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;padStart&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>padStart</highlighted_element>
+        <language>JavaScript</language>
+        <offset>39</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>388</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;cos&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>cos</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>404</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;abs&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>abs</highlighted_element>
+        <language>JavaScript</language>
+        <offset>27</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>404</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable timestamp</description>
+        <highlighted_element>timestamp</highlighted_element>
+        <language>JavaScript</language>
+        <offset>47</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>404</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable timestamp</description>
+        <highlighted_element>timestamp</highlighted_element>
+        <language>JavaScript</language>
+        <offset>73</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>408</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;abs&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>abs</highlighted_element>
+        <language>JavaScript</language>
+        <offset>26</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>408</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable phi</description>
+        <highlighted_element>phi</highlighted_element>
+        <language>JavaScript</language>
+        <offset>46</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>408</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable phi</description>
+        <highlighted_element>phi</highlighted_element>
+        <language>JavaScript</language>
+        <offset>66</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>74</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable config</description>
+        <highlighted_element>config</highlighted_element>
+        <language>JavaScript</language>
+        <offset>9</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>75</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable url</description>
+        <highlighted_element>url</highlighted_element>
+        <language>JavaScript</language>
+        <offset>19</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>75</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable env</description>
+        <highlighted_element>env</highlighted_element>
+        <language>JavaScript</language>
+        <offset>34</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>75</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable EXCALIBUR_RPC_URL</description>
+        <highlighted_element>EXCALIBUR_RPC_URL</highlighted_element>
+        <language>JavaScript</language>
+        <offset>38</offset>
+        <length>17</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>76</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable timeout</description>
+        <highlighted_element>timeout</highlighted_element>
+        <language>JavaScript</language>
+        <offset>23</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>77</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable retries</description>
+        <highlighted_element>retries</highlighted_element>
+        <language>JavaScript</language>
+        <offset>23</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>79</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable requestId</description>
+        <highlighted_element>requestId</highlighted_element>
+        <language>JavaScript</language>
+        <offset>9</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>85</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable requestId</description>
+        <highlighted_element>requestId</highlighted_element>
+        <language>JavaScript</language>
+        <offset>17</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>91</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;abort&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>abort</highlighted_element>
+        <language>JavaScript</language>
+        <offset>50</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>91</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable config</description>
+        <highlighted_element>config</highlighted_element>
+        <language>JavaScript</language>
+        <offset>64</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>91</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable timeout</description>
+        <highlighted_element>timeout</highlighted_element>
+        <language>JavaScript</language>
+        <offset>71</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>94</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable config</description>
+        <highlighted_element>config</highlighted_element>
+        <language>JavaScript</language>
+        <offset>40</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>94</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable url</description>
+        <highlighted_element>url</highlighted_element>
+        <language>JavaScript</language>
+        <offset>47</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>99</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;stringify&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>stringify</highlighted_element>
+        <language>JavaScript</language>
+        <offset>19</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>100</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable signal</description>
+        <highlighted_element>signal</highlighted_element>
+        <language>JavaScript</language>
+        <offset>27</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>105</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable ok</description>
+        <highlighted_element>ok</highlighted_element>
+        <language>JavaScript</language>
+        <offset>20</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>106</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable status</description>
+        <highlighted_element>status</highlighted_element>
+        <language>JavaScript</language>
+        <offset>56</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>109</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;json&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>json</highlighted_element>
+        <language>JavaScript</language>
+        <offset>35</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>111</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable error</description>
+        <highlighted_element>error</highlighted_element>
+        <language>JavaScript</language>
+        <offset>15</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>112</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable error</description>
+        <highlighted_element>error</highlighted_element>
+        <language>JavaScript</language>
+        <offset>43</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>112</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable message</description>
+        <highlighted_element>message</highlighted_element>
+        <language>JavaScript</language>
+        <offset>49</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>112</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable error</description>
+        <highlighted_element>error</highlighted_element>
+        <language>JavaScript</language>
+        <offset>72</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>112</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable code</description>
+        <highlighted_element>code</highlighted_element>
+        <language>JavaScript</language>
+        <offset>78</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>115</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable result</description>
+        <highlighted_element>result</highlighted_element>
+        <language>JavaScript</language>
+        <offset>18</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>119</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable config</description>
+        <highlighted_element>config</highlighted_element>
+        <language>JavaScript</language>
+        <offset>56</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>119</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable timeout</description>
+        <highlighted_element>timeout</highlighted_element>
+        <language>JavaScript</language>
+        <offset>63</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>129</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>133</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>137</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>143</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>148</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>152</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>157</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>161</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>166</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>170</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>175</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>179</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>184</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;sendRequest&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>sendRequest</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>190</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getBlockCount&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getBlockCount</highlighted_element>
+        <language>JavaScript</language>
+        <offset>17</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>207</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;allSettled&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>allSettled</highlighted_element>
+        <language>JavaScript</language>
+        <offset>64</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>208</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getBlockCount&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getBlockCount</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>209</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getPeerInfo&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getPeerInfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>210</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getMempoolInfo&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getMempoolInfo</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>213</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable connected</description>
+        <highlighted_element>connected</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>214</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable blockCount</description>
+        <highlighted_element>blockCount</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>214</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable status</description>
+        <highlighted_element>status</highlighted_element>
+        <language>JavaScript</language>
+        <offset>37</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>214</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable value</description>
+        <highlighted_element>value</highlighted_element>
+        <language>JavaScript</language>
+        <offset>73</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>215</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable peers</description>
+        <highlighted_element>peers</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>215</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable status</description>
+        <highlighted_element>status</highlighted_element>
+        <language>JavaScript</language>
+        <offset>30</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>215</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable value</description>
+        <highlighted_element>value</highlighted_element>
+        <language>JavaScript</language>
+        <offset>64</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>215</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable length</description>
+        <highlighted_element>length</highlighted_element>
+        <language>JavaScript</language>
+        <offset>70</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>216</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable mempoolSize</description>
+        <highlighted_element>mempoolSize</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>216</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable status</description>
+        <highlighted_element>status</highlighted_element>
+        <language>JavaScript</language>
+        <offset>39</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>216</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable value</description>
+        <highlighted_element>value</highlighted_element>
+        <language>JavaScript</language>
+        <offset>76</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>216</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable size</description>
+        <highlighted_element>size</highlighted_element>
+        <language>JavaScript</language>
+        <offset>82</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>218</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable connected</description>
+        <highlighted_element>connected</highlighted_element>
+        <language>JavaScript</language>
+        <offset>13</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>16</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>17</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>20</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;start&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>start</highlighted_element>
+        <language>JavaScript</language>
+        <offset>27</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>21</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>24</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;getState&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>getState</highlighted_element>
+        <language>JavaScript</language>
+        <offset>27</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>25</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>26</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>26</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable chainCorrelation</description>
+        <highlighted_element>chainCorrelation</highlighted_element>
+        <language>JavaScript</language>
+        <offset>44</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>26</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;toFixed&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>toFixed</highlighted_element>
+        <language>JavaScript</language>
+        <offset>61</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>27</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>27</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable hashRateBoost</description>
+        <highlighted_element>hashRateBoost</highlighted_element>
+        <language>JavaScript</language>
+        <offset>42</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>27</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;toFixed&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>toFixed</highlighted_element>
+        <language>JavaScript</language>
+        <offset>56</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>28</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>28</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable dysonEquilibrium</description>
+        <highlighted_element>dysonEquilibrium</highlighted_element>
+        <language>JavaScript</language>
+        <offset>44</offset>
+        <length>16</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>28</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;toFixed&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>toFixed</highlighted_element>
+        <language>JavaScript</language>
+        <offset>61</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>29</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>29</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>Unresolved variable valknutPassRate</description>
+        <highlighted_element>valknutPassRate</highlighted_element>
+        <language>JavaScript</language>
+        <offset>45</offset>
+        <length>15</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>29</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;toFixed&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>toFixed</highlighted_element>
+        <language>JavaScript</language>
+        <offset>68</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>30</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>34</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>37</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;on&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>38</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>12</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>40</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;stop&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>stop</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>41</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;exit&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>exit</highlighted_element>
+        <language>JavaScript</language>
+        <offset>12</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>44</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;on&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>45</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;log&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>log</highlighted_element>
+        <language>JavaScript</language>
+        <offset>12</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>47</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;stop&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>stop</highlighted_element>
+        <language>JavaScript</language>
+        <offset>16</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>48</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;exit&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>exit</highlighted_element>
+        <language>JavaScript</language>
+        <offset>12</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>52</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;color:#cf8e6d;&quot;&gt;catch&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>catch</highlighted_element>
+        <language>JavaScript</language>
+        <offset>7</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>53</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;error&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>error</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/main.ts</file>
+        <line>54</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/main.ts"/>
+        <problem_class id="TypeScriptUnresolvedReference" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">
+            Unresolved TypeScript reference
+        </problem_class>
+        <description>&lt;html&gt;Unresolved function or method &lt;code&gt;&lt;span style=&quot;&quot;&gt;exit&lt;/span&gt;&lt;span
+            style=&quot;&quot;&gt;()&lt;/span&gt;&lt;/code&gt;&lt;/html&gt;
+        </description>
+        <highlighted_element>exit</highlighted_element>
+        <language>JavaScript</language>
+        <offset>10</offset>
+        <length>4</length>
+    </problem>
+</problems>

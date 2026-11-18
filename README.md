@@ -117,7 +117,73 @@ Aetherion-Excalibur is raising on a **$1.5M SAFE, $8M post-money cap, 20% discou
 | [excalibur-rpc-node](https://github.com/Holedozer1229/excalibur-rpc-node) | Excalibur node software v0.2.0 — full node, miner, JSON-RPC |
 | [aether-proof](https://github.com/Holedozer1229/aether-proof) | The Aether Proof — a self-verifying cross-chain authorship capsule (`python3 verify_all.py`) |
 
-## Run it
+## AetherionEXCAL Wallet — The Living Interface
+
+**AetherionEXCAL.exe** (34.6 MB) is the unified single-file wallet — node, P2P, mining, governance, and GUI in one executable.
+
+### Cinematic Experience
+
+- **⚔ Quantum Genesis** — On first launch, an animated quantum field materializes the 13-word Prophecy one word at a time, then reveals the Taproot Treasury address derived from the Prophecy hash. Particles converge, bonds form, and the Realm awakens.
+- **💎 Living Chain** — A real-time 3D visualization tab shows the blockchain as floating crystals in a quantum field. Each block is a rotating diamond connected by entanglement bonds, gently pulsing with the chain's heartbeat.
+- **⚔ Knight's Oath Ceremony** — Swear allegiance to the Knights of the Round Table and receive your unique Genesis Knight NFT, saved locally with a ZK rarity proof.
+
+### Full Feature Set
+
+| Feature | Description |
+| --- | --- |
+| GUI Wallet | CustomTkinter dark theme with Aetherion Oracle aesthetics |
+| Encryption | AES-256-GCM + scrypt KDF key storage |
+| Fork Node | Built-in RPC server (port 9432), auto-starts on launch |
+| P2P Database | Persistent SQLite database — peers, txs, blocks survive restart |
+| Bootstrap Server | Auto-discovery server (port 9435) — nodes find each other |
+| UDP Multicast | LAN peer discovery — no hardcoded IPs needed |
+| EREPR P2P | Quantum-inspired gossip protocol — entanglement bonds, no DHT |
+| CPU Mining | Multi-threaded SHA-256d mining with thread control |
+| GPU Mining | Stratum server for external GPU miners (T-Rex, GMiner, etc.) |
+| Knights Governance | 3-of-5 MuSig2 (BIP-327) threshold signing |
+| AI Oracle Knights | 5 specialized AI oracles analyze proposals |
+| NFT Minting | 13 Knight NFTs with ZK rarity proofs |
+| zkSync Bridge | Cross-chain EXCAL↔URUU bridge with bonding curve |
+| Oracle Chat | Ask the Omniscient Sphinx anything |
+
+### SkyNet P2P — Always-On Node Beacon
+
+**Your node stays discoverable 24/7**, even when the wallet GUI is closed.
+
+**`AetherionEXCAL-Beacon.exe`** (25.3 MB) is a standalone background service that:
+- Runs the bootstrap discovery server (HTTP + UDP multicast/broadcast)
+- Registers this machine with central SkyNet beacons
+- Heartbeats every 60 seconds to stay alive
+- Discovers and shares peers with other nodes
+- Persists all P2P data in SQLite
+
+**Three language implementations** — run any combination:
+
+| Language | File | Build |
+| --- | --- | --- |
+| **Python** | `skynet_beacon.py` | `pyinstaller AetherionEXCAL-Beacon.spec` → `AetherionEXCAL-Beacon.exe` |
+| **Node.js** | `skynet-p2p.js` | `npm install ws` → `node skynet-p2p.js` |
+| **.NET 8** | `skynet-p2p.cs` | `dotnet build` → `dotnet run` |
+
+**Auto-start on Windows:**
+```powershell
+# Double-click or run:
+start-beacon.bat
+# Or place in shell:startup for auto-start on login
+```
+
+**Auto-start on Mac:**
+```bash
+# Copy plist and load:
+cp com.aetherion.skynet-beacon.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.aetherion.skynet-beacon.plist
+```
+
+**How SkyNet works:** When you launch the beacon on two machines, they automatically discover each other via UDP multicast (239.1.1.1:9436) and LAN broadcast (255.255.255.255:9437). Each beacon runs an HTTP REST API (port 9435) for peer discovery. No hardcoded IPs, no manual configuration — just launch and connect.
+
+**Cross-network discovery:** Deploy the [SkyNet Cloudflare Worker beacon](skynet-beacon/) for always-on peer discovery across the internet. Free tier: 100K requests/day, $0/month.
+
+### Run it
 
 ```
 python3 genealogy_verify.py     # check the whole chain from the anchor
@@ -125,6 +191,10 @@ python3 window_planner.py       # current window: frozen bits, blocks
                                 # left, exact expected cost per block
 python3 grace_miner.py          # strategy validation + flood simulation
 STRATUM_HOST=0.0.0.0 python3 stratum_fork.py   # serve GPU miners
+dist\AetherionEXCAL.exe         # launch the unified wallet (Windows)
+dist\AetherionEXCAL-Beacon.exe  # start the always-on SkyNet beacon
+node skynet-p2p.js              # Node.js P2P node
+dotnet run --project skynet-p2p.cs  # .NET P2P node
 ```
 
 ## Honest scope

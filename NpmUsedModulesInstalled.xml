@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/src/setupProxy.js</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/src/setupProxy.js"/>
+        <problem_class id="NpmUsedModulesInstalled" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">Missing
+            module dependency
+        </problem_class>
+        <description>Module is not listed in package.json dependencies</description>
+        <highlighted_element>'http-proxy-middleware'</highlighted_element>
+        <language>ECMAScript 6</language>
+        <offset>42</offset>
+        <length>23</length>
+    </problem>
+</problems>

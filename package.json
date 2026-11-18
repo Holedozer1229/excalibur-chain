@@ -1,0 +1,20 @@
+{
+  "name": "excalibur-chain-dyson",
+  "version": "1.0.0",
+  "description": "Dyson Sphere Quantum Gravity Miner with WebSocket Hub",
+  "main": "dist/ws-hub.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/ws-hub.js",
+    "dev": "ts-node src/ws-hub.ts"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.10"
+  }
+}

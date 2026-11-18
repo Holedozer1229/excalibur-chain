@@ -1,0 +1,98 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>316</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyStringFormatInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Errors in
+            string formatting operations
+        </problem_class>
+        <description>Format spec is not supported for 'UnsafeUnion[float | int, Unknown]' ('object.__format__' only
+            accepts empty string)
+        </description>
+        <highlighted_element>:.4f</highlighted_element>
+        <language>Python</language>
+        <offset>36</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sign_and_sweep.py</file>
+        <line>417</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sign_and_sweep.py"/>
+        <problem_class id="PyStringFormatInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Errors in
+            string formatting operations
+        </problem_class>
+        <description>Format spec is not supported for 'UnsafeUnion[float | int, Unknown]' ('object.__format__' only
+            accepts empty string)
+        </description>
+        <highlighted_element>:.8f</highlighted_element>
+        <language>Python</language>
+        <offset>58</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>212</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyStringFormatInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Errors in
+            string formatting operations
+        </problem_class>
+        <description>Format spec is not supported for 'SupportsDunderLT[Any] | SupportsDunderGT[Any]'
+            ('object.__format__' only accepts empty string)
+        </description>
+        <highlighted_element>:.4f</highlighted_element>
+        <language>Python</language>
+        <offset>47</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>213</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyStringFormatInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Errors in
+            string formatting operations
+        </problem_class>
+        <description>Format spec is not supported for 'SupportsDunderLT[Any] | SupportsDunderGT[Any]'
+            ('object.__format__' only accepts empty string)
+        </description>
+        <highlighted_element>:.4f</highlighted_element>
+        <language>Python</language>
+        <offset>47</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>241</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyStringFormatInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Errors in
+            string formatting operations
+        </problem_class>
+        <description>Format spec is not supported for 'SupportsDunderLT[Any] | SupportsDunderGT[Any]'
+            ('object.__format__' only accepts empty string)
+        </description>
+        <highlighted_element>:.4f</highlighted_element>
+        <language>Python</language>
+        <offset>44</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>635</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyStringFormatInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Errors in
+            string formatting operations
+        </problem_class>
+        <description>Format spec is not supported for 'SupportsDunderLT[Any] | SupportsDunderGT[Any]'
+            ('object.__format__' only accepts empty string)
+        </description>
+        <highlighted_element>:.4f</highlighted_element>
+        <language>Python</language>
+        <offset>52</offset>
+        <length>4</length>
+    </problem>
+</problems>

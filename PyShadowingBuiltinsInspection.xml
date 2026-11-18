@@ -1,0 +1,30 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py</file>
+        <line>711</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py"/>
+        <problem_class id="PyShadowingBuiltinsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Shadowing built-in names
+        </problem_class>
+        <description>Shadows built-in name 'format'</description>
+        <highlighted_element>format</highlighted_element>
+        <language>Python</language>
+        <offset>30</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>318</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyShadowingBuiltinsInspection" severity="WEAK WARNING" attribute_key="INFO_ATTRIBUTES">
+            Shadowing built-in names
+        </problem_class>
+        <description>Shadows built-in name 'format'</description>
+        <highlighted_element>format</highlighted_element>
+        <language>Python</language>
+        <offset>26</offset>
+        <length>6</length>
+    </problem>
+</problems>

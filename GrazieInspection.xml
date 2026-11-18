@@ -1,0 +1,828 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/AUDIT.md</file>
+        <line>230</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/AUDIT.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>If a new sentence starts here, add a space and start with an uppercase letter.</description>
+        <highlighted_element>keys</highlighted_element>
+        <language>Markdown</language>
+        <offset>16</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/BIP_KNOT_LOCK.md</file>
+        <line>85</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/BIP_KNOT_LOCK.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'Choose not'?</description>
+        <highlighted_element>Choose knot</highlighted_element>
+        <language>Markdown</language>
+        <offset>3</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/BIP_KNOT_LOCK.md</file>
+        <line>116</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/BIP_KNOT_LOCK.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'quantized not'?</description>
+        <highlighted_element>quantized knot</highlighted_element>
+        <language>Markdown</language>
+        <offset>179</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/BIP_KNOT_LOCK.md</file>
+        <line>124</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/BIP_KNOT_LOCK.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'using not'?</description>
+        <highlighted_element>using KNOT</highlighted_element>
+        <language>Markdown</language>
+        <offset>89</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/BIP_KNOT_LOCK.md</file>
+        <line>170</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/BIP_KNOT_LOCK.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'support not'?</description>
+        <highlighted_element>support KNOT</highlighted_element>
+        <language>Markdown</language>
+        <offset>92</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/BIP_KNOT_LOCK.md</file>
+        <line>170</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/BIP_KNOT_LOCK.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'reject not'?</description>
+        <highlighted_element>reject KNOT</highlighted_element>
+        <language>Markdown</language>
+        <offset>116</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/BIP_KNOT_LOCK.md</file>
+        <line>180</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/BIP_KNOT_LOCK.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'create not'?</description>
+        <highlighted_element>create KNOT</highlighted_element>
+        <language>Markdown</language>
+        <offset>91</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/CROSS_ENCODING_CIPHER.md</file>
+        <line>96</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/CROSS_ENCODING_CIPHER.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use 'an' instead of 'a' if the following word starts with a vowel sound, e.g. 'an article', 'an
+            hour'.
+        </description>
+        <highlighted_element>a</highlighted_element>
+        <language>Markdown</language>
+        <offset>15</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/POWDER.md</file>
+        <line>60</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/POWDER.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>If you mean a great quantity, use 'a lot of buys'.</description>
+        <highlighted_element>a lot buys</highlighted_element>
+        <language>Markdown</language>
+        <offset>23</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/PROOF_AUDIT.md</file>
+        <line>106</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/PROOF_AUDIT.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>A comma may be missing after the conjunctive/linking adverb 'Therefore'.</description>
+        <highlighted_element>Therefore</highlighted_element>
+        <language>Markdown</language>
+        <offset>5</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/PROOF_AUDIT.md</file>
+        <line>107</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/PROOF_AUDIT.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>A comma may be missing after the conjunctive/linking adverb 'Therefore'.</description>
+        <highlighted_element>Therefore</highlighted_element>
+        <language>Markdown</language>
+        <offset>5</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/PROOF_AUDIT.md</file>
+        <line>134</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/PROOF_AUDIT.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>A comma may be missing after the conjunctive/linking adverb 'Therefore'.</description>
+        <highlighted_element>Therefore</highlighted_element>
+        <language>Markdown</language>
+        <offset>2</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/TOKENOMICS.md</file>
+        <line>150</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/TOKENOMICS.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>An apostrophe may be missing.</description>
+        <highlighted_element>patrons</highlighted_element>
+        <language>Markdown</language>
+        <offset>152</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/WINDOWS_MINER.md</file>
+        <line>23</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/WINDOWS_MINER.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Possible typo detected.</description>
+        <highlighted_element>core6f</highlighted_element>
+        <language>Markdown</language>
+        <offset>16</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/WINDOWS_MINER.md</file>
+        <line>47</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/WINDOWS_MINER.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use 'an' instead of 'a' if the following word starts with a vowel sound, e.g. 'an article', 'an
+            hour'.
+        </description>
+        <highlighted_element>a</highlighted_element>
+        <language>Markdown</language>
+        <offset>53</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/WINDOWS_MINER.md</file>
+        <line>97</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/WINDOWS_MINER.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>If a new sentence starts here, add a space and start with an uppercase letter.</description>
+        <highlighted_element>space</highlighted_element>
+        <language>Markdown</language>
+        <offset>53</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/bip32_messerene_derivations.py</file>
+        <line>314</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/bip32_messerene_derivations.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Unpaired symbol: ''' seems to be missing</description>
+        <highlighted_element>'</highlighted_element>
+        <language>Python</language>
+        <offset>62</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/chainstate.py</file>
+        <line>2</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/chainstate.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>File types are usually capitalized</description>
+        <highlighted_element>json</highlighted_element>
+        <language>Python</language>
+        <offset>7</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/cross_encoding_cipher.py</file>
+        <line>68</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/cross_encoding_cipher.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use 'an' instead of 'a' if the following word starts with a vowel sound, e.g. 'an article', 'an
+            hour'.
+        </description>
+        <highlighted_element>a</highlighted_element>
+        <language>Python</language>
+        <offset>20</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/cross_encoding_cipher.py</file>
+        <line>135</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/cross_encoding_cipher.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use 'an' instead of 'a' if the following word starts with a vowel sound, e.g. 'an article', 'an
+            hour'.
+        </description>
+        <highlighted_element>a</highlighted_element>
+        <language>Python</language>
+        <offset>45</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/cross_encoding_cipher.py</file>
+        <line>179</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/cross_encoding_cipher.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use 'an' instead of 'a' if the following word starts with a vowel sound, e.g. 'an article', 'an
+            hour'.
+        </description>
+        <highlighted_element>a</highlighted_element>
+        <language>Python</language>
+        <offset>28</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/cross_encoding_cipher.py</file>
+        <line>281</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/cross_encoding_cipher.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use 'an' instead of 'a' if the following word starts with a vowel sound, e.g. 'an article', 'an
+            hour'.
+        </description>
+        <highlighted_element>a</highlighted_element>
+        <language>Python</language>
+        <offset>29</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/demo_multi_chain_wallet.py</file>
+        <line>4</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/demo_multi_chain_wallet.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>This word is normally spelled as one.</description>
+        <highlighted_element>multi-chain</highlighted_element>
+        <language>Python</language>
+        <offset>29</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/deploy.py</file>
+        <line>6</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/deploy.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Possible typo: you repeated a word.</description>
+        <highlighted_element>config config</highlighted_element>
+        <language>Python</language>
+        <offset>23</offset>
+        <length>13</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/AUDIT.md</file>
+        <line>230</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/AUDIT.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>If a new sentence starts here, add a space and start with an uppercase letter.</description>
+        <highlighted_element>keys</highlighted_element>
+        <language>Markdown</language>
+        <offset>16</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/OMEGA.md</file>
+        <line>16</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/OMEGA.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use a comma before 'and' if it connects two independent clauses (unless they are closely connected
+            and short).
+        </description>
+        <highlighted_element>and</highlighted_element>
+        <language>Markdown</language>
+        <offset>26</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/OMEGA.md</file>
+        <line>103</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/OMEGA.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean 'who's'?</description>
+        <highlighted_element>whose</highlighted_element>
+        <language>Markdown</language>
+        <offset>2</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/POWDER.md</file>
+        <line>60</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/POWDER.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>If you mean a great quantity, use 'a lot of buys'.</description>
+        <highlighted_element>a lot buys</highlighted_element>
+        <language>Markdown</language>
+        <offset>23</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/README.md</file>
+        <line>61</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/README.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use a comma before 'and' if it connects two independent clauses (unless they are closely connected
+            and short).
+        </description>
+        <highlighted_element>and</highlighted_element>
+        <language>Markdown</language>
+        <offset>322</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/TOKENOMICS.md</file>
+        <line>150</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/TOKENOMICS.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>An apostrophe may be missing.</description>
+        <highlighted_element>patrons</highlighted_element>
+        <language>Markdown</language>
+        <offset>152</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/genealogy-bridge-spec.md</file>
+        <line>169</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/genealogy-bridge-spec.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean 'who's'?</description>
+        <highlighted_element>whose</highlighted_element>
+        <language>Markdown</language>
+        <offset>21</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/genealogy-bridge-spec.md</file>
+        <line>181</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/genealogy-bridge-spec.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>A comma may be missing after the conjunctive/linking adverb 'Therefore'.</description>
+        <highlighted_element>Therefore</highlighted_element>
+        <language>Markdown</language>
+        <offset>0</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/README.md</file>
+        <line>125</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/README.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'refuses not'?</description>
+        <highlighted_element>refuses KNOT</highlighted_element>
+        <language>Markdown</language>
+        <offset>13</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/__init__.py</file>
+        <line>19</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/__init__.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Possible typo: you repeated a word.</description>
+        <highlighted_element>CLI</highlighted_element>
+        <language>Python</language>
+        <offset>73</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/__init__.py</file>
+        <line>20</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/__init__.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Possible typo: you repeated a word.</description>
+        <highlighted_element>cli</highlighted_element>
+        <language>Python</language>
+        <offset>2</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/__init__.py</file>
+        <line>28</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/__init__.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'create not'?</description>
+        <highlighted_element>create</highlighted_element>
+        <language>Python</language>
+        <offset>64</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/__init__.py</file>
+        <line>29</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/__init__.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'create not'?</description>
+        <highlighted_element>KNOT</highlighted_element>
+        <language>Python</language>
+        <offset>4</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_ramanujan_seed.py</file>
+        <line>169</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_ramanujan_seed.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>This phrase is duplicated. You should probably use 'the overflow' only once.</description>
+        <highlighted_element>the overflow</highlighted_element>
+        <language>Python</language>
+        <offset>62</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_ramanujan_seed.py</file>
+        <line>170</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_ramanujan_seed.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>This phrase is duplicated. You should probably use 'the overflow' only once.</description>
+        <highlighted_element>The overflow</highlighted_element>
+        <language>Python</language>
+        <offset>2</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/fork_child.py</file>
+        <line>21</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/fork_child.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>File types are usually capitalized</description>
+        <highlighted_element>JSONL</highlighted_element>
+        <language>Python</language>
+        <offset>37</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>140</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Use 'an' instead of 'a' if the following word starts with a vowel sound, e.g. 'an article', 'an
+            hour'.
+        </description>
+        <highlighted_element>a</highlighted_element>
+        <language>Python</language>
+        <offset>16</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genealogy-bridge-spec.md</file>
+        <line>169</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genealogy-bridge-spec.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean 'who's'?</description>
+        <highlighted_element>whose</highlighted_element>
+        <language>Markdown</language>
+        <offset>21</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genealogy-bridge-spec.md</file>
+        <line>181</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genealogy-bridge-spec.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>A comma may be missing after the conjunctive/linking adverb 'Therefore'.</description>
+        <highlighted_element>Therefore</highlighted_element>
+        <language>Markdown</language>
+        <offset>0</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>12</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>The usual collocation for &quot;independently&quot; is &quot;of&quot;, not &quot;from&quot;. Did
+            you mean 'independently of'?
+        </description>
+        <highlighted_element>independently from</highlighted_element>
+        <language>Python</language>
+        <offset>26</offset>
+        <length>18</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genesis_block_puzzle.py</file>
+        <line>124</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genesis_block_puzzle.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Unpaired symbol: ''' seems to be missing</description>
+        <highlighted_element>'</highlighted_element>
+        <language>Python</language>
+        <offset>55</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/hooks/hook-darkdetect.py</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/hooks/hook-darkdetect.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Possible typo: you repeated a word.</description>
+        <highlighted_element>darkdetect</highlighted_element>
+        <language>Python</language>
+        <offset>23</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/hooks/hook-darkdetect.py</file>
+        <line>2</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/hooks/hook-darkdetect.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Possible typo: you repeated a word.</description>
+        <highlighted_element>darkdetect</highlighted_element>
+        <language>Python</language>
+        <offset>2</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>4</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'validates not'?</description>
+        <highlighted_element>validates KNOT</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>14</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>6</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation ''s not'?</description>
+        <highlighted_element>'s KNOT</highlighted_element>
+        <language>Python</language>
+        <offset>14</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>324</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean the negation 'Compute not'?</description>
+        <highlighted_element>Compute knot</highlighted_element>
+        <language>Python</language>
+        <offset>6</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/light-ledger/README.md</file>
+        <line>16</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/light-ledger/README.md"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>File types are usually capitalized</description>
+        <highlighted_element>JSONL</highlighted_element>
+        <language>Markdown</language>
+        <offset>37</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/prometheus.yml</file>
+        <line>4</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/prometheus.yml"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>The standard spelling is 'Prometheus'</description>
+        <highlighted_element>prometheus</highlighted_element>
+        <language>yaml</language>
+        <offset>15</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/self-serve/claim_btc.py</file>
+        <line>19</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/self-serve/claim_btc.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>The standard spelling is 'Python 3'</description>
+        <highlighted_element>python3</highlighted_element>
+        <language>Python</language>
+        <offset>2</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/bonding_curve.py</file>
+        <line>377</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/bonding_curve.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean 'for sale'?</description>
+        <highlighted_element>for sell</highlighted_element>
+        <language>Python</language>
+        <offset>40</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>19</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>The personal pronoun 'I' should be uppercase.</description>
+        <highlighted_element>i</highlighted_element>
+        <language>Python</language>
+        <offset>14</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>229</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean an apostrophe?</description>
+        <highlighted_element>x^d</highlighted_element>
+        <language>Python</language>
+        <offset>52</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>317</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Did you mean 'jg'?</description>
+        <highlighted_element>j g</highlighted_element>
+        <language>Python</language>
+        <offset>57</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_multi_chain_wallet.py</file>
+        <line>2</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_multi_chain_wallet.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>This word is normally spelled as one.</description>
+        <highlighted_element>multi-chain</highlighted_element>
+        <language>Python</language>
+        <offset>17</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/tests/test_multi_chain_wallet.py</file>
+        <line>228</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/tests/test_multi_chain_wallet.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>This word is normally spelled as one.</description>
+        <highlighted_element>multi-chain</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/eip7949Excal.ts</file>
+        <line>50</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/eip7949Excal.ts"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Unpaired symbol: ''' seems to be missing</description>
+        <highlighted_element>'</highlighted_element>
+        <language>TypeScript</language>
+        <offset>20</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>55</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>The standard spelling is 'NumPy'</description>
+        <highlighted_element>numpy</highlighted_element>
+        <language>Python</language>
+        <offset>36</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>62</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="GrazieInspection" severity="GRAMMAR_ERROR" attribute_key="GRAMMAR_ERROR">Grammar
+        </problem_class>
+        <description>Two consecutive dots</description>
+        <highlighted_element>..</highlighted_element>
+        <language>Python</language>
+        <offset>67</offset>
+        <length>2</length>
+    </problem>
+</problems>

@@ -1,0 +1,39 @@
+{
+  "type": "DR_TIME_PROOF_OF_CONTROL",
+  "version": 1,
+  "bad_block": {
+    "hash": "0000000000790ab3f22ec756ad43b6ab569abf0bddeb97c67a6f7b1470a7ec1c",
+    "height": 74638,
+    "header_hex": "01000000846e2b968653ef0a25a92c12e8884d76919907df8e3079e665686000000000005eecb6808d6de56a05211483d86fc6c7d17cda46c3388dd0c8139e4114ba8e61751e684c0e80001ccf2fae01",
+    "overflow_tx": "1d5e512a9723cbef373b970eb52f1e9598ad67e7408077a82fdac194b65333c9",
+    "overflow_amount": "184467440737.09551616 BTC",
+    "timestamp": 1281891957,
+    "date": "2010-08-15T12:05:57"
+  },
+  "trifold": {
+    "root": "7083fbebd6bfbd5f82fd40827cf36bc30da81524914011e69488b5a63e7bfe55",
+    "leaf_index": 0,
+    "signature_valid": true,
+    "bit_flip_resistant": true
+  },
+  "ramanujan": {
+    "prime": 691,
+    "tau_28": 24647168,
+    "sigma_11_28": 8297561014164632,
+    "note": "tau(n) = sigma_11(n) mod 691 for certain n (Ramanujan congruence)"
+  },
+  "lineage": {
+    "genesis": "Bitcoin genesis header",
+    "fork_25344": "Dr. Time, root 65ef9c66...",
+    "fork_25351": "PQ-CHAIN, root fc4a1de9...",
+    "fork_43750": "Dr. Time overflow, root 7083fbeb..."
+  },
+  "scope": {
+    "is_satoshi_signing": false,
+    "is_proof_of_control": true,
+    "is_claim_on_coins": false,
+    "is_new_hardness": false,
+    "security": "SHA-256 preimage resistance only",
+    "what_it_is": "Canonical BIP proof of control: descendant chain countersigning the strangest block in Bitcoin's history"
+  }
+}

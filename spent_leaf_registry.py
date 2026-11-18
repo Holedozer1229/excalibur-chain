@@ -1,71 +1,42 @@
-"""Spent-leaf registry for quantum-safe (Trifold / PQH) spends.
+"""spent_leaf_registry.py — Persistent spent-leaf registry for Q-Day wallet safety.
 
-The hole this closes: a one-time leaf is safe only if it is used once.
-A wallet counter alone does not close it — restoring an old wallet
-backup resets the counter, and a second wallet holding the same seed
-never saw the first spend at all. The chain itself is therefore the
-authority: a (root, index) pair that appears in a confirmed block is
-spent, everywhere, forever, no matter which wallet copy signs next.
+Prevents Trifold leaf reuse by recording (root, index) pairs before any
+signature is produced. The registry is independent of wallet files, so
+restoring a wallet backup never resets it.
 
-Design, in one paragraph:
-- The registry is a set of (root, index) pairs, keyed by root hex +
-  index, with a first-spend reference (txid, height) for every entry.
-- It lives in the chain data directory, NOT in any wallet file, so
-  restoring a wallet backup never resets it. ChainState rebuilds it
-  from the confirmed chain on load and updates it on every new best
-  block, so the file on disk is a cache of the chain, not a second
-  source of truth that can drift from it.
-- The wallet checks it BEFORE producing a signature and records the
-  pair BEFORE the signature is returned, so a crash between signing
-  and recording cannot reuse a leaf. A refused pair is never silently
-  skipped for the next leaf — refusal is explicit, with the first-spend
-  reference, and the caller must decide what to do.
-- Validation checks it too: a transaction whose witness reuses a pair
-  already spent on the chain, in the mempool, or earlier in the same
-  block is rejected, even if it spends a different UTXO — the pair, not
-  the UTXO, is the one-time unit.
-
-Pure stdlib. No network. No keys are stored here — roots are public
-commitments already revealed by their first spend.
+File format: JSON lines (one record per line) for crash safety.
+Each record: {"root": "<hex>", "index": <int>, "txid": "<hex>|null",
+              "height": <int>|null}
 """
 import json
 import os
+import sys
+from file_locks import exclusive_file_lock, fsync_directory
 
-from txpq import decode_witness
-
-
-def pair_key(root: bytes, index: int) -> str:
-    return f"{root.hex()}:{int(index)}"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def extract_pairs(raw_tx: bytes):
-    """All (root, index) pairs revealed by a transaction's witnesses.
-
-    Only PQH witnesses decode; PKH (98 bytes), P2PK (66 bytes), OPEN
-    (empty) and coinbase scriptSigs do not, and are skipped. A malformed
-    witness is skipped here — validation elsewhere rejects it on its
-    own grounds; this function never turns a malformed spend into a
-    spent pair.
-    """
+    """Return one-time Trifold (root, index) pairs revealed by a tx."""
+    from txpq import decode_witness
     from txscript import parse_tx
+
     try:
-        t = parse_tx(raw_tx)
+        tx = parse_tx(raw_tx)
     except Exception:
         return []
+
     pairs = []
-    for vin in t["vin"]:
+    for vin in tx["vin"]:
         script = vin["script"]
-        if len(script) < 100:  # PQH witnesses are ~25 KB; nothing else is
+        if len(script) < 100:
             continue
         try:
             root, sig = decode_witness(script)
         except Exception:
-            # QHTLC witnesses carry a mode byte before the Trifold
-            # witness; a leaf spent there is one-time too, and must
-            # be recorded by chain rebuilds exactly like a PQH leaf.
             try:
                 from txscript import parse_qhtlc_witness
-                _mode, root, sig, _secret, _desc = \
+                _mode, root, sig, _secret, _descriptor = \
                     parse_qhtlc_witness(script)
             except Exception:
                 continue
@@ -74,108 +45,157 @@ def extract_pairs(raw_tx: bytes):
 
 
 def extract_pairs_from_txs(txs):
-    out = []
-    for raw in txs:
-        out.extend(extract_pairs(raw))
-    return out
+    return [pair for raw_tx in txs for pair in extract_pairs(raw_tx)]
+
+
+def _registry_path() -> str:
+    """Return the path to the spent-leaf registry file."""
+    workspace = os.environ.get(
+        "EXCAL_WORKSPACE",
+        os.path.join(os.path.expanduser("~"), "workspace")
+    )
+    return os.path.join(workspace, "spent_leaves.jsonl")
 
 
 class SpentLeafRegistry:
-    """Persistent (root, index) -> first-spend reference map."""
+    """Thread-safe spent-leaf registry backed by a JSONL file."""
 
-    def __init__(self, path):
-        self.path = path
-        self.entries = {}  # pair_key -> {"txid": hex, "height": int|None}
-        self.load()
+    def __init__(self, path: str):
+        self.path = os.path.normcase(os.path.abspath(path))
+        self._cache: dict[tuple[str, int], dict] = {}
+        self._load()
 
-    def load(self):
-        try:
-            with open(self.path) as f:
-                data = json.load(f)
-        except (OSError, ValueError):
-            self.entries = {}
-            return
-        if isinstance(data, dict):
-            self.entries = {str(k): v for k, v in data.items()
-                            if isinstance(v, dict)}
-        else:
-            self.entries = {}
+    def _load(self):
+        """Load existing records from disk into the in-memory cache."""
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
 
-    def save(self):
-        tmp = self.path + ".tmp"
-        os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
-        with open(tmp, "w") as f:
-            json.dump(self.entries, f, sort_keys=True)
-        os.replace(tmp, self.path)
+    def _refresh_locked(self):
+        """Reload under the process lock; malformed history fails closed."""
+        cache = {}
+        if os.path.exists(self.path):
+            with open(self.path, "r", encoding="utf-8") as f:
+                for line_number, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        record = json.loads(line)
+                        root = record["root"]
+                        index = record["index"]
+                        if (not isinstance(root, str) or len(root) != 64
+                                or not isinstance(index, int)
+                                or isinstance(index, bool) or index < 0):
+                            raise ValueError("invalid root or index")
+                        decoded_root = bytes.fromhex(root)
+                        if len(decoded_root) != 32:
+                            raise ValueError("root must decode to 32 bytes")
+                        root = decoded_root.hex()
+                    except (json.JSONDecodeError, KeyError, TypeError,
+                            ValueError) as exc:
+                        raise ValueError(
+                            f"corrupt spent-leaf registry at line "
+                            f"{line_number}: {exc}") from exc
+                    record["root"] = root
+                    cache.setdefault((root, index), record)
+        self._cache = cache
 
     def is_spent(self, root: bytes, index: int) -> bool:
-        return pair_key(root, index) in self.entries
+        """Check whether (root, index) is already recorded as spent."""
+        self._validate_pair(root, index)
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+            return (root.hex(), index) in self._cache
 
-    def first_spend(self, root: bytes, index: int):
-        return self.entries.get(pair_key(root, index))
-
-    def record(self, root: bytes, index: int, txid=None, height=None):
-        """Record a pair. Raises RuntimeError if already spent, with the
-        first-spend reference — never overwrites, never silently proceeds."""
-        key = pair_key(root, index)
-        if key in self.entries:
-            first = self.entries[key]
-            raise RuntimeError(
-                f"spent leaf refused: root={root.hex()} index={index} "
-                f"already spent in tx {first.get('txid')} "
-                f"at height {first.get('height')}")
-        self.entries[key] = {"txid": txid, "height": height}
-        self.save()
-        return True
-
-    def record_many(self, pairs, txid=None, height=None):
-        """Record several pairs atomically as a set: if any is spent,
-        none are recorded. Returns the list of recorded pair keys."""
-        for root, index in pairs:
-            if self.is_spent(root, index):
-                first = self.first_spend(root, index)
-                raise RuntimeError(
-                    f"spent leaf refused: root={root.hex()} index={index} "
-                    f"already spent in tx {first.get('txid')} "
-                    f"at height {first.get('height')}")
-        for root, index in pairs:
-            self.entries[pair_key(root, index)] = {"txid": txid,
-                                                   "height": height}
-        self.save()
-        return [pair_key(r, i) for r, i in pairs]
-
-    def replace_with(self, pairs_with_refs):
-        """Replace the whole set (chain rebuild / reorg). pairs_with_refs
-        is a dict pair_key -> reference. Persists immediately."""
-        self.entries = dict(pairs_with_refs)
-        self.save()
+    def first_spend(self, root: bytes, index: int) -> dict | None:
+        """Return the first spend record for (root, index), or None."""
+        self._validate_pair(root, index)
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+            return self._cache.get((root.hex(), index))
 
     def as_set(self):
-        """Set of (root_bytes, index) for validation."""
-        out = set()
-        for key in self.entries:
-            try:
-                root_hex, idx = key.rsplit(":", 1)
-                out.add((bytes.fromhex(root_hex), int(idx)))
-            except (ValueError, TypeError):
-                continue
-        return out
+        """Snapshot all reserved pairs in validate_tx's byte-tuple format."""
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+            return {(bytes.fromhex(root), index)
+                    for root, index in self._cache}
 
-    def __len__(self):
-        return len(self.entries)
+    @staticmethod
+    def _validate_pair(root, index):
+        if not isinstance(root, bytes) or len(root) != 32:
+            raise ValueError("Trifold root must be 32 bytes")
+        if not isinstance(index, int) or isinstance(index, bool) or index < 0:
+            raise ValueError("Trifold leaf index must be a non-negative integer")
 
-    def __contains__(self, pair):
-        root, index = pair
-        return self.is_spent(root, index)
+    def reserve(self, root: bytes, index: int, txid: str | None = None,
+                height: int | None = None) -> bool:
+        """Atomically reserve a leaf across threads and wallet processes.
+
+        Returns False when another operation already reserved this pair.
+        A corrupt registry or an I/O failure raises, so callers never sign
+        when they cannot establish that the leaf is fresh.
+        """
+        self._validate_pair(root, index)
+        key = (root.hex(), index)
+        with exclusive_file_lock(self.path + ".lock"):
+            self._refresh_locked()
+            if key in self._cache:
+                return False
+            record = {"root": key[0], "index": index,
+                      "txid": txid, "height": height}
+            directory = os.path.dirname(os.path.abspath(self.path))
+            os.makedirs(directory, exist_ok=True)
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            fsync_directory(directory)
+            self._cache[key] = record
+            return True
+
+    def record(self, root: bytes, index: int, txid: str | None = None,
+               height: int | None = None):
+        """Idempotently record a pair; use reserve() when signing."""
+        self.reserve(root, index, txid=txid, height=height)
 
 
-def default_registry_path():
-    """Chain-data location for the live fork, independent of any wallet
-    file. An explicit path always wins over this default."""
-    here = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(here, "chaindata_fork",
-                        "spent_pqh_registry.json")
+def load_registry(path: str | None = None) -> SpentLeafRegistry:
+    """Load or create the spent-leaf registry.
+
+    Args:
+        path: Optional custom path for tests. Defaults to the
+              workspace-based registry file.
+
+    Returns:
+        A SpentLeafRegistry instance with the in-memory cache loaded.
+    """
+    if path is None:
+        path = _registry_path()
+    return SpentLeafRegistry(path)
 
 
-def load_registry(path=None):
-    return SpentLeafRegistry(path or default_registry_path())
+# Quick self-test when run directly.
+if __name__ == "__main__":
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl",
+                                     delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        reg = SpentLeafRegistry(tmp_path)
+        root = b"\x00" * 32
+        assert not reg.is_spent(root, 0)
+        reg.record(root, 0, txid="abc", height=100)
+        assert reg.is_spent(root, 1) is False  # Different index.
+        assert reg.is_spent(root, 0)
+        first = reg.first_spend(root, 0)
+        assert first["txid"] == "abc"
+        assert first["height"] == 100
+        # Idempotent record.
+        reg.record(root, 0, txid="def", height=200)
+        assert reg.first_spend(root, 0)["txid"] == "abc"  # First wins.
+        print("spent_leaf_registry self-test: PASSED")
+    finally:
+        os.unlink(tmp_path)

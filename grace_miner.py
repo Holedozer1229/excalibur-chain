@@ -20,8 +20,13 @@ Read-only: nothing is mined or submitted here.
 """
 import json, os, sys
 # genealogy_verify.py lives next to this script; the script's own directory
-# is already on sys.path when run directly.
+# is already on sys.path when run directly. Keep the VM path only as a
+# fallback for checkouts where the two files were separated.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Fallback workspace for checkouts where files are separated
+_ws = os.environ.get("EXCAL_WORKSPACE", "")
+if _ws:
+    sys.path.insert(0, _ws)
 import genealogy_verify as gv
 
 def load_chain():

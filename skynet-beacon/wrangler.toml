@@ -1,0 +1,23 @@
+# SkyNet Temporal Node Beacon — Cloudflare Worker Configuration
+#
+# Deploy: npx wrangler deploy
+# Preview: npx wrangler dev
+
+name = "skynet-beacon"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Workers KV namespace for peer storage
+[[kv_namespaces]]
+binding = "SKYNET_KV"
+id = "YOUR_KV_NAMESPACE_ID"  # Replace after creating: wrangler kv:namespace create SKYNET_KV
+preview_id = "YOUR_PREVIEW_KV_NAMESPACE_ID"
+
+# Optional: custom domain
+# routes = [
+#   { pattern = "bootstrap.sky-net.excal/*", zone_name = "sky-net.excal" }
+# ]
+
+# Cron trigger for peer cleanup (optional, requires paid plan)
+# [triggers]
+# crons = ["0 * * * *"]

@@ -64,10 +64,11 @@ class FrostgateError(Exception):
 
 
 def find_operator_cli():
-    """Path to the built aethergate-operator binary, or None.
+    """Path to the built aethergate-operator binary, or the Python fallback.
 
     Frozen (PyInstaller one-file) builds carry the binary inside the
     bundle (_MEIPASS) — check there first, then the workspace paths.
+    Falls back to the pure Python frostgate_cli.py if no Rust binary found.
     """
     candidates = []
     meipass = getattr(sys, "_MEIPASS", None)
@@ -86,6 +87,10 @@ def find_operator_cli():
     for c in candidates:
         if os.path.isfile(c) and os.access(c, os.X_OK):
             return c
+    # Fallback to pure Python implementation
+    python_cli = os.path.join(WORKSPACE, "frostgate_cli.py")
+    if os.path.isfile(python_cli):
+        return python_cli
     return None
 
 
@@ -95,10 +100,16 @@ def _run_cli(args, timeout=180):
         raise FrostgateError(
             "Frostgate operator binary not built. Build it with:\n"
             "  cd ~/workspace/aethergate && cargo build --release "
-            "-p aethergate-operator")
+            "-p aethergate-operator\n"
+            "Or use the Python fallback: python frostgate_cli.py")
     try:
-        proc = subprocess.run([cli] + args, capture_output=True,
-                              timeout=timeout)
+        # Python CLI needs `python` prefix; Rust binary runs directly
+        if cli.endswith('.py'):
+            proc = subprocess.run([sys.executable, cli] + args,
+                                  capture_output=True, timeout=timeout)
+        else:
+            proc = subprocess.run([cli] + args, capture_output=True,
+                                  timeout=timeout)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise FrostgateError(f"could not run Frostgate CLI: {e}")
     out = proc.stdout.decode(errors="replace")

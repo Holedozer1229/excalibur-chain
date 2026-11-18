@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/skynet-p2p.js</file>
+        <line>372</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/skynet-p2p.js"/>
+        <problem_class id="JSDeprecatedSymbols" severity="WEAK WARNING" attribute_key="DEPRECATED_ATTRIBUTES">Deprecated
+            symbol used
+        </problem_class>
+        <description>Deprecated symbol used, consult docs for better alternative</description>
+        <highlighted_element>on</highlighted_element>
+        <language>JavaScript</language>
+        <offset>12</offset>
+        <length>2</length>
+    </problem>
+</problems>

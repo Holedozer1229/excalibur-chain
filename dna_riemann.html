@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNA as Riemann Zeta Encoding</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a2e 0%, #1a0a3e 50%, #0a2a3e 100%);
+            color: #e0e0ff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00ff88, #00aaff, #ff00aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 1.2em;
+            color: #8888cc;
+            margin-bottom: 30px;
+        }
+        .dna-display {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 1.1em;
+            word-wrap: break-word;
+            letter-spacing: 2px;
+        }
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            color: #00aaff;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333366;
+            padding-bottom: 10px;
+        }
+        canvas {
+            width: 100%;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background: linear-gradient(90deg, #00ff88, #00aaff);
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+        .melody-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .note-card {
+            background: rgba(0, 170, 255, 0.1);
+            border: 1px solid #00aaff;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .note-card .codon { font-size: 1.3em; font-weight: bold; color: #00ff88; }
+        .note-card .amino { color: #ffaa00; }
+        .note-card .freq { font-size: 0.9em; color: #8888cc; }
+        .zeros-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .zero-badge {
+            background: rgba(255, 0, 170, 0.2);
+            border: 1px solid #ff00aa;
+            border-radius: 15px;
+            padding: 5px 12px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 DNA as Riemann Zeta Encoding</h1>
+        <p class="subtitle">The genetic code mapped to the critical line through Riemann zeros</p>
+
+        <div class="dna-display">
+            <strong>DNA Sequence:</strong><br>
+            ATGGCCTACGCTTACGTTACGACGCTGCCGATGTGCGCTCTTGCAGCCTGAGCTGA
+        </div>
+
+        <div class="controls">
+            <button onclick="playMelody()">▶ Play Melody</button>
+            <button onclick="stopMelody()">⏹ Stop</button>
+            <button onclick="visualizeZeros()">🔄 Visualize Zeros</button>
+        </div>
+
+        <div class="section">
+            <h2>🎵 DNA Melody (Riemann Zero Frequencies)</h2>
+            <canvas id="melodyCanvas" height="300"></canvas>
+            <div class="melody-grid" id="melodyGrid"></div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Riemann Zeros (Resonant Frequencies)</h2>
+            <canvas id="zerosCanvas" height="200"></canvas>
+            <div class="zeros-display" id="zerosDisplay"></div>
+        </div>
+
+        <div class="section">
+            <h2>🧬 Codon → Hexagram Mapping</h2>
+            <p>The 64 codons map to the 64 hexagrams of the Caduceus state space.</p>
+            <canvas id="codonCanvas" height="250"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const melody = [{"codon": "ATG", "amino_acid": "M", "riemann_zero": 37.59042263168464, "midi_note": 65, "frequency_hz": 349.2282314330039, "duration_beats": 2.0, "velocity": 127, "instrument": "piano", "mobius_value": 1}, {"codon": "GCC", "amino_acid": "A", "riemann_zero": 48.00379694193607, "midi_note": 72, "frequency_hz": 523.2511306011972, "duration_beats": 0.5, "velocity": 64, "instrument": "piano", "mobius_value": -1}, {"codon": "TAC", "amino_acid": "Y", "riemann_zero": 49.770679919202756, "midi_note": 73, "frequency_hz": 554.3652619537442, "duration_beats": 0.5, "velocity": 64, "instrument": "piano", "mobius_value": -1}, {"codon": "GCT", "amino_acid": "A", "riemann_zero": 43.32383684696001, "midi_note": 69, "frequency_hz": 440.0, "duration_beats": 1.0, "velocity": 100, "instrument": "piano", "mobius_value": 0}, {"codon": "TAC", "amino_acid": "Y", "riemann_zero": 49.770679919202756, "midi_note": 73, "frequency_hz": 554.3652619537442, "duration_beats": 0.5, "velocity": 64, "instrument": "piano", "mobius_value": -1}, {"codon": "GTT", "amino_acid": "V", "riemann_zero": 30.428533183241452, "midi_note": 60, "frequency_hz": 261.6255653005986, "duration_beats": 2.0, "velocity": 127, "instrument": "piano", "mobius_value": 1}, {"codon": "ACG", "amino_acid": "T", "riemann_zero": 49.770679919202756, "midi_note": 73, "frequency_hz": 554.3652619537442, "duration_beats": 0.5, "velocity": 64, "instrument": "flute", "mobius_value": -1}, {"codon": "ACG", "amino_acid": "T", "riemann_zero": 49.770679919202756, "midi_note": 73, "frequency_hz": 554.3652619537442, "duration_beats": 1.0, "velocity": 100, "instrument": "flute", "mobius_value": 0}, {"codon": "CTG", "amino_acid": "L", "riemann_zero": 32.93789300672089, "midi_note": 61, "frequency_hz": 277.1826309768721, "duration_beats": 1.0, "velocity": 100, "instrument": "piano", "mobius_value": 0}, {"codon": "CCG", "amino_acid": "P", "riemann_zero": 48.00379694193607, "midi_note": 72, "frequency_hz": 523.2511306011972, "duration_beats": 2.0, "velocity": 127, "instrument": "piano", "mobius_value": 1}, {"codon": "ATG", "amino_acid": "M", "riemann_zero": 37.59042263168464, "midi_note": 65, "frequency_hz": 349.2282314330039, "duration_beats": 0.5, "velocity": 64, "instrument": "piano", "mobius_value": -1}, {"codon": "TGC", "amino_acid": "C", "riemann_zero": 60.83436015832379, "midi_note": 81, "frequency_hz": 880.0, "duration_beats": 1.0, "velocity": 100, "instrument": "piano", "mobius_value": 0}, {"codon": "GCT", "amino_acid": "A", "riemann_zero": 43.32383684696001, "midi_note": 69, "frequency_hz": 440.0, "duration_beats": 0.5, "velocity": 64, "instrument": "piano", "mobius_value": -1}, {"codon": "CTT", "amino_acid": "L", "riemann_zero": 21.02217530180239, "midi_note": 53, "frequency_hz": 174.61411571650194, "duration_beats": 2.0, "velocity": 127, "instrument": "piano", "mobius_value": 1}, {"codon": "GCA", "amino_acid": "A", "riemann_zero": 49.770679919202756, "midi_note": 73, "frequency_hz": 554.3652619537442, "duration_beats": 2.0, "velocity": 127, "instrument": "piano", "mobius_value": 1}, {"codon": "GCC", "amino_acid": "A", "riemann_zero": 48.00379694193607, "midi_note": 72, "frequency_hz": 523.2511306011972, "duration_beats": 1.0, "velocity": 100, "instrument": "piano", "mobius_value": 0}, {"codon": "TGA", "amino_acid": "*", "riemann_zero": 65.11543571555414, "midi_note": 84, "frequency_hz": 1046.5022612023945, "duration_beats": 0.5, "velocity": 64, "instrument": "flute", "mobius_value": -1}, {"codon": "GCT", "amino_acid": "A", "riemann_zero": 43.32383684696001, "midi_note": 69, "frequency_hz": 440.0, "duration_beats": 1.0, "velocity": 100, "instrument": "piano", "mobius_value": 0}];
+        const zeros = [14.131649847540546, 21.02217530180239, 25.006979126884033, 30.428533183241452, 32.93789300672089, 37.59042263168464, 40.91795150313445, 43.32383684696001, 48.00379694193607, 49.770679919202756, 52.97251349149064, 56.44445316166755, 59.350256152247155, 60.83436015832379, 65.11543571555414];
+        let audioCtx = null;
+        let oscillators = [];
+
+        function playMelody() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            melody.forEach((note, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.frequency.value = note.frequency_hz;
+                osc.type = 'sine';
+                gain.gain.value = note.velocity / 127 * 0.3;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const startTime = audioCtx.currentTime + i * note.duration_beats * 0.3;
+                osc.start(startTime);
+                osc.stop(startTime + note.duration_beats * 0.3);
+                oscillators.push(osc);
+            });
+        }
+
+        function stopMelody() {
+            oscillators.forEach(osc => { try { osc.stop(); } catch(e) {} });
+            oscillators = [];
+        }
+
+        function drawMelody() {
+            const canvas = document.getElementById('melodyCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 300;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw frequency spectrum
+            const maxFreq = Math.max(...melody.map(n => n.frequency_hz));
+            const minFreq = Math.min(...melody.map(n => n.frequency_hz));
+            const range = maxFreq - minFreq || 1;
+
+            const barWidth = canvas.width / melody.length;
+
+            melody.forEach((note, i) => {
+                const x = i * barWidth;
+                const normalizedFreq = (note.frequency_hz - minFreq) / range;
+                const barHeight = normalizedFreq * (canvas.height - 40);
+
+                // Color by hydrophobicity
+                const color = note.instrument === 'piano' ? '#00ff88' : '#00aaff';
+                ctx.fillStyle = color;
+                ctx.fillRect(x, canvas.height - barHeight - 20, barWidth - 2, barHeight);
+
+                // Label
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '10px monospace';
+                ctx.fillText(note.codon, x + 2, canvas.height - 5);
+            });
+        }
+
+        function drawZeros() {
+            const canvas = document.getElementById('zerosCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 200;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Z-function plot
+            ctx.strokeStyle = '#ff00aa';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            const minT = 14;
+            const maxT = 66;
+            const steps = 500;
+
+            for (let i = 0; i <= steps; i++) {
+                const t = minT + (maxT - minT) * i / steps;
+                const x = (i / steps) * canvas.width;
+
+                // Approximate Z-function visualization
+                let z = 0;
+                for (let n = 1; n <= 50; n++) {
+                    z += Math.cos(t * Math.log(n) - theta(t)) / Math.sqrt(n);
+                }
+                z *= 2;
+                const y = canvas.height / 2 + z * 20;
+
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Mark zeros
+            zeros.forEach((zero, i) => {
+                const x = ((zero - minT) / (maxT - minT)) * canvas.width;
+                ctx.fillStyle = '#00ff88';
+                ctx.beginPath();
+                ctx.arc(x, canvas.height / 2, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+
+        function theta(t) {
+            // Approximate Riemann-Siegel theta
+            return (t / 2) * Math.log(t / (2 * Math.PI)) - t / 2 - Math.PI / 8;
+        }
+
+        function visualizeZeros() {
+            drawZeros();
+        }
+
+        // Populate melody grid
+        const grid = document.getElementById('melodyGrid');
+        melody.forEach(note => {
+            const card = document.createElement('div');
+            card.className = 'note-card';
+            card.innerHTML = `
+                <div class="codon">${note.codon}</div>
+                <div class="amino">${note.amino_acid}</div>
+                <div class="freq">${note.frequency_hz.toFixed(1)} Hz</div>
+                <div style="font-size:0.8em;color:#8888cc">γ≈${note.riemann_zero.toFixed(2)}</div>
+            `;
+            grid.appendChild(card);
+        });
+
+        // Populate zeros display
+        const zerosDisplay = document.getElementById('zerosDisplay');
+        zeros.forEach((zero, idx) => {
+            const badge = document.createElement('span');
+            badge.className = 'zero-badge';
+            badge.textContent = 'γ_' + (idx+1) + ' = ' + zero.toFixed(2);
+            zerosDisplay.appendChild(badge);
+        });
+
+        // Draw codon-hexagram mapping
+        function drawCodonMap() {
+            const canvas = document.getElementById('codonCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 250;
+
+            const codons = Object.keys({
+                TTT: 'F', TTC: 'F', TTA: 'L', TTG: 'L',
+                TCT: 'S', TCC: 'S', TCA: 'S', TCG: 'S',
+                TAT: 'Y', TAC: 'Y', TAA: '*', TAG: '*',
+                TGT: 'C', TGC: 'C', TGA: '*', TGG: 'W',
+                CTT: 'L', CTC: 'L', CTA: 'L', CTG: 'L',
+                CCT: 'P', CCC: 'P', CCA: 'P', CCG: 'P',
+                CAT: 'H', CAC: 'H', CAA: 'Q', CAG: 'Q',
+                CGT: 'R', CGC: 'R', CGA: 'R', CGG: 'R',
+                ATT: 'I', ATC: 'I', ATA: 'I', ATG: 'M',
+                ACT: 'T', ACC: 'T', ACA: 'T', ACG: 'T',
+                AAT: 'N', AAC: 'N', AAA: 'K', AAG: 'K',
+                AGT: 'S', AGC: 'S', AGA: 'R', AGG: 'R',
+                GTT: 'V', GTC: 'V', GTA: 'V', GTG: 'V',
+                GCT: 'A', GCC: 'A', GCA: 'A', GCG: 'A',
+                GAT: 'D', GAC: 'D', GAA: 'E', GAG: 'E',
+                GGT: 'G', GGC: 'G', GGA: 'G', GGG: 'G',
+            });
+
+            const cellW = canvas.width / 16;
+            const cellH = canvas.height / 4;
+
+            codons.forEach((codon, i) => {
+                const row = Math.floor(i / 16);
+                const col = i % 16;
+                const x = col * cellW;
+                const y = row * cellH;
+
+                const amino = ${Object.freeze({
+                    TTT: 'F', TTC: 'F', TTA: 'L', TTG: 'L',
+                    TCT: 'S', TCC: 'S', TCA: 'S', TCG: 'S',
+                    TAT: 'Y', TAC: 'Y', TAA: '*', TAG: '*',
+                    TGT: 'C', TGC: 'C', TGA: '*', TGG: 'W',
+                    CTT: 'L', CTC: 'L', CTA: 'L', CTG: 'L',
+                    CCT: 'P', CCC: 'P', CCA: 'P', CCG: 'P',
+                    CAT: 'H', CAC: 'H', CAA: 'Q', CAG: 'Q',
+                    CGT: 'R', CGC: 'R', CGA: 'R', CGG: 'R',
+                    ATT: 'I', ATC: 'I', ATA: 'I', ATG: 'M',
+                    ACT: 'T', ACC: 'T', ACA: 'T', ACG: 'T',
+                    AAT: 'N', AAC: 'N', AAA: 'K', AAG: 'K',
+                    AGT: 'S', AGC: 'S', AGA: 'R', AGG: 'R',
+                    GTT: 'V', GTC: 'V', GTA: 'V', GTG: 'V',
+                    GCT: 'A', GCC: 'A', GCA: 'A', GCG: 'A',
+                    GAT: 'D', GAC: 'D', GAA: 'E', GAG: 'E',
+                    GGT: 'G', GGC: 'G', GGA: 'G', GGG: 'G',
+                })}[codon] || '?';
+
+                ctx.fillStyle = amino === '*' ? '#ff0000' : (i % 2 === 0 ? '#00ff88' : '#00aaff');
+                ctx.globalAlpha = 0.3;
+                ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+                ctx.globalAlpha = 1.0;
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(codon, x + cellW / 2, y + cellH / 2 - 5);
+                ctx.font = 'bold 12px monospace';
+                ctx.fillText(amino, x + cellW / 2, y + cellH / 2 + 10);
+            });
+        }
+
+        // Initialize
+        drawMelody();
+        drawZeros();
+        drawCodonMap();
+    </script>
+</body>
+</html>

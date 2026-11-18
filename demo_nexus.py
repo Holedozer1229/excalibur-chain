@@ -13,16 +13,19 @@ import sys
 import os
 import numpy as np
 
-# Fix Windows console encoding
+# Fix Windows console encoding (safe for PyInstaller windowed mode)
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    try:
+        if sys.stdout is not None:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sphinx_os.nexus import (
     NexusOrchestrator,
-    NexusConfig,
     QuantumSpacetimeFabric,
     ConsciousConsensusEngine,
     HolographicP2PLayer,
@@ -96,7 +99,7 @@ def demo_individual_components():
         p2p.connect_peer(f"peer_{i}")
     
     # Send a message
-    msg = p2p.send_message("peer_0", "block_proposal", {
+    p2p.send_message("peer_0", "block_proposal", {
         "height": 1,
         "hash": "abc123",
     })
@@ -169,7 +172,7 @@ def demo_nexus_orchestrator():
     # Run unified steps
     print("\n▶ Running unified Nexus steps...")
     for step in range(10):
-        state = nexus.step()
+        nexus.step()
     
     print(f"   Steps completed:    10")
     print(f"   Current phase:      {nexus.state.phase.value}")

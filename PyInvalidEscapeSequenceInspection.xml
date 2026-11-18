@@ -1,0 +1,16 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>16</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyInvalidEscapeSequenceInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">
+            Invalid escape sequence
+        </problem_class>
+        <description>Invalid escape sequence '\ℍ'</description>
+        <highlighted_element>\ℍ</highlighted_element>
+        <language>Python</language>
+        <offset>48</offset>
+        <length>2</length>
+    </problem>
+</problems>

@@ -1,0 +1,26 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/public/electron.js</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/public/electron.js"/>
+        <problem_class id="Eslint" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">ESLint</problem_class>
+        <description>ESLint: No results for electron.js after 20 sec</description>
+        <highlighted_element>const</highlighted_element>
+        <language>JavaScript</language>
+        <offset>0</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/gui/public/index.html</file>
+        <line>1</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/gui/public/index.html"/>
+        <problem_class id="Eslint" severity="ERROR" attribute_key="WRONG_REFERENCES_ATTRIBUTES">ESLint</problem_class>
+        <description>ESLint: No results for index.html after 20 sec</description>
+        <highlighted_element>&lt;!DOCTYPE</highlighted_element>
+        <language>XML</language>
+        <offset>0</offset>
+        <length>9</length>
+    </problem>
+</problems>

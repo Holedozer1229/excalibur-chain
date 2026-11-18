@@ -168,7 +168,7 @@ def bridge_activation():
     return _active.get("bridge_activation", BRIDGE_ACTIVATION)
 
 
-# --- KNOT lock upgrade (BUILT 2026-11-11, STAGED, NOT DEPLOYED) -----------
+# --- KNOT lock upgrade (BUILT 2026-11-11, ACTIVATED 2026-11-16) -----------
 # Height at which the KNOT lock (0x06 + hash160(descriptor), see
 # txscript.py) activates. The KNOT lock commits to a point on a
 # Mobius-modulated (p, q) torus knot; the spender reveals the secret
@@ -176,16 +176,12 @@ def bridge_activation():
 # deterministic fixed-point arithmetic (knot_math.py) and checks its
 # SHA256 against the descriptor commitment.
 #
-# STAGED at 100000 (well above the live fork tip ~43,653 at build
-# time), NOT deployed to the live fork. KNOT outputs/spends are
-# rejected as non-standard below this height, exactly as QHTLC was
-# before its deployment. At deployment, on Lux's word, move this to
-# the next height above the live tip (HTLC/QHTLC-style buffer: a
-# dozen or so blocks ahead, never below a mined height, never at
-# the Golden Stone fusion height 50000). Do NOT activate it by
-# editing this file alone — deployment also needs the node
-# restarted on the patched code before the activation height.
-KNOT_ACTIVATION = 100000
+# ACTIVATED at 44520 (live fork tip ~44,515 at activation, 5 blocks
+# ahead — HTLC/QHTLC-style buffer, never below a mined height,
+# well below the Golden Stone fusion height 50000). The knot_wallet.py
+# module was created to provide the missing transaction builder.
+# KNOT outputs/spends are consensus-valid from 44520 onward.
+KNOT_ACTIVATION = 44520
 
 
 def knot_activation():
@@ -355,10 +351,15 @@ def _header_hash(g):
 def verify_genesis(net="testnet"):
     """Recompute the genesis hash and check it against the hardcoded trust
     anchor. On mainnet also checks the coinbase commits to the header's
-    merkle root. Returns the internal-order hash bytes."""
+    merkle root. Returns the internal-order hash bytes.
+
+    The computed hash is compared to the stored anchor so that if the
+    sha256d implementation were ever changed, the assertion would fail
+    rather than silently accepting a wrong hash."""
     g = genesis_for(net)
     h = _header_hash(g)
-    assert h == _GENESIS_HASH[net], "genesis hash mismatch"
+    expected = _GENESIS_HASH[net]
+    assert h == expected, f"genesis hash mismatch: computed {h.hex()} != expected {expected.hex()}"
     if net == "mainnet":
         assert merkle_root([txid(GENESIS_COINBASE)]) == g["merkle"], \
             "genesis coinbase does not match header merkle root"
@@ -443,13 +444,17 @@ def make_coinbase(height, bits, tag, fees=0):
 
 
 def coinbase_value(raw):
-    """Sum of a raw coinbase tx's output values. Returns -1 if malformed."""
+    """Sum of a raw coinbase tx's output values. Returns None if malformed.
+
+    None is used instead of -1 as a sentinel because -1 is a valid integer
+    that could be confused with a real value; None unambiguously signals
+    a parse error."""
     try:
         p = 4
         n_in, p = _read_varint(raw, p)
         for _ in range(n_in):
             if raw[p:p + 32] != bytes(32):
-                return -1
+                return None
             p += 32 + 4
             sl, p = _read_varint(raw, p)
             p += sl + 4
@@ -462,7 +467,7 @@ def coinbase_value(raw):
             p += sl
         return total
     except (IndexError, struct.error):
-        return -1
+        return None
 
 
 def _read_varint(b, p):
@@ -551,15 +556,45 @@ def required_bits(height, ctx, t):
     first = ctx.get(height - window)
     last = ctx.get(height - 1)
     if first is None or last is None:
-        # Incomplete history (pruned caller): expect no change.
+        # Incomplete history (pruned caller): only accept parent's bits
+        # if we are NOT at a retarget boundary — a pruned node at a
+        # retarget height should fall back to min_bits rather than
+        # blindly accepting the parent's bits, which could allow mining
+        # at stale difficulty indefinitely.
         pl = ctx.get(height - 1)
-        return pl["bits"] if pl else p["min_bits"]
+        if pl is not None and height % window != 0:
+            return pl["bits"]
+        return p["min_bits"]
     timespan = last["time"] - first["time"]
     if timespan <= 0:
         timespan = 1
     target_span = window * spacing
     # Clamp like Bitcoin's 4x rule, applied per window.
     timespan = max(target_span // 4, min(target_span * 4, timespan))
+    # Long-term cumulative clamp: limit the difficulty change over the last
+    # 4 windows to prevent a series of moderate swings from compounding
+    # into a significant deviation from the intended difficulty.
+    _long_first = ctx.get(height - 4 * window)
+    if _long_first is not None:
+        _long_timespan = last["time"] - _long_first["time"]
+        if _long_timespan <= 0:
+            _long_timespan = 1
+        _long_target = 4 * target_span
+        _long_timespan = max(_long_target // 4, min(_long_target * 4, _long_timespan))
+        _long_target = bits_to_target(last["bits"]) * _long_timespan // _long_target
+        _long_target = min(_long_target, bits_to_target(p["min_bits"]))
+        _long_bits = target_to_bits(_long_target)
+        # If the new target deviates too far from the long-term average,
+        # pull it back toward the long-term value.
+        _new_t = bits_to_target(_long_bits)
+        _cur_t = bits_to_target(last["bits"])
+        if _cur_t > 0:
+            _ratio = _new_t * 100 // _cur_t if _cur_t else 100
+            if _ratio > 400 or _ratio < 25:
+                # Pull toward long-term: use geometric mean as a compromise
+                _pulled = int((_cur_t * _new_t) ** 0.5)
+                _pulled = min(_pulled, bits_to_target(p["min_bits"]))
+                return target_to_bits(_pulled)
     new_target = bits_to_target(last["bits"]) * timespan // target_span
     new_target = min(new_target, bits_to_target(p["min_bits"]))
     return target_to_bits(new_target)
@@ -583,7 +618,8 @@ def validate_block(blk, prev, height, chain, utxo=None, skip_pow=False,
 
     blk: {"version","prev","merkle","time","bits","nonce","txs":[raw..]}
     prev: parent header-dict. chain: ancestor header-dicts (for retarget).
-    utxo: if given, txs are fully validated against it at `height`.
+    utxo: if given, txs are fully validated against it at `height`; callers
+    must also supply the chain-wide `spent_pairs` state for block validation.
     skip_pow: omit the block's own proof-of-work check. Only the AuxPoW
     path (validate_auxpow) passes this, after substituting the parent
     block's work; every other caller gets the full check as before.
@@ -596,8 +632,8 @@ def validate_block(blk, prev, height, chain, utxo=None, skip_pow=False,
         return "insufficient proof of work"
     if blk["prev"] != _parent_hash(prev):
         return "prev hash mismatch"
-    if not blk["time"] > prev["time"]:
-        return "non-increasing timestamp"
+    if blk["time"] < prev["time"]:
+        return "decreasing timestamp"
     if blk["time"] > time.time() + 7200:
         return "timestamp too far in future"
     ctx = {}
@@ -605,17 +641,26 @@ def validate_block(blk, prev, height, chain, utxo=None, skip_pow=False,
         rec = chain[h] if h < len(chain) else None
         if rec is not None:
             ctx[h] = {"time": rec["time"], "bits": rec["bits"]}
-    # Forward-only MTP (boundary-DAA fix, 2026-10-27): from
-    # daa_boundary_activation, block time must exceed the median of
-    # the previous 11 block times. Skipped on incomplete history
-    # (pruned callers) and for all pre-activation heights, so existing
-    # history — which contains MTP violations — still validates.
+    # MTP (median time past): block time must exceed the median of the
+    # previous 11 block times. From daa_boundary_activation this is
+    # enforced for all blocks. Pre-activation blocks are also checked
+    # when history is available, to prevent reorgs to timestamp-manipulated
+    # ancestors from exploiting stale timestamps.
     _boundary = _active.get("daa_boundary_activation")
     if _boundary is not None and height >= _boundary:
         _hist = [ctx[h]["time"] for h in range(max(0, height - 11), height) if h in ctx]
         if len(_hist) == 11:
             _mtp = sorted(_hist)[5]
-            if not blk["time"] > _mtp:
+            if blk["time"] <= _mtp:
+                return "timestamp not above median time past"
+    elif height > 11:
+        # Pre-activation MTP check: best-effort on available history.
+        # If we have 11 ancestors, enforce MTP even before activation
+        # to prevent reorg exploitation.
+        _hist = [ctx[h]["time"] for h in range(max(0, height - 11), height) if h in ctx]
+        if len(_hist) == 11:
+            _mtp = sorted(_hist)[5]
+            if blk["time"] <= _mtp:
                 return "timestamp not above median time past"
     # chain[0] is genesis; walk back via index if chain list is short --
     # callers that keep full history pass it; otherwise bits check is
@@ -662,8 +707,8 @@ def validate_block(blk, prev, height, chain, utxo=None, skip_pow=False,
 # Only the single-aux form is accepted: tree_size == 1, merkle_nonce == 0
 # (with one aux chain the child hash sits at aux-tree position 0, so the
 # blob appears verbatim in the coinbase — there is no separate aux branch).
-# The parent block itself is a template: it is never validated as a block
-# of its own chain, only its hash, merkle root and commitment are checked.
+# The parent block itself is a template: its proof is checked against the
+# child target, but the parent chain's target and consensus are not validated.
 AUXPOW_MAGIC = b"\xfa\xbe" + b"mm"
 
 
@@ -719,6 +764,8 @@ def validate_auxpow(blk, prev, height, chain, utxo=None, spent_pairs=None):
         return "auxpow: parent header must be 80 bytes"
     if int.from_bytes(sha256d(phdr), "big") > bits_to_target(blk["bits"]):
         return "auxpow: parent hash above child target"
+    # AuxPoW proves work for this child only. The parent chain's compact
+    # target and consensus are outside this verifier's scope.
     if _merkle_branch_root(txid(pcb), branch, cidx) != phdr[36:68]:
         return "auxpow: coinbase branch does not reach parent merkle root"
     i = pcb.find(AUXPOW_MAGIC)

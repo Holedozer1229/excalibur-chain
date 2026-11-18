@@ -25,10 +25,6 @@ omega_blob() never raises: on any error it returns None and the
 producer builds a plain block. Block production never depends on the
 signer being healthy.
 """
-try:
-    import fcntl
-except ImportError:  # Windows: no fcntl; omega file locking falls back to no-op
-    fcntl = None
 import hashlib
 import json
 import os
@@ -38,6 +34,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import trifold_lockbox as tl
+from file_locks import exclusive_file_lock, fsync_directory
 
 OMEGA_DIR = os.environ.get(
     "OMEGA_DIR",
@@ -67,9 +64,12 @@ def _save_json(name, obj, mode=None):
     tmp = _path(name + ".tmp")
     with open(tmp, "w") as f:
         json.dump(obj, f)
+        f.flush()
+        os.fsync(f.fileno())
     if mode is not None:
         os.chmod(tmp, mode)
     os.replace(tmp, _path(name))
+    fsync_directory(os.path.dirname(os.path.abspath(_path(name))))
 
 
 def _ledger():
@@ -188,9 +188,7 @@ def omega_blob(parent_header):
                 blob = f.read()
             if len(blob) == BLOB_BYTES:
                 return blob
-        with open(_path("omega.lock"), "a") as lockf:
-            if fcntl is not None:  # Windows fallback: no file locking
-                fcntl.flock(lockf, fcntl.LOCK_EX)
+        with exclusive_file_lock(_path("omega.lock")):
             if os.path.exists(cache):
                 with open(cache, "rb") as f:
                     blob = f.read()
@@ -207,11 +205,12 @@ def omega_blob(parent_header):
                 _create_epoch(epoch)
                 st = _state(epoch)
             key, st = _load_key(epoch)
-            sig = key.sign(parent_header)
-            # Persist the spent leaf BEFORE the signature leaves the
-            # lock: a crash from here can burn a leaf, never reuse one.
-            st["next_index"] = sig["index"] + 1
+            idx = st["next_index"]
+            # Persist reservation before deriving any one-time secret. A
+            # crash from here burns the leaf instead of reusing it.
+            st["next_index"] = idx + 1
             _save_json(f"epoch_{epoch}.json", st, mode=0o600)
+            sig = key._sign_reserved(parent_header, idx)
             blob = MAGIC + struct.pack(">H", epoch) + _serialize(sig)
             with open(cache, "wb") as f:
                 f.write(blob)

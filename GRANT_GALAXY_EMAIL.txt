@@ -1,0 +1,77 @@
+Subject: Post-Quantum Bitcoin Fork: Hash-Based Signature Implementation for Q-Day Migration
+
+To: quantum@galaxy.com
+
+---
+
+Dear Galaxy Bitcoin Quantum Readiness Initiative Team,
+
+I am submitting a proposal for the Developer Grant Program: a working Bitcoin fork with hash-based post-quantum signatures (Lamport One-Time Signatures with ternary Merkle trees) integrated into the transaction layer, wallet, and consensus.
+
+## Project: AetherionEXCAL Post-Quantum Bitcoin Fork
+
+**Repository:** [GitHub link — to be provided]
+
+**What we've built:**
+
+A complete post-quantum signature implementation running on a live Bitcoin fork (starting at block 968,698):
+
+1. **Trifold Lockbox** (`trifold_lockbox.py`): Hash-based one-time signatures (Lamport OTS) authenticated by ternary Merkle trees (height 6, 729 signatures per key). Security based solely on SHA-256 collision resistance — no number-theoretic assumptions.
+
+2. **Transaction Layer** (`txpq.py`): Bitcoin witness encoding/decoding for post-quantum signatures. Full compatibility with Bitcoin script verification via the witness stack.
+
+3. **Wallet Integration** (`excalibur_wallet/`): Post-quantum hash addresses (PQH) with BIP39 mnemonic derivation and migration path from ECDSA.
+
+4. **Spent-Leaf Registry** (`spent_leaf_registry.py`): Key reuse prevention with persistent state tracking across wallet restores.
+
+5. **Light Ledger** (`lightledger.py`): Checkpoint attestation with post-quantum signatures for lightweight clients.
+
+**Signature scheme comparison:**
+
+| Scheme | Type | Sig Size | Quantum Safe | NIST Status |
+|--------|------|----------|--------------|-------------|
+| ECDSA (secp256k1) | Elliptic curve | 64 bytes | ✗ NO | Legacy |
+| ML-DSA-65 | Lattice | 2.4 KB | ✓ YES | FIPS 204 |
+| SLH-DSA/SHAKE-256s | Hash-based | 22 KB | ✓ YES | FIPS 205 |
+| Trifold (this project) | Hash-based | ~25 KB | ✓ YES | Research |
+
+**Why hash-based?** Hash-based signatures are the most conservative post-quantum choice: minimal assumptions (hash collision resistance only), 47 years of cryptanalysis since Merkle's 1979 proposal, and Bitcoin-native (SHA-256 is already trusted and hardware-accelerated).
+
+**Demo:** Run `python demo_post_quantum_fork.py` to see key generation, transaction signing, witness encoding, and verification.
+
+## Grant Alignment
+
+This project directly addresses your stated priority areas:
+
+1. ✓ **Post-quantum signature scheme integration** — Trifold hash-based signatures fully integrated
+2. ✓ **Quantum-resistant transaction proposals** — P2QRH address type with witness encoding
+3. ✓ **Wallet migration tooling** — PQH address generation and ECDSA migration path
+4. ⏳ **Formal security audit** — Seeking funding for independent audit
+
+## Funding Request
+
+We are seeking milestone-based grant funding for:
+
+| Milestone | Deliverable | Timeline |
+|-----------|-------------|----------|
+| 1 | Testnet deployment with PQH addresses | 3 months |
+| 2 | Wallet migration tooling (ECDSA → PQH) | 3 months |
+| 3 | Performance benchmarking report | 2 months |
+| 4 | Independent security audit | 3 months |
+| 5 | BIP proposal for P2QRH | 2 months |
+
+## Why Now
+
+- 6.7 million BTC ($600B+) are vulnerable to quantum extraction
+- NIST standardized PQC (ML-DSA, SLH-DSA) in 2024
+- Bitcoin Security Consortium pledged $15M for post-quantum research
+- Protocol-level upgrades require multi-year consensus cycles
+
+We have working code. We need funding for audit, testnet deployment, and community consensus building.
+
+Thank you for your consideration.
+
+Best regards,
+[Your Name]
+[Your Contact Information]
+[GitHub Repository Link]

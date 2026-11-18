@@ -1,0 +1,105 @@
+{
+  "version": "2.1.0",
+  "network": {
+    "blockchain": "excal",
+    "network": "mainnet"
+  },
+  "allow_incomplete_blocks": false,
+  "data": {
+    "network": {
+      "blockchain": "excal",
+      "network": "mainnet"
+    },
+    "genesis_block_identifier": {
+      "index": 0
+    },
+    "genesis_block_timestamp": 1700000000000,
+    "block_identifier_palettes": [],
+    "account_identifier_palettes": [],
+    "operation_statuses": [
+      {
+        "status": "success",
+        "successful": true
+      },
+      {
+        "status": "failure",
+        "successful": false
+      }
+    ],
+    "operation_types": [
+      "transfer",
+      "coinbase",
+      "nft_mint",
+      "bridge",
+      "fee"
+    ],
+    "currencies": [
+      {
+        "symbol": "EXCAL",
+        "decimals": 8
+      }
+    ],
+    "fungible_operations": [
+      "transfer",
+      "coinbase",
+      "fee"
+    ],
+    "related_operations": [
+      {
+        "operation_type": "transfer",
+        "related_operation_types": ["transfer"]
+      },
+      {
+        "operation_type": "coinbase",
+        "related_operation_types": []
+      },
+      {
+        "operation_type": "nft_mint",
+        "related_operation_types": ["transfer"]
+      },
+      {
+        "operation_type": "bridge",
+        "related_operation_types": ["transfer"]
+      },
+      {
+        "operation_type": "fee",
+        "related_operation_types": ["transfer"]
+      }
+    ],
+    "errors": [
+      {"code": 1, "message": "block not found"},
+      {"code": 2, "message": "transaction not found"},
+      {"code": 3, "message": "account not found"},
+      {"code": 4, "message": "invalid address format"},
+      {"code": 5, "message": "insufficient balance"}
+    ]
+  },
+  "construction": {
+    "network": {
+      "blockchain": "excal",
+      "network": "mainnet"
+    },
+    "currencies": [
+      {
+        "symbol": "EXCAL",
+        "decimals": 8
+      }
+    ],
+    "can_build": [
+      "transfer",
+      "nft_mint",
+      "bridge"
+    ],
+    "metadata": {
+      "address_format": "20-char uppercase hex",
+      "signature_type": "SHA-256 hash-only",
+      "encryption": "AES-256-GCM"
+    }
+  },
+  "storage": {
+    "type": "sqlite",
+    "config": {
+      "path": "./rosetta.db"
+    }
+  }
+}

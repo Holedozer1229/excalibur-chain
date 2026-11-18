@@ -168,19 +168,73 @@ class Ledger:
         out = {}
         for lock in locks:
             rows = self.rpc.getutxos(lock)
+            if not isinstance(rows, list):
+                raise RpcError("node returned an invalid UTXO list")
             mature = immature = 0
             utxos = []
             for r in rows:
-                if r["mature"]:
-                    mature += int(r["value"])
+                try:
+                    value = r["value"]
+                    is_coinbase = r["coinbase"]
+                    height = r["height"]
+                    row_tip = r["tip_height"]
+                    is_mature = r["mature"]
+                    pending_spend = r["pending_spend"]
+                    cb_h = r["cb_h"]
+                    row_lock = r["lock"]
+                    if (not isinstance(value, int) or isinstance(value, bool)
+                            or value < 0 or not isinstance(is_coinbase, bool)
+                            or not isinstance(height, int)
+                            or isinstance(height, bool) or height < 0
+                            or height > tip_height
+                            or not isinstance(row_tip, int)
+                            or isinstance(row_tip, bool) or row_tip != tip_height
+                            or not isinstance(is_mature, bool)
+                            or not isinstance(pending_spend, bool)
+                            or not isinstance(cb_h, int) or isinstance(cb_h, bool)
+                            or not isinstance(row_lock, str)
+                            or row_lock != lock.hex()):
+                        raise ValueError
+                    if cb_h != (height if is_coinbase else 0):
+                        raise ValueError
+                    expected_mature = (
+                        not is_coinbase
+                        or tip_height + 1 - cb_h >= COINBASE_MATURITY
+                    )
+                    if is_mature != expected_mature:
+                        raise ValueError
+                    spendable = r["spendable"]
+                    if (not isinstance(spendable, bool)
+                            or spendable != (is_mature and not pending_spend)):
+                        raise ValueError
+                    txid = str(r["txid"])
+                    vout = r["vout"]
+                    if (len(bytes.fromhex(txid)) != 32
+                            or not isinstance(vout, int)
+                            or isinstance(vout, bool) or vout < 0):
+                        raise ValueError
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise RpcError("node returned a malformed UTXO") from exc
+                if is_mature:
+                    mature += value
                 else:
-                    immature += int(r["value"])
-                utxos.append({"txid": r["txid"], "vout": int(r["vout"]),
-                              "value": int(r["value"]),
-                              "mature": bool(r["mature"]),
-                              "coinbase": bool(r["coinbase"])})
-            out[lock.hex()] = {"mature": mature, "immature": immature,
-                               "utxos": utxos}
+                    immature += value
+                utxos.append({"txid": txid, "vout": vout,
+                              "value": value, "mature": is_mature,
+                              "coinbase": is_coinbase, "height": height,
+                              "cb_h": cb_h, "tip_height": row_tip,
+                              "pending_spend": pending_spend,
+                              "spendable": is_mature and not pending_spend})
+            out[lock.hex()] = {
+                "mature": mature,
+                "immature": immature,
+                "spendable": sum(
+                    u["value"] for u in utxos
+                    if u["mature"] and not u["pending_spend"]),
+                "pending_spend": sum(
+                    u["value"] for u in utxos if u["pending_spend"]),
+                "utxos": utxos,
+            }
         return out, (tip_height, tip_hash)
 
     # ------------------------------------------------------------ snapshot
@@ -347,7 +401,7 @@ class Ledger:
     # ------------------------------------------------------------ views
     def cached_utxos(self, lock=None):
         """UTXOs from the local-scan cache: [{txid, vout, value, height,
-        coinbase, cb_h, mature}] (mature at the cached tip)."""
+        coinbase, cb_h, mature}] (mature for the next candidate height)."""
         cache = self._load_cache()
         tip = int(cache.get("tip_height", -1))
         out = []

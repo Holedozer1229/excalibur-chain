@@ -1,0 +1,949 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>95</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>'+' is not supported between 'list[int]' and 'None'</description>
+        <highlighted_element>+</highlighted_element>
+        <language>Python</language>
+        <offset>20</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>260</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str', got 'tuple[LiteralString, int, int]' instead</description>
+        <highlighted_element>f_chars[:60], f_count, len(f_chars)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>35</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>340</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str | None | bool', got 'int' instead</description>
+        <highlighted_element>witver</highlighted_element>
+        <language>Python</language>
+        <offset>31</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>342</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str | None | bool', got 'int' instead</description>
+        <highlighted_element>len(program)</highlighted_element>
+        <language>Python</language>
+        <offset>36</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>368</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str | None | bool', got 'int' instead</description>
+        <highlighted_element>version</highlighted_element>
+        <language>Python</language>
+        <offset>32</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/canonical_proof_of_control.py</file>
+        <line>370</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/canonical_proof_of_control.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str | None | bool', got 'int' instead</description>
+        <highlighted_element>len(payload)</highlighted_element>
+        <language>Python</language>
+        <offset>36</offset>
+        <length>12</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py</file>
+        <line>187</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type '{__getitem__}', got 'Unknown | None' instead</description>
+        <highlighted_element>blk</highlighted_element>
+        <language>Python</language>
+        <offset>39</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py</file>
+        <line>194</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/p2p_sync.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type '{__getitem__}', got 'Unknown | None' instead</description>
+        <highlighted_element>blk</highlighted_element>
+        <language>Python</language>
+        <offset>25</offset>
+        <length>3</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>118</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>119</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>50</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>156</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>37</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>157</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>46</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>158</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>45</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>183</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>37</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>184</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>46</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>197</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>206</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>44</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>213</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>45</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>231</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>40</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>232</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>233</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>50</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>255</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>269</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>37</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>288</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>37</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_seed_fast.py</file>
+        <line>295</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_seed_fast.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>46</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>102</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>48</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>112</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>55</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>122</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>48</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>123</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>55</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>227</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>40</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>237</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>49</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>247</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>48</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>320</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>40</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>336</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>49</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>357</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>373</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>48</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>386</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>45</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/find_tau28_691_seed.py</file>
+        <line>434</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/find_tau28_691_seed.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Literal[&quot;little&quot;, &quot;big&quot;]', got 'str' instead</description>
+        <highlighted_element>endian</highlighted_element>
+        <language>Python</language>
+        <offset>49</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py</file>
+        <line>457</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/friedman_hyperbolic_rsa.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'tuple[int, int]', got 'None' instead</description>
+        <highlighted_element>None</highlighted_element>
+        <language>Python</language>
+        <offset>34</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/knot_wallet.py</file>
+        <line>360</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/knot_wallet.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'bytes', got 'bytes | str | Unknown' instead</description>
+        <highlighted_element>res[&quot;raw&quot;]</highlighted_element>
+        <language>Python</language>
+        <offset>30</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/messerene_operator.py</file>
+        <line>95</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/messerene_operator.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected an iterable, got 'None | {__eq__} | tuple[int, int] | Unknown'</description>
+        <highlighted_element>mul(k)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>6</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/rebuild_dr_time_proof.py</file>
+        <line>224</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/rebuild_dr_time_proof.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'float | int', got 'int | str' instead</description>
+        <highlighted_element>HEADER_FIELDS[&quot;timestamp&quot;]</highlighted_element>
+        <language>Python</language>
+        <offset>43</offset>
+        <length>26</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>154</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected an iterable, got 'tuple[int, int] | None | Unknown'</description>
+        <highlighted_element>_mul(k)</highlighted_element>
+        <language>Python</language>
+        <offset>16</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>172</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected an iterable, got 'tuple[int, int] | None'</description>
+        <highlighted_element>_sign_rs(priv, h)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>17</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/secp256k1.py</file>
+        <line>178</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/secp256k1.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected an iterable, got 'tuple[int, int] | None'</description>
+        <highlighted_element>_sign_rs(priv, h)</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>17</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sign_and_sweep.py</file>
+        <line>286</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sign_and_sweep.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str', got 'None' instead</description>
+        <highlighted_element>None</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sign_and_sweep.py</file>
+        <line>334</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sign_and_sweep.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'dict[str, int | bytes]', got 'dict[Literal[&quot;prev_txid&quot;, &quot;prev_vout&quot;,
+            &quot;scriptSig&quot;, &quot;sequence&quot;, &quot;witness&quot;], bytes | Literal[4294967295] |
+            list[Unknown] | Unknown]' instead
+        </description>
+        <highlighted_element>{ 'prev_txid': u['txid'], 'prev_vout': u['vout'], 'scriptSig': b...</highlighted_element>
+        <language>Python</language>
+        <offset>25</offset>
+        <length>175</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sign_and_sweep.py</file>
+        <line>416</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sign_and_sweep.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Iterable[_T]', got 'int | list[Unknown] | list[dict[str, int | bytes]]' instead
+        </description>
+        <highlighted_element>tx['vout']</highlighted_element>
+        <language>Python</language>
+        <offset>29</offset>
+        <length>10</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/metrics_wiring.py</file>
+        <line>375</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/metrics_wiring.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'MetricsWiring', got 'MetricsWiring | None' instead</description>
+        <highlighted_element>_wiring</highlighted_element>
+        <language>Python</language>
+        <offset>11</offset>
+        <length>7</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/frost.py</file>
+        <line>282</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/frost.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'list[tuple[int, int]]', got 'list[tuple[int, int] | None]' instead</description>
+        <highlighted_element>commitments=commitments</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>23</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py</file>
+        <line>216</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'bytes | bytearray | memoryview[int]', got 'bytes | None' instead</description>
+        <highlighted_element>self._encryption_key</highlighted_element>
+        <language>Python</language>
+        <offset>30</offset>
+        <length>20</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py</file>
+        <line>236</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/holographic_p2p.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'Buffer', got 'bytes | None' instead</description>
+        <highlighted_element>self._encryption_key</highlighted_element>
+        <language>Python</language>
+        <offset>29</offset>
+        <length>20</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>427</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str', got 'None' instead</description>
+        <highlighted_element>None</highlighted_element>
+        <language>Python</language>
+        <offset>41</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>427</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str', got 'None' instead</description>
+        <highlighted_element>None</highlighted_element>
+        <language>Python</language>
+        <offset>62</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py</file>
+        <line>428</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/sphinx_os/nexus/p2p_bootstrap_server.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'str', got 'None' instead</description>
+        <highlighted_element>None</highlighted_element>
+        <language>Python</language>
+        <offset>29</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/ternary_code.py</file>
+        <line>94</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/ternary_code.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>'!=' is not supported between '{__eq__}' and 'Literal[0]'</description>
+        <highlighted_element>!=</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_genesis_fork_auxpow.py</file>
+        <line>50</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_genesis_fork_auxpow.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'int | bytes | list[Unknown]', got 'dict[Literal[&quot;parent_header&quot;, &quot;parent_coinbase&quot;,
+            &quot;coinbase_branch&quot;, &quot;coinbase_index&quot;], bytes | UnsafeUnion[bytes, Unknown] |
+            list[Unknown] | Literal[0]]' instead
+        </description>
+        <highlighted_element>{ &quot;parent_header&quot;: parent_header, &quot;parent_coinbase&quot;: coinbase, &quot;...</highlighted_element>
+        <language>Python</language>
+        <offset>26</offset>
+        <length>164</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>242</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>'&gt;' is not supported between 'SupportsDunderLT[Any]' and 'Literal[0]'</description>
+        <highlighted_element>&gt;</highlighted_element>
+        <language>Python</language>
+        <offset>22</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>303</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Tuple index out of range</description>
+        <highlighted_element>2</highlighted_element>
+        <language>Python</language>
+        <offset>25</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>309</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Tuple index out of range</description>
+        <highlighted_element>2</highlighted_element>
+        <language>Python</language>
+        <offset>31</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>632</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>'-' is not supported between 'SupportsDunderLT[Any] | SupportsDunderGT[Any]' and
+            'SupportsDunderLT[Any] | SupportsDunderGT[Any]'
+        </description>
+        <highlighted_element>-</highlighted_element>
+        <language>Python</language>
+        <offset>29</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_hilbert_polya_operator.py</file>
+        <line>636</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_hilbert_polya_operator.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>'&gt;' is not supported between 'SupportsDunderLT[Any]' and 'Literal[0]'</description>
+        <highlighted_element>&gt;</highlighted_element>
+        <language>Python</language>
+        <offset>18</offset>
+        <length>1</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_client.py</file>
+        <line>33</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_client.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'int', got 'str | bytes | bytearray | int' instead</description>
+        <highlighted_element>beacon_port=self.port</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/test_skynet_client.py</file>
+        <line>70</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/test_skynet_client.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'int', got 'str | bytes | bytearray | int' instead</description>
+        <highlighted_element>beacon_port=self.port</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>21</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/txpq.py</file>
+        <line>58</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/txpq.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>'+=' is not supported between 'bytearray' and 'list[_T]'</description>
+        <highlighted_element>+=</highlighted_element>
+        <language>Python</language>
+        <offset>12</offset>
+        <length>2</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/txpq.py</file>
+        <line>59</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/txpq.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected an iterable, got '_T | list[_T] | Unknown'</description>
+        <highlighted_element>a, b</highlighted_element>
+        <language>Python</language>
+        <offset>8</offset>
+        <length>4</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/txpq.py</file>
+        <line>62</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/txpq.py"/>
+        <problem_class id="PyTypeCheckerInspection" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Incorrect
+            type
+        </problem_class>
+        <description>Expected type 'collections.Iterable', got '_T | list[_T] | Unknown' instead</description>
+        <highlighted_element>sibs</highlighted_element>
+        <language>Python</language>
+        <offset>17</offset>
+        <length>4</length>
+    </problem>
+</problems>

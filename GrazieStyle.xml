@@ -1,0 +1,125 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/dist-electron/win-unpacked/LICENSE.electron.txt</file>
+        <line>10</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/dist-electron/win-unpacked/LICENSE.electron.txt"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>Long sentences (67 words here) are harder to read, according to the research; consider splitting
+        </description>
+        <highlighted_element>conditions:</highlighted_element>
+        <language>TEXT</language>
+        <offset>14</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/dist-electron/win-unpacked/LICENSE.electron.txt</file>
+        <line>21</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/dist-electron/win-unpacked/LICENSE.electron.txt"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>Long sentences (46 words here) are harder to read, according to the research; consider splitting
+        </description>
+        <highlighted_element>SOFTWARE.</highlighted_element>
+        <language>TEXT</language>
+        <offset>54</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/dist-electron-live/win-unpacked/LICENSE.electron.txt</file>
+        <line>10</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/dist-electron-live/win-unpacked/LICENSE.electron.txt"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>Long sentences (67 words here) are harder to read, according to the research; consider splitting
+        </description>
+        <highlighted_element>conditions:</highlighted_element>
+        <language>TEXT</language>
+        <offset>14</offset>
+        <length>11</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/dist-electron-live/win-unpacked/LICENSE.electron.txt</file>
+        <line>21</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/dist-electron-live/win-unpacked/LICENSE.electron.txt"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>Long sentences (46 words here) are harder to read, according to the research; consider splitting
+        </description>
+        <highlighted_element>SOFTWARE.</highlighted_element>
+        <language>TEXT</language>
+        <offset>54</offset>
+        <length>9</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/docs/genealogy-bridge-spec.md</file>
+        <line>22</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/docs/genealogy-bridge-spec.md"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>Long sentences (47 words here) are harder to read, according to the research; consider splitting
+        </description>
+        <highlighted_element>link.</highlighted_element>
+        <language>Markdown</language>
+        <offset>23</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/__init__.py</file>
+        <line>29</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/__init__.py"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>American English does not double '-l-' in suffixes</description>
+        <highlighted_element>labelled</highlighted_element>
+        <language>Python</language>
+        <offset>63</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/excalibur_wallet/locks.py</file>
+        <line>16</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/excalibur_wallet/locks.py"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>American English does not double '-l-' in suffixes</description>
+        <highlighted_element>labelled</highlighted_element>
+        <language>Python</language>
+        <offset>40</offset>
+        <length>8</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/genealogy-bridge-spec.md</file>
+        <line>22</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/genealogy-bridge-spec.md"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>Long sentences (47 words here) are harder to read, according to the research; consider splitting
+        </description>
+        <highlighted_element>link.</highlighted_element>
+        <language>Markdown</language>
+        <offset>23</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/light-ledger/README.md</file>
+        <line>75</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/light-ledger/README.md"/>
+        <problem_class id="GrazieStyle" severity="STYLE_SUGGESTION" attribute_key="TEXT_STYLE_SUGGESTION">Style
+        </problem_class>
+        <description>Would you like to insert '→'?</description>
+        <highlighted_element>-&gt;</highlighted_element>
+        <language>Markdown</language>
+        <offset>23</offset>
+        <length>2</length>
+    </problem>
+</problems>

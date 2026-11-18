@@ -1,0 +1,30 @@
+<problems>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>106</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="ExceptionCaughtLocallyJS" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Exception
+            used for local control-flow
+        </problem_class>
+        <description>'throw' of exception caught locally</description>
+        <highlighted_element>throw</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>5</length>
+    </problem>
+    <problem>
+        <file>file://$PROJECT_DIR$/src/lib/excaliburRpc.ts</file>
+        <line>112</line>
+        <module>sphinx-os</module>
+        <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/src/lib/excaliburRpc.ts"/>
+        <problem_class id="ExceptionCaughtLocallyJS" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Exception
+            used for local control-flow
+        </problem_class>
+        <description>'throw' of exception caught locally</description>
+        <highlighted_element>throw</highlighted_element>
+        <language>JavaScript</language>
+        <offset>8</offset>
+        <length>5</length>
+    </problem>
+</problems>

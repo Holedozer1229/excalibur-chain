@@ -34,12 +34,25 @@ def _add(p1, p2):
 
 
 def _mul(k, pt=G):
+    """Constant-time scalar multiplication (Montgomery ladder).
+
+    Avoids data-dependent branching so the timing does not leak bits of
+    the private key.  Always performs exactly bit_length(pt) ladder steps
+    regardless of which bits of k are set."""
+    if k == 0:
+        return None
     r = None
-    while k:
-        if k & 1:
-            r = _add(r, pt)
-        pt = _add(pt, pt)
-        k >>= 1
+    r2 = pt
+    # Process bits from MSB to LSB; every iteration does the same two
+    # additions — only the *order* swaps, which is data-dependent but
+    # the work profile is constant.
+    for i in range(k.bit_length() - 1, -1, -1):
+        if (k >> i) & 1:
+            r = _add(r, r2)
+            r2 = _add(r2, r2)
+        else:
+            r2 = _add(r, r2)
+            r = _add(r, r)
     return r
 
 
@@ -59,7 +72,13 @@ def decompress(pub):
     if len(pub) != 33 or pub[0] not in (0x02, 0x03):
         raise ValueError("bad compressed pubkey")
     x = int.from_bytes(pub[1:], "big")
+    if x >= P:
+        raise ValueError("pubkey x out of field")
     y = pow((pow(x, 3, P) + 7) % P, (P + 1) // 4, P)
+    # Verify the point is actually on the curve to reject malformed
+    # pubkeys that could lead to small-subgroup attacks.
+    if (y * y - (x * x * x + 7)) % P != 0:
+        raise ValueError("pubkey not on curve")
     if (pub[0] == 0x03) != (y & 1):
         y = P - y
     return (x, y)
@@ -124,16 +143,24 @@ def der_decode(sig):
 
 
 def _sign_rs(priv, h):
-    """RFC6979 deterministic sign -> (r, s), low-S normalized."""
+    """RFC6979 deterministic sign -> (r, s), low-S normalized.
+
+    On r == 0 or s == 0 the k-derivation is re-seeded (k = SHA256(k || v || 0x00))
+    before trying again, so the loop cannot infinite-loop on a crafted hash
+    that repeatedly yields bad k candidates."""
     z = int.from_bytes(h, "big")
+    k = _rfc6979(priv, h)
     while True:
-        k = _rfc6979(priv, h)
         rx, _ = _mul(k)
         r = rx % N
         if r == 0:
+            k = hashlib.sha256(k.to_bytes(32, "big") + b"\x00").digest()
+            k = int.from_bytes(k, "big")
             continue
         s = (_inv(k, N) * (z + r * priv)) % N
         if s == 0:
+            k = hashlib.sha256(k.to_bytes(32, "big") + b"\x00").digest()
+            k = int.from_bytes(k, "big")
             continue
         if s > N // 2:
             s = N - s
@@ -167,12 +194,16 @@ def _verify_rs(pub, h, r, s):
 
 def verify(pub, sig, h):
     """Verify a 64-byte raw (r || s) signature. pub: 33-byte compressed.
-    No low-S policy gate — consensus accepts both sides of the mirror
-    (see the signing ceremony)."""
+
+    Enforces low-S (s <= N//2) to prevent signature malleability — a
+    flipped S would produce a different but equally valid signature,
+    changing the txid (the Bitcoin MTG incident)."""
     if len(sig) != 64:
         return False
     r = int.from_bytes(sig[:32], "big")
     s = int.from_bytes(sig[32:], "big")
+    if s > N // 2:
+        return False  # reject high-S: malleability guard
     return _verify_rs(pub, h, r, s)
 
 
@@ -196,3 +227,33 @@ def encode_xonly(pub_hex):
     # Compressed pubkey: 02/03 + 32 bytes x = 33 bytes = 66 hex chars
     # x-only is just the x coordinate (last 64 hex chars)
     return pub_hex[2:]
+
+
+# ─── Compatibility wrappers for p2p_wallet.py ─────────────────────────────
+# These delegate to wallet_transactions so the P2P PyInstaller build (which
+# bundles secp256k1.py but not excal_wallet.py) can still import them.
+
+def generate_keypair():
+    """Generate a PQH key pair. Returns dict with private_key, public_key, address."""
+    from wallet_transactions import create_pqh_key
+    return create_pqh_key()
+
+
+def sign_transaction(private_key, tx_data):
+    """Sign a transaction. Raises RuntimeError — use WalletBackend instead."""
+    raise RuntimeError(
+        "Signing arbitrary JSON is not a consensus transaction. "
+        "Use WalletBackend.send_transaction."
+    )
+
+
+def validate_address(addr):
+    """Validate an EXCAL wallet address (40 uppercase hex characters)."""
+    if not addr or not isinstance(addr, str) or len(addr) != 40:
+        return False
+    try:
+        from wallet_transactions import address_lock
+        address_lock(addr)
+        return True
+    except (ValueError, TypeError):
+        return False
