@@ -204,7 +204,11 @@ export class ExcaliburRpcClient {
     const status: { connected: boolean; blockCount?: number; peers?: number; mempoolSize?: number } = { connected: false };
 
     try {
-      const [blockCount, peerInfo, mempoolInfo] = await Promise.allSettled([
+      const [blockCount, peerInfo, mempoolInfo]: [
+        PromiseSettledResult<number>,
+        PromiseSettledResult<PeerInfo[]>,
+        PromiseSettledResult<MempoolInfo>
+      ] = await Promise.allSettled([
         this.getBlockCount(),
         this.getPeerInfo(),
         this.getMempoolInfo(),

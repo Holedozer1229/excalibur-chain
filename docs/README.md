@@ -86,7 +86,7 @@ The Bitcoin genesis block nonce **2,083,236,893** (`0x7C2BAC1D`) sits at positio
 - P2PKH (base58): `17GHncLkSxQYC5TdfuNxjkjmNb4ZaepawM`
 - P2WPKH (bech32): `bc1qgj6srdszgygpltt2kc3eqva0alx9g48gj9fyj5`
 
-Both are public by construction (the pattern and the nonce are public). A fingerprint, never a wallet — never fund either address. Verified numbers, including the correction of the first draft's wrong bytes, in [`pos28`](pos28).
+Both are public by construction (the pattern and the nonce are public). A fingerprint, never a wallet — never fund either address. Verified numbers, including the correction of the first draft's wrong bytes, in [`pos28`](#messerene--pos28--the-genesis-nonce-embedded).
 
 ## Golden Stone — one coin, one height
 
@@ -181,7 +181,7 @@ launchctl load ~/Library/LaunchAgents/com.aetherion.skynet-beacon.plist
 
 **How SkyNet works:** When you launch the beacon on two machines, they automatically discover each other via UDP multicast (239.1.1.1:9436) and LAN broadcast (255.255.255.255:9437). Each beacon runs an HTTP REST API (port 9435) for peer discovery. No hardcoded IPs, no manual configuration — just launch and connect.
 
-**Cross-network discovery:** Deploy the [SkyNet Cloudflare Worker beacon](skynet-beacon/) for always-on peer discovery across the internet. Free tier: 100K requests/day, $0/month.
+**Cross-network discovery:** Deploy the [SkyNet Cloudflare Worker beacon](../skynet-beacon/) for always-on peer discovery across the internet. Free tier: 100K requests/day, $0/month.
 
 ### Run it
 

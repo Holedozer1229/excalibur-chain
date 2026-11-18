@@ -131,10 +131,10 @@ candidates.append((f"SHA256('pi(74638)-pi(37319)={diff}')", seed))
 
 # Try the Ramanujan prime R_diff
 # R_n where n = diff
-for rp in KNOWN_RAMANUJAN:
+for i, rp in enumerate(KNOWN_RAMANUJAN):
     if i + 1 == diff:
         seed = hashlib.sha256(f"Dr. Time: R_{diff}={rp}".encode()).digest()
-        candidates.append((f"SHA256('Dr. Time: R_{diff}={rp}')", seed), seed)
+        candidates.append((f"SHA256('Dr. Time: R_{diff}={rp}')", seed))
 
 # Try: SHA256 of "Dr. Time: " + Ramanujan prime bytes
 for rp in KNOWN_RAMANUJAN[:200]:

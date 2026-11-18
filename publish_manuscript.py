@@ -127,18 +127,18 @@ def markdown_to_latex(md_content):
                 i += 1
                 continue
             elif section_name.startswith('Appendix'):
-                latex += f'\section*{{{section_name}}}\n\n'
+                latex += f'\\section*{{{section_name}}}\n\n'
             else:
                 # Remove section numbers
                 section_name = re.sub(r'^\d+\.\s*', '', section_name)
-                latex += f'\section{{{section_name}}}\n\n'
+                latex += f'\\section{{{section_name}}}\n\n'
             i += 1
             continue
         
         if line.startswith('### '):
             subsection_name = line[4:].strip()
             subsection_name = re.sub(r'^\d+\.\s*', '', subsection_name)
-            latex += f'\subsection{{{subsection_name}}}\n\n'
+            latex += f'\\subsection{{{subsection_name}}}\n\n'
             i += 1
             continue
         

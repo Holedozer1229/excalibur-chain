@@ -124,7 +124,7 @@ class TrifoldKey:
                     f"corrupt Trifold state file {self.state_path}: {e}")
         if st.get("root") != self.root.hex():
             raise ValueError(
-                f"Trifold state file {self.state_path} belongs to a different root")
+                f"Trifold state file {self.state_path} belongs to a different root (root mismatch)")
         n = st.get("next_index")
         if not isinstance(n, int) or isinstance(n, bool) \
                 or n < 0 or n > self.capacity:
@@ -148,6 +148,13 @@ class TrifoldKey:
             os.fsync(f.fileno())
         os.replace(tmp, self.state_path)
         fsync_directory(d or os.path.dirname(self.state_path))
+
+    def _reserve_index(self):
+        """Reserve one leaf under the state lock."""
+        if self.state_path is None:
+            raise RuntimeError("Trifold signing requires a persistent state_path")
+        with exclusive_file_lock(self.state_path + ".lock"):
+            return self._read_and_reserve_locked()
 
     def sign(self, msg: bytes):
         """Reserve and use one leaf, requiring durable shared state.
