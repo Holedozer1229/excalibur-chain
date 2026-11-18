@@ -282,7 +282,6 @@ def main():
     funded = []
     for r in results:
         bal = check_balance(r["p2wpkh"])
-        status = ""
         if "error" not in bal:
             btc = bal["chain_stats"]
             txs = bal["tx_count"]
