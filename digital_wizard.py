@@ -264,14 +264,14 @@ def ctc_fixed_point(transform, initial_state: List[float],
         if state_error < tolerance:
             return CTCSolution(
                 density_matrix=density,
-                consistency_error=state_error,
+                consistency_error=error,
                 iterations=i + 1,
                 converged=True,
             )
 
     return CTCSolution(
         density_matrix=density,
-        consistency_error=state_error,
+        consistency_error=error if 'error' in locals() else state_error,
         iterations=max_iter,
         converged=state_error < 1e-6,  # Accept near-convergence
     )
@@ -288,13 +288,8 @@ def metatron_determinant(state: List[float]) -> float:
     """
     # 3×3 Hermitian matrix from state
     a, b, c = state
-    # det = a*b*c - a*(im(b))^2 - b*(im(c))^2 - c*(im(a))^2 + 2*re(a)*re(b)*re(c)
-    # For real states: det = a*b*c - a*0 - b*0 - c*0 + 2*a*b*c = 3*a*b*c
-    # But the actual Metatron determinant is:
-    det = a * (b * c - 0) - b * (a * c - 0) + c * (a * b - 0)
-    # Simplified: det = 3*a*b*c for real states
-    # The actual Jordan determinant:
-    det = a * b * c - (a * b * c) / 2  # Real part of octonionic product
+    # Jordan determinant: Real part of octonionic product
+    det = a * b * c - (a * b * c) / 2
     return det
 
 
