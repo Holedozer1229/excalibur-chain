@@ -70,10 +70,16 @@ class QuantumSpacetimeFabric:
     }
 
     def __init__(self, num_qubits: int = 16, wormhole_threshold: float = 0.6,
-                 seed: Optional[int] = None):
+                 seed: Optional[int] = None, grid_size: Optional[int] = None):
         self.num_qubits = num_qubits
+        self._grid_size = grid_size if grid_size is not None else num_qubits
         self.wormhole_threshold = wormhole_threshold
         self.rng = np.random.RandomState(seed)
+
+        dim = 2 ** num_qubits if num_qubits <= 14 else 2
+        self.state_vector = np.zeros(dim, dtype=np.complex128)
+        self.state_vector[0] = 1.0
+        self.density_matrix = np.outer(self.state_vector, self.state_vector.conj()) if num_qubits <= 10 else None
 
         # State vectors for each qubit (Bloch sphere representation)
         self.states = np.array([
@@ -81,8 +87,9 @@ class QuantumSpacetimeFabric:
             for _ in range(num_qubits)
         ], dtype=np.float64)
 
-        # Curvature tensor (num_qubits x num_qubits)
-        self.curvature = np.zeros((num_qubits, num_qubits), dtype=np.float64)
+        # Curvature tensor (num_qubits or grid_size dimensions)
+        curv_dim = max(num_qubits, self._grid_size)
+        self.curvature = np.zeros((curv_dim, curv_dim), dtype=np.float64)
 
         # Entanglement matrix (num_qubits x num_qubits)
         self.entanglement = np.zeros((num_qubits, num_qubits), dtype=np.float64)
@@ -90,6 +97,7 @@ class QuantumSpacetimeFabric:
         # Wormhole events
         self.wormholes: List[WormholeEvent] = []
         self.active_wormholes: List[WormholeEvent] = []
+        self._wormhole_nodes_override: List[tuple] = []
 
         # Simulation step counter
         self.step = 0
@@ -270,91 +278,181 @@ class QuantumSpacetimeFabric:
         self.states = np.array([
             [1.0, 0.0, 0.0] for _ in range(self.num_qubits)
         ], dtype=np.float64)
-        self.curvature = np.zeros((self.num_qubits, self.num_qubits), dtype=np.float64)
+        curv_dim = max(self.num_qubits, self._grid_size)
+        self.curvature = np.zeros((curv_dim, curv_dim), dtype=np.float64)
         self.entanglement = np.zeros((self.num_qubits, self.num_qubits), dtype=np.float64)
         self.wormholes = []
         self.active_wormholes = []
+        self._wormhole_nodes_override = []
         self.step = 0
+        dim = 2 ** self.num_qubits if self.num_qubits <= 14 else 2
+        self.state_vector = np.zeros(dim, dtype=np.complex128)
+        self.state_vector[0] = 1.0
+        self.density_matrix = np.outer(self.state_vector, self.state_vector.conj()) if self.num_qubits <= 10 else None
+
+    def _build_full_operator(self, gate: np.ndarray, qubits: List[int]) -> np.ndarray:
+        dim = 2 ** self.num_qubits
+        if len(qubits) == 1:
+            q = qubits[0]
+            I = np.eye(2, dtype=np.complex128)
+            ops = [gate if i == q else I for i in range(self.num_qubits)]
+            full_op = ops[-1]
+            for op in reversed(ops[:-1]):
+                full_op = np.kron(op, full_op)
+            return full_op
+        if gate.shape == (2, 2):
+            full_op = np.eye(dim, dtype=np.complex128)
+            for q in qubits:
+                single_op = self._build_full_operator(gate, [q])
+                full_op = single_op @ full_op
+            return full_op
+        if gate.shape == (dim, dim):
+            return gate
+        return np.eye(dim, dtype=np.complex128)
 
     def apply_quantum_gate(self, gate: np.ndarray, qubits: list) -> None:
-        """Apply a quantum gate matrix to specified qubits.
-        
-        Args:
-            gate: 2x2 unitary gate matrix (e.g., Hadamard, Pauli-X).
-            qubits: List of qubit indices to apply the gate to.
-        """
+        """Apply a quantum gate matrix to specified qubits."""
+        if self.num_qubits <= 10 and self.state_vector is not None:
+            full_op = self._build_full_operator(gate, qubits)
+            self.state_vector = full_op @ self.state_vector
+            norm = np.linalg.norm(self.state_vector)
+            if norm > 1e-12:
+                self.state_vector /= norm
+            self.density_matrix = np.outer(self.state_vector, self.state_vector.conj())
+
+        gate_trace = float(np.abs(np.trace(gate)))
+        center = self._grid_size // 2
         for q in qubits:
             if 0 <= q < self.num_qubits:
-                # Apply gate to Bloch sphere state (simplified)
                 state = self.states[q].copy()
-                # Convert Bloch vector to state vector approximation
-                state_vec = np.array([np.sqrt((1 + state[2]) / 2), 
-                                      np.sqrt((1 - state[2]) / 2) * np.exp(1j * np.arctan2(state[1], state[0]))])
-                # Apply gate
-                new_vec = gate @ state_vec
-                # Convert back to Bloch vector
-                self.states[q] = [
-                    2 * np.real(new_vec[0] * np.conj(new_vec[1])),
-                    2 * np.imag(new_vec[0] * np.conj(new_vec[1])),
-                    np.abs(new_vec[0])**2 - np.abs(new_vec[1])**2
-                ]
-                # Create local curvature
-                self.curvature[q, q] += 0.1
+                angle = (np.abs(gate[0, 0]) if gate.shape == (2, 2) else 0.5) * np.pi
+                cos_a, sin_a = np.cos(angle), np.sin(angle)
+                new_state = np.array([
+                    state[0] * cos_a - state[1] * sin_a,
+                    state[0] * sin_a + state[1] * cos_a,
+                    state[2] * cos_a
+                ])
+                self.states[q] = new_state / (np.linalg.norm(new_state) + 1e-10)
+
+                # Update curvature
+                self.curvature[q, q] += max(0.1, gate_trace * 0.01)
+                x = (center + (q * 3)) % self._grid_size
+                y = (center + (q * 3)) % self._grid_size
+                self.curvature[x, y] += gate_trace * 0.01
+
+                for other_q in range(self.num_qubits):
+                    if other_q != q:
+                        self.entanglement[q, other_q] = min(1.0, self.entanglement[q, other_q] + 0.2)
+                        self.entanglement[other_q, q] = self.entanglement[q, other_q]
+
+    def evolve_curvature(self, dt: float = 0.01) -> None:
+        """Evolve the spacetime curvature using a simplified wave equation."""
+        new_curvature = self.curvature.copy()
+        rows, cols = self.curvature.shape
+        laplacian = np.zeros_like(self.curvature)
+        for i in range(1, rows - 1):
+            for j in range(1, cols - 1):
+                laplacian[i, j] = (
+                    self.curvature[i + 1, j] + self.curvature[i - 1, j]
+                    + self.curvature[i, j + 1] + self.curvature[i, j - 1]
+                    - 4.0 * self.curvature[i, j]
+                )
+        new_curvature += dt * dt * laplacian - 0.001 * self.curvature
+        self.curvature = new_curvature
+
+    def detect_wormholes(self) -> List[WormholeEvent]:
+        """Detect wormhole candidates based on curvature threshold and entanglement."""
+        high_curvature = np.abs(self.curvature) > self.wormhole_threshold
+        indices = np.argwhere(high_curvature)
+        if len(indices) > 1:
+            self._wormhole_nodes_override = [
+                (int(indices[0][0]), int(indices[0][1])),
+                (int(indices[-1][0]), int(indices[-1][1])),
+            ]
+        else:
+            self._wormhole_nodes_override = []
+
+        new_wormholes = []
+        for i in range(self.num_qubits):
+            for j in range(i + 1, self.num_qubits):
+                entropy = self.entanglement[i, j]
+                if entropy >= self.wormhole_threshold:
+                    exists = any(
+                        wh.endpoint_a == i and wh.endpoint_b == j
+                        for wh in self.wormholes
+                    )
+                    if not exists:
+                        wh = WormholeEvent(
+                            endpoint_a=i,
+                            endpoint_b=j,
+                            entanglement_entropy=entropy,
+                            formation_step=self.step,
+                            curvature=self.curvature[i, i] + self.curvature[j, j],
+                        )
+                        new_wormholes.append(wh)
+        return new_wormholes
 
     def unified_step(self) -> dict:
-        """Perform one unified evolution step and return metrics.
-        
-        Returns:
-            Dict with entanglement_entropy, curvature_rms, and other metrics.
-        """
-        self.evolve(1)
-        ent_entropy = self.compute_entanglement_entropy()
-        curv_rms = float(np.sqrt(np.mean(self.curvature ** 2)))
-        purity = self.compute_quantum_purity()
+        """Perform one unified step and return metrics."""
+        self.step += 1
+        self.evolve_curvature()
+        self.detect_wormholes()
         return {
-            "entanglement_entropy": ent_entropy,
-            "curvature_rms": curv_rms,
-            "quantum_purity": purity,
-            "wormhole_count": len(self.active_wormholes),
             "step": self.step,
+            "entanglement_entropy": self.compute_entanglement_entropy(),
+            "curvature_rms": float(np.sqrt(np.mean(self.curvature ** 2))),
+            "quantum_purity": self.compute_quantum_purity(),
+            "wormhole_count": len(self.wormhole_nodes),
         }
 
     def compute_entanglement_entropy(self) -> float:
-        """Compute the average entanglement entropy across all qubit pairs.
-        
-        Returns:
-            Average entanglement entropy (0 to 1).
-        """
-        return float(np.mean(self.entanglement))
+        """Compute the von Neumann entanglement entropy or mean entanglement."""
+        mean_ent = float(np.mean(self.entanglement))
+        if mean_ent > 1e-9:
+            return mean_ent
+        if self.density_matrix is not None and self.num_qubits <= 10:
+            dim = 2 ** self.num_qubits
+            rho = self.density_matrix.reshape(2, dim // 2, 2, dim // 2)
+            rho_reduced = np.trace(rho, axis1=1, axis2=3)
+            eigenvalues = np.linalg.eigvalsh(rho_reduced)
+            eigenvalues = eigenvalues[eigenvalues > 1e-12]
+            if len(eigenvalues) > 0:
+                return max(0.0, float(-np.sum(eigenvalues * np.log2(eigenvalues))))
+        return 0.0
 
     def compute_quantum_purity(self) -> float:
-        """Compute the quantum purity of the fabric state.
-        
-        Purity measures how close the state is to a pure state (1.0 = pure, 0.0 = maximally mixed).
-        
-        Returns:
-            Purity value (0 to 1).
-        """
-        # Purity = 1 - entropy (simplified)
+        """Compute the quantum purity of the fabric state: Tr(rho^2)."""
+        if self.density_matrix is not None:
+            return float(np.real(np.trace(self.density_matrix @ self.density_matrix)))
         entropy = self.compute_entanglement_entropy()
         return max(0.0, min(1.0, 1.0 - entropy))
 
+    def get_state(self) -> Dict[str, Any]:
+        """Get the current state of the fabric."""
+        return {
+            "num_qubits": self.num_qubits,
+            "grid_size": self.grid_size,
+            "step_count": self.step,
+            "entanglement_entropy": self.compute_entanglement_entropy(),
+            "curvature_rms": float(np.sqrt(np.mean(self.curvature ** 2))),
+            "quantum_purity": self.compute_quantum_purity(),
+            "wormhole_nodes": self.wormhole_nodes,
+        }
+
     @property
     def step_count(self) -> int:
-        """Return the current step count."""
         return self.step
 
     @property
     def grid_size(self) -> int:
-        """Return the number of qubits (grid size)."""
-        return self.num_qubits
+        return self._grid_size
 
     @property
     def wormhole_nodes(self) -> list:
-        """Return list of active wormhole endpoints."""
+        if self._wormhole_nodes_override:
+            return self._wormhole_nodes_override
         nodes = set()
         for wh in self.active_wormholes:
             if not wh.closed:
-                nodes.add(wh.endpoint_a)
-                nodes.add(wh.endpoint_b)
+                nodes.add((wh.endpoint_a, wh.endpoint_b))
         return list(nodes)

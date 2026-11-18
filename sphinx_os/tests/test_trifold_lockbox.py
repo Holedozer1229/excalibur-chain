@@ -97,7 +97,7 @@ class TestTrifoldStateSafety(unittest.TestCase):
                 "version": 1,
                 "vin": [{"prev": prev_txid, "idx": 0, "script": b"",
                          "seq": 0xFFFFFFFF}],
-                "vout": [{"value": 90, "script": lock}],
+                "vout": [{"value": 90000, "script": lock}],
                 "locktime": 0,
             }
             sighash = txscript.sighash_all(tx, 0, lock)
@@ -106,18 +106,18 @@ class TestTrifoldStateSafety(unittest.TestCase):
                 key.root, signature, key.height)
             raw = txscript.ser_tx(tx)
             coinbase = gf.make_coinbase(height, gf.network()["min_bits"],
-                                        f"test-{height}".encode(), fees=10)
+                                        f"test-{height}".encode(), fees=10000)
             return raw, coinbase
 
         for n, height in enumerate((gf.qday_activation(),
                                     gf.qday_activation() + 1), 1):
             prev = bytes([n]) * 32
             raw, coinbase = make_spend(prev, height)
-            utxo = {(prev, 0): [(100, lock, False, 0)]}
+            utxo = {(prev, 0): [(100000, lock, False, 0)]}
             ok, reason, _fee = txscript.validate_block_txs(
                 [coinbase, raw], utxo, height, gf.subsidy(height),
                 spent_pairs=spent_pairs)
-            if height == 1:
+            if n == 1:
                 self.assertTrue(ok, reason)
             else:
                 self.assertFalse(ok)

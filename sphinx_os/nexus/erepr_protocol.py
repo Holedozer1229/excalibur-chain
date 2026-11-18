@@ -372,6 +372,7 @@ class EREPRProtocol:
             bond_strength=resonance,
             created_at=time.time(),
             last_heartbeat=time.time(),
+            echo_count=1,
         )
         self.bonds[peer_id] = bond
 
