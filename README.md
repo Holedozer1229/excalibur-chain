@@ -155,6 +155,26 @@ Aetherion-Excalibur is raising on a **$1.5M SAFE, $8M post-money cap, 20% discou
 | zkSync Bridge | Cross-chain EXCAL↔URUU bridge with bonding curve |
 | Oracle Chat | Ask the Omniscient Sphinx anything |
 
+### Release builds
+
+Pushing to `master` or manually starting the **AetherionEXCAL Release Builds**
+workflow builds Windows x64 wallet, Beacon, Stratum Miner, P2P client, and
+Inno Setup installer artifacts, plus a native Apple Silicon macOS wallet
+package. Download them from the workflow run's **Artifacts** section. macOS
+artifacts must be built on a macOS runner and are not cross-compiled by the
+Windows build script.
+
+For a local Windows build, install the packages in `requirements.txt` and
+Inno Setup 6 or 7, then run:
+
+```powershell
+.\build_all_release_binaries.ps1
+```
+
+The script stops on build errors and verifies the four named Windows
+executables and installer exist. `AetherionEXCAL-AutonomousNode.exe` is also
+built separately in CI because it is an optional installer component.
+
 ### SkyNet P2P — Always-On Node Beacon
 
 **Your node stays discoverable 24/7**, even when the wallet GUI is closed.

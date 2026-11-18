@@ -1,0 +1,131 @@
+name: AetherionEXCAL Release Builds
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64 binaries and installer
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build Windows executables
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $specs = @(
+            "AetherionEXCAL.spec",
+            "AetherionEXCAL-Beacon.spec",
+            "AetherionEXCAL-StratumMiner.spec",
+            "AetherionEXCAL-P2P.spec",
+            "AetherionEXCAL-AutonomousNode.spec"
+          )
+          foreach ($spec in $specs) {
+            python -m PyInstaller --clean --noconfirm $spec
+            if ($LASTEXITCODE -ne 0) {
+              throw "PyInstaller failed for $spec"
+            }
+          }
+
+      - name: Prepare verified Kubo binary
+        shell: pwsh
+        run: ./prepare-kubo.ps1
+
+      - name: Build Inno Setup package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $compiler = @(
+            (Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"),
+            (Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Inno Setup 7\ISCC.exe"),
+            (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"),
+            (Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Inno Setup 6\ISCC.exe")
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $compiler) {
+            throw "Inno Setup compiler was not found."
+          }
+          & $compiler "AetherionEXCAL-installer.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup compilation failed."
+          }
+
+      - name: Verify Windows release files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $files = @(
+            "dist/AetherionEXCAL.exe",
+            "dist/AetherionEXCAL-Beacon.exe",
+            "dist/AetherionEXCAL-StratumMiner.exe",
+            "dist/AetherionEXCAL-P2P.exe",
+            "installer/AetherionEXCAL-Setup-3.0.0.exe"
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path $file) -or (Get-Item $file).Length -eq 0) {
+              throw "Missing or empty release artifact: $file"
+            }
+          }
+
+      - name: Upload Windows release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherionEXCAL-windows-x64
+          if-no-files-found: error
+          path: |
+            dist/AetherionEXCAL.exe
+            dist/AetherionEXCAL-Beacon.exe
+            dist/AetherionEXCAL-StratumMiner.exe
+            dist/AetherionEXCAL-P2P.exe
+            installer/AetherionEXCAL-Setup-3.0.0.exe
+
+  macos:
+    name: macOS Apple Silicon application
+    runs-on: macos-14
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Build macOS application
+        run: python -m PyInstaller --clean --noconfirm AetherionEXCAL.spec
+
+      - name: Package macOS application
+        run: |
+          test -s dist/AetherionEXCAL
+          tar -czf AetherionEXCAL-macos-arm64.tar.gz -C dist AetherionEXCAL
+
+      - name: Upload macOS release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherionEXCAL-macos-arm64
+          if-no-files-found: error
+          path: AetherionEXCAL-macos-arm64.tar.gz
