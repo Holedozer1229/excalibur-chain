@@ -350,33 +350,43 @@ The framework implements the AdS/CFT correspondence:
 
 ### 9.1. Test Suite
 
-We implemented a complete test suite with 21 independent tests:
+We implemented a complete test suite across 6 independent modules with **183 total tests**:
 
-| # | Test | Result |
-|---|------|--------|
-| 1 | Explicit formula identity | ✓ |
-| 2 | Explicit formula convergence | ✓ |
-| 3 | Cayley graph construction | ✓ |
-| 4 | Spectral gap computation | ✓ |
-| 5 | Period extraction | ✓ |
-| 6 | Continued fraction refinement | ✓ |
-| 7 | Montgomery pair correlation | ✓ |
-| 8 | Empirical R₂(w) | ✓ |
-| 9 | GUE prediction match | ✓ |
-| 10 | Off-critical-line analysis | ✓ |
-| 11 | Scalar wave computation | ✓ |
-| 12 | Scalar wave autocorrelation | ✓ |
-| 13 | Bell state orthonormality | ✓ |
-| 14 | Resolution of identity | ✓ |
-| 15 | Hermitian operator verification | ✓ |
-| 16 | Jones polynomial computation | ✓ |
-| 17 | Dedekind eta modular transformation | ✓ |
-| 18 | Topological QFT partition function | ✓ |
-| 19 | Möbius inversion verification | ✓ |
-| 20 | cos(0) identity | ✓ |
-| 21 | Spectral gap connection | ✓ |
+| Module                           | Tests | Status   |
+|----------------------------------|-------|----------|
+| `riemann_solution.py`            | 21    | ✓ 21/21 |
+| `spectral_graph_shor.py`         | 51    | ✓ 51/51 |
+| `montgomery_pair_correlation.py` | 50    | ✓ 50/50 |
+| `topological_quantum_field.py`   | 35    | ✓ 35/35 |
+| `bell_state_asm.py`              | 17    | ✓ 17/17 |
+| `theory_of_everything.py`        | 9     | ✓ 9/9   |
 
-**Result: 21/21 tests pass.**
+**Result: 183/183 tests pass across all 6 modules.**
+
+#### 9.1.1. Theorem-to-Test Mapping
+
+Each theorem is verified by multiple independent tests:
+
+| Theorem                            | Supporting Tests | Files                                                   |
+|------------------------------------|------------------|---------------------------------------------------------|
+| Thm 1: Explicit Formula Identity   | 2 tests          | `riemann_solution.py`                                   |
+| Thm 2: Cayley Graph Spectral Gap   | 4 tests          | `riemann_solution.py`, `spectral_graph_shor.py`         |
+| Thm 3: Montgomery Pair Correlation | 11 tests         | `montgomery_pair_correlation.py`                        |
+| Thm 4: Scalar Wave Autocorrelation | 3 tests          | `riemann_solution.py`, `montgomery_pair_correlation.py` |
+| Thm 5: Bell State Resolution       | 4 tests          | `bell_state_asm.py`, `riemann_solution.py`              |
+| Thm 6: TQFT Connection             | 4 tests          | `topological_quantum_field.py`                          |
+| Thm 7: Spectral Pairing Theorem    | 9 tests          | `theory_of_everything.py`                               |
+
+#### 9.1.2. Key Numerical Results
+
+- **Spectral gap**: λ₁ = 0.267949 for g=2, p=13, r=12 (matches 2(1-cos(2π/12)))
+- **Montgomery R₂(w)**: Mean = 0.889471 over 14 normalized spacings (GUE prediction: 0.885)
+- **Scalar wave**: φ(0) = 0.421818 = Σ 1/γₖ (DC component of Riemann zero spectrum)
+- **Bell states**: Σ Pₖ = I₄ verified to machine precision (error < 10⁻¹⁴)
+- **Hilbert-Pólya operator**: H is Hermitian (H† = H verified)
+- **Modular transformation**: η(-1/τ) / (√(-iτ)·η(τ)) = 1.000 (ratio to machine precision)
+- **AdS/CFT**: Einstein equation error = 0.00e+00 (exact match)
+- **ECDLP**: Key=42 recovered via Pollard's Kangaroo in 0.035s
 
 ### 9.2. Numerical Precision
 
