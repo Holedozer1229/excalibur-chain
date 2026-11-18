@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Open DistroSea and learn about running an experimental EXCAL node.">
+<title>SkyNet Node | AetherionEXCAL</title>
+<style>
+  :root { color-scheme: dark; }
+  body { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; background: #0b0b0f; color: #e8e8ec; font: 16px/1.6 system-ui, sans-serif; }
+  h1, h2 { line-height: 1.2; }
+  a { color: #7fd0ff; }
+  .card { margin: 22px 0; padding: 20px; border: 1px solid #343443; border-radius: 12px; background: #12121a; }
+  .notice { border-left: 4px solid #f5c518; }
+  .cta { display: inline-block; margin: 8px 0; padding: 12px 18px; border-radius: 8px; background: #f5c518; color: #111; font-weight: 700; text-decoration: none; }
+  code { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+  <p><a href="./index.html">AetherionEXCAL home</a></p>
+  <h1>SkyNet Living Ledger node</h1>
+  <p>This GitHub Pages site can open a DistroSea browser session. Pages itself
+  cannot run or keep a node alive.</p>
+
+  <section class="card">
+    <h2>Open DistroSea</h2>
+    <p>Choose a Linux distribution on DistroSea and use its browser session to
+    experiment with the EXCAL node software.</p>
+    <a class="cta" href="https://distrosea.com/" target="_blank" rel="noopener noreferrer">Choose a Linux distro</a>
+  </section>
+
+  <section class="card notice">
+    <h2>Browser session, not a persistent seed</h2>
+    <p>DistroSea is for testing Linux distributions in temporary browser sessions.
+    It is not a user-owned, always-on server. Session lifetime, persistence, and
+    inbound networking are not guaranteed, so don’t advertise it as a stable P2P
+    seed or production node. A public seed needs an always-on host with a
+    reachable public IP and TCP 9433.</p>
+    <p>The current node software serves the <strong>EXCAL fork network</strong>;
+    it is not a Bitcoin mainnet node. Its production setup and monitoring notes
+    are in the <a href="./SKYNET_NODE.md">node deployment guide</a>.</p>
+  </section>
+
+  <section class="card">
+    <h2>Publish this static site on IPFS</h2>
+    <p>On an online machine with Kubo installed and a running IPFS daemon, from
+    the repository root run:</p>
+    <p><code>ipfs add -Qr --pin=true --cid-version=1 docs</code></p>
+    <p>Open the printed CID at
+    <code>https://&lt;CID&gt;.ipfs.dweb.link/</code>. This serves the static
+    site only; keep the directory pinned on an always-on IPFS node or a pinning
+    service. The live node and network status still require an online EXCAL node.</p>
+  </section>
+
+  <section class="card">
+    <h2>Deploy a persistent P2P seed</h2>
+    <p>For public P2P service, deploy the node on an always-on Ubuntu VM and keep
+    JSON-RPC and Prometheus private. See the
+    <a href="./SKYNET_NODE.md">deployment guide</a> for setup and firewall details.</p>
+  </section>
+</body>
+</html>

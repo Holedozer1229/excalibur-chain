@@ -1,102 +1,19 @@
-# Prometheus Configuration for Excalibur Chain
-#
-# Place this file at: /etc/prometheus/prometheus.yml
-# or run with: prometheus --config.file=prometheus.yml
-#
-# Scrape targets:
-# - Excalibur node metrics (port 9435)
-# - SkyNet Beacon metrics (port 9435)
-# - Fork node RPC metrics (port 9432)
-# - Living ledger (port 9434)
-#
-# Global settings:
+# Scrape the local Excalibur full node. The node's metrics listener is bound
+# to loopback by default and should not be exposed to the public internet.
 global:
-  scrape_interval: 15s          # How often to scrape targets
-  evaluation_interval: 15s      # How often to evaluate alert rules
-  scrape_timeout: 10s           # Maximum scrape time before timeout
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
 
-# Alerting configuration
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-            - 'localhost:9093'   # Alertmanager endpoint
-
-# Rule files (alerting and recording rules)
-rule_files:
-  - 'alert_rules.yml'
-
-# Scrape configurations
 scrape_configs:
-  # Prometheus self-monitoring
-  - job_name: 'prometheus'
+  - job_name: excalibur_node
+    metrics_path: /metrics
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["127.0.0.1:9435"]
         labels:
-          instance: 'prometheus'
+          network: excal-fork
+          component: full-node-p2p
 
-  # Excalibur Chain Node Metrics
-  - job_name: 'excalibur_node'
-    scrape_interval: 5s
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['localhost:9435']
-        labels:
-          instance: 'excalibur-node'
-          environment: 'production'
-          component: 'node'
-
-  # SkyNet Beacon Metrics
-  - job_name: 'skynet_beacon'
-    scrape_interval: 10s
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['localhost:9435']
-        labels:
-          instance: 'skynet-beacon'
-          environment: 'production'
-          component: 'beacon'
-
-  # Fork Node RPC Metrics (if separate port)
-  - job_name: 'fork_node_rpc'
-    scrape_interval: 10s
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['localhost:9432']
-        labels:
-          instance: 'fork-node'
-          environment: 'production'
-          component: 'rpc'
-
-  # Living Ledger Metrics
-  - job_name: 'living_ledger'
-    scrape_interval: 15s
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['localhost:9434']
-        labels:
-          instance: 'living-ledger'
-          environment: 'production'
-          component: 'explorer'
-
-  # Wallet Metrics (if running separately)
-  - job_name: 'excalibur_wallet'
-    scrape_interval: 30s
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['localhost:9436']
-        labels:
-          instance: 'wallet'
-          environment: 'production'
-          component: 'wallet'
-
-  # Stratum Miner Metrics
-  - job_name: 'stratum_miner'
-    scrape_interval: 10s
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['localhost:9437']
-        labels:
-          instance: 'stratum-miner'
-          environment: 'production'
-          component: 'miner'
+# For remote monitoring, add node metrics targets only over a secured
+# management network/VPN. Do not bind EXCAL_PROMETHEUS_HOST to a public
+# interface or expose TCP 9435 to the internet.

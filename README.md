@@ -64,6 +64,13 @@ The locks are QHTLC — hash-based, quantum-resistant Trifold signatures, not EC
 - **Light ledger** (`lightledger.py`, `light-ledger/`): the fork's UTXO set as a snapshot committed by two sorted-Merkle roots (overlay + spent tombstones), with Trifold-signed checkpoints and a URUU bond on zkSync Era (1,000 URUU, 24 h fraud window). A real-chain test passed at tip 44,523 (44,414 overlay entries, 2,226,150 EXCAL; tamper test rejected; omission fraud proof proven against a tampered checkpoint, correctly failing against an honest one). The anchor and swap contracts compile clean. **Not deployed** — deployment needs the deployer key and ETH gas. Trust model, stated plainly: no trust in the auditor's key; what remains is zkSync consensus + contract code + at least one honest watcher in the window + the fraud verifier. Full replay is the only trust-free path.
 - **Bitcoin solo mining** (ONE SHOT): one Bitcoin block template, one full sweep of all 4.29 billion nonces. If a hash lands below target, **3.125 BTC** goes to `bc1qnfd75mezay3xwqvxwv32z7sh248mwf6de67ce7`. The solo miner (v11) is live at ~3.87M H/s, 13.59B hashes this run, best 39 bits, 0 blocks — in pool mode while the local Bitcoin node re-syncs. Watch it live: [oneshot.html](https://holedozer1229.github.io/excalibur-chain/oneshot.html).
 
+## Run a public SkyNet node
+
+The Living Ledger is an explorer for each user's locally validating node, not a
+centralized database. For an Ubuntu P2P seed and public explorer deployment,
+including private RPC and TLS reverse-proxy setup, see
+[`docs/SKYNET_NODE.md`](docs/SKYNET_NODE.md).
+
 ## Dr. Time — one countersignature, three chains
 
 ![Three chains, one countersignature](docs/assets/three-chains.webp)
@@ -133,6 +140,7 @@ Aetherion-Excalibur is raising on a **$1.5M SAFE, $8M post-money cap, 20% discou
 | --- | --- |
 | GUI Wallet | CustomTkinter dark theme with Aetherion Oracle aesthetics |
 | Encryption | AES-256-GCM + scrypt KDF key storage |
+| Local IPFS | Optional Kubo node; API and gateway bound to localhost, content pinning supported |
 | Fork Node | Built-in RPC server (port 9432), auto-starts on launch |
 | P2P Database | Persistent SQLite database — peers, txs, blocks survive restart |
 | Bootstrap Server | Auto-discovery server (port 9435) — nodes find each other |
@@ -156,6 +164,12 @@ Aetherion-Excalibur is raising on a **$1.5M SAFE, $8M post-money cap, 20% discou
 - Heartbeats every 60 seconds to stay alive
 - Discovers and shares peers with other nodes
 - Persists all P2P data in SQLite
+
+The Windows installer includes an optional **Local IPFS Node** component. It
+initializes a per-user Kubo repository with the API and gateway restricted to
+localhost. Starting the daemon at sign-in is a separate, unchecked installer
+task. See [`docs/SKYNET_NODE.md`](docs/SKYNET_NODE.md) for pinning and IPFS
+availability guidance; IPFS serves pinned content, not the live node process.
 
 **Three language implementations** — run any combination:
 

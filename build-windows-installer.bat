@@ -90,6 +90,14 @@ if not defined INNO_SETUP if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set 
 if not defined INNO_SETUP if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set "INNO_SETUP=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 if defined INNO_SETUP (
     echo.
+    echo Preparing the verified Kubo IPFS binary...
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0prepare-kubo.ps1"
+    if !errorlevel! neq 0 (
+        echo ERROR: Failed to prepare the Kubo IPFS binary.
+        exit /b 1
+    )
+
+    echo.
     echo ========================================
     echo   Building Inno Setup Installer...
     echo ========================================

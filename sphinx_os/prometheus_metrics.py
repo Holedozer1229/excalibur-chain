@@ -103,6 +103,36 @@ class PrometheusMetrics:
             'P2P network coherence score (0-1)',
             registry=self._registry,
         )
+        self.p2p_erepr_peers = Gauge(
+            'excalibur_p2p_erepr_peers',
+            'Connected P2P peers advertising EREPR support',
+            registry=self._registry,
+        )
+        self.p2p_erepr_v2_peers = Gauge(
+            'excalibur_p2p_erepr_v2_peers',
+            'Connected P2P peers advertising EREPR v2 support',
+            registry=self._registry,
+        )
+        self.p2p_known_addresses = Gauge(
+            'excalibur_p2p_known_addresses',
+            'Known peer addresses available for P2P discovery',
+            registry=self._registry,
+        )
+        self.p2p_gossip_sent = Gauge(
+            'excalibur_p2p_gossip_sent',
+            'EREPR gossip messages sent since this node started',
+            registry=self._registry,
+        )
+        self.p2p_gossip_received = Gauge(
+            'excalibur_p2p_gossip_received',
+            'EREPR gossip messages received since this node started',
+            registry=self._registry,
+        )
+        self.p2p_peer_latency = Gauge(
+            'excalibur_p2p_peer_latency_seconds',
+            'Average latency of connected P2P peers',
+            registry=self._registry,
+        )
 
         # --- Transaction Metrics ---
         self.transactions_total = Counter(
@@ -230,6 +260,11 @@ class PrometheusMetrics:
         self.blocks_mined = Counter(
             'excalibur_blocks_mined_total',
             'Total blocks mined by this node',
+            registry=self._registry,
+        )
+        self.blocks_seen = Counter(
+            'excalibur_blocks_seen_total',
+            'Total blocks accepted by this node after startup',
             registry=self._registry,
         )
 
@@ -385,6 +420,12 @@ class PrometheusMetrics:
         self.peers_total = _NoOp()
         self.peers_disconnected = _NoOp()
         self.network_coherence = _NoOp()
+        self.p2p_erepr_peers = _NoOp()
+        self.p2p_erepr_v2_peers = _NoOp()
+        self.p2p_known_addresses = _NoOp()
+        self.p2p_gossip_sent = _NoOp()
+        self.p2p_gossip_received = _NoOp()
+        self.p2p_peer_latency = _NoOp()
         self.transactions_total = _NoOp()
         self.transaction_amount = _NoOp()
         self.transaction_latency = _NoOp()
@@ -404,6 +445,7 @@ class PrometheusMetrics:
         self.chain_difficulty = _NoOp()
         self.chain_total_work = _NoOp()
         self.blocks_mined = _NoOp()
+        self.blocks_seen = _NoOp()
         self.block_height = _NoOp()
         self.block_size = _NoOp()
         self.block_transactions = _NoOp()
@@ -477,9 +519,8 @@ def start_http_server(port: int = 9435, addr: str = "127.0.0.1") -> Optional[thr
         _start_http_server(port, addr, registry=metrics._registry)
         print(f"[Prometheus] Metrics server started on http://{addr}:{port}/metrics")
         return None  # Runs in its own thread internally
-    except OSError as e:
-        print(f"[Prometheus] Failed to start metrics server on port {port}: {e}")
-        return None
+    except OSError:
+        raise
 
 
 def stop_http_server():

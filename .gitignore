@@ -38,6 +38,7 @@ build/
 # Dist (keep only release builds in tags)
 dist/
 !dist/AetherionEXCAL.exe
+installer/
 
 # ============================================================
 # Node.js

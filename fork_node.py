@@ -37,7 +37,9 @@ logging.basicConfig(
 logger = logging.getLogger("fork_node")
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-CHAIN_FILE = os.environ.get("EXCAL_CHAIN_FILE") or sys.argv[1] if len(sys.argv) > 1 else os.path.join(_HERE, "chain.jsonl")
+CHAIN_FILE = os.environ.get("EXCAL_CHAIN_FILE") or (
+    sys.argv[1] if len(sys.argv) > 1 else os.path.join(_HERE, "chain.jsonl")
+)
 RPC_PORT = int(os.environ.get("FORK_RPC_PORT", "9432"))
 
 # --- consensus helpers (mirrors genesis_fork.py) ---
@@ -1195,6 +1197,50 @@ def _load_p2p_settings():
     return p2p_layer, listen_host, listen_port, seed_peers, advertise_host, allow_private
 
 
+def _update_prometheus_metrics(metrics, store, p2p, last_height):
+    """Refresh node and live P2P gauges; return the current chain height."""
+    with store.lock:
+        height = store.tip_height
+        tip = store.by_height.get(height)
+        mempool_bytes = sum(len(tx) for tx in store.mempool.values())
+        mempool_size = len(store.mempool)
+        total_work = store.metrics["total_difficulty"]
+
+    p2p_mempool = getattr(p2p, "mempool", {})
+    mempool_size += len(p2p_mempool)
+    mempool_bytes += sum(len(tx) for tx in p2p_mempool.values())
+
+    metrics.chain_height.set(height)
+    metrics.chain_total_work.set(total_work)
+    metrics.mempool_size.set(mempool_size)
+    metrics.mempool_bytes.set(mempool_bytes)
+
+    if tip is not None:
+        bits = tip["bits"]
+        if isinstance(bits, str):
+            bits = int(bits, 16)
+        target = bits_to_target(bits)
+        if target > 0:
+            metrics.chain_difficulty.set(
+                0x00000000FFFF0000000000000000000000000000000000000000000000000000
+                / target
+            )
+
+    network = p2p.get_network_health()
+    metrics.peers_connected.set(network["peer_count"])
+    metrics.p2p_erepr_peers.set(network["erepr_peers"])
+    metrics.p2p_erepr_v2_peers.set(network["erepr_v2_peers"])
+    metrics.p2p_known_addresses.set(network["known_peer_addresses"])
+    metrics.p2p_gossip_sent.set(network["erepr_gossip_sent"])
+    metrics.p2p_gossip_received.set(network["erepr_gossip_received"])
+    metrics.p2p_peer_latency.set(network["avg_latency_ms"] / 1000)
+    metrics.update_uptime()
+
+    if height > last_height:
+        metrics.blocks_seen.inc(height - max(last_height, -1))
+    return height
+
+
 def main():
     if not os.path.exists(CHAIN_FILE):
         print(f"ERROR: chain file not found: {CHAIN_FILE}", file=sys.stderr)
@@ -1212,24 +1258,65 @@ def main():
         advertise_host=advertise_host,
         allow_private_peers=allow_private,
     )
-    p2p.start()
-    ForkRPCHandler.p2p_node = p2p
+
+    from sphinx_os.prometheus_metrics import (
+        PROMETHEUS_AVAILABLE,
+        get_metrics,
+        start_http_server,
+    )
+
+    if not PROMETHEUS_AVAILABLE:
+        p2p.stop()
+        raise RuntimeError(
+            "prometheus_client is required for the production node; "
+            "install it with the Linux deployment installer"
+        )
+    metrics = get_metrics()
+    metrics.node_info.labels(
+        version="2.0.0", network="excal-fork", sword=str(gf.SWORD)
+    ).info({"status": "running"})
+    metrics_host = os.environ.get("EXCAL_PROMETHEUS_HOST", "127.0.0.1")
+    metrics_port = int(os.environ.get("EXCAL_PROMETHEUS_PORT", "9435"))
 
     rpc_host = os.environ.get("FORK_RPC_HOST", "0.0.0.0")
     server = ThreadedHTTPServer((rpc_host, RPC_PORT), ForkRPCHandler)
-    print(f"Fork node RPC listening on {rpc_host}:{RPC_PORT} (serve-only, --no-mine)", flush=True)
-    print(
-        f"P2P listening on {p2p_host}:{p2p.listen_port}; "
-        f"seeds={seed_peers or 'none (listening only)'}",
-        flush=True,
-    )
 
+    last_height = store.getblockcount()
     try:
+        p2p.start()
+        ForkRPCHandler.p2p_node = p2p
+        start_http_server(metrics_port, metrics_host)
+        print(
+            f"Prometheus metrics listening on {metrics_host}:{metrics_port}/metrics",
+            flush=True,
+        )
+        print(f"Fork node RPC listening on {rpc_host}:{RPC_PORT} (serve-only, --no-mine)", flush=True)
+        print(
+            f"P2P listening on {p2p_host}:{p2p.listen_port}; "
+            f"seeds={seed_peers or 'none (listening only)'}",
+            flush=True,
+        )
+        _update_prometheus_metrics(metrics, store, p2p, last_height)
+        def update_metrics():
+            nonlocal last_height
+            while True:
+                try:
+                    last_height = _update_prometheus_metrics(
+                        metrics, store, p2p, last_height
+                    )
+                except Exception:
+                    logger.exception("Failed to refresh Prometheus node metrics")
+                time.sleep(5)
+
+        threading.Thread(
+            target=update_metrics, daemon=True, name="prometheus-metrics"
+        ).start()
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nShutting down...", flush=True)
+    finally:
         p2p.stop()
-        server.shutdown()
+        server.server_close()
 
 
 if __name__ == "__main__":

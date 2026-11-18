@@ -497,6 +497,8 @@ class ThreadedHTTPD(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 def main():
     parser = argparse.ArgumentParser(description="Excalibur Living Ledger")
+    parser.add_argument("--host", type=str, default="0.0.0.0",
+                        help="Address to serve on (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=9434,
                         help="Port to serve the ledger page (default: 9434)")
     parser.add_argument("--rpc", type=str, default="http://localhost:9432",
@@ -511,8 +513,8 @@ def main():
     ledger = LedgerData(args.rpc)
     LedgerHandler.ledger = ledger
 
-    server = ThreadedHTTPD(("0.0.0.0", args.port), LedgerHandler)
-    print(f"Living Ledger running at http://localhost:{args.port}")
+    server = ThreadedHTTPD((args.host, args.port), LedgerHandler)
+    print(f"Living Ledger running at http://{args.host}:{args.port}")
     print(f"Connected to node RPC: {args.rpc}")
     print("Press Ctrl+C to stop")
     try:

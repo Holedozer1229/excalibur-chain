@@ -33,4 +33,4 @@ cryptography
 numpy
 pyinstaller
 customtkinter
-prometheus-client
+prometheus-client>=0.20,<1

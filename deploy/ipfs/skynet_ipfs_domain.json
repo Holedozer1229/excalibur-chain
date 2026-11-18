@@ -1,0 +1,17 @@
+{
+  "name": "aetherionexcal-skynet",
+  "registered_at": "2026-11-17T23:36:00Z",
+  "author": "Travis Dale Jones",
+  "ipns_key_name": "aetherionexcal-skynet",
+  "ipns_domain": "k51qzi5uqu5dhgx5v1zp19ly9boliz5hd1vmbc6h5cj955z0eicir1vgk07z0k",
+  "ipfs_cid": "bafybeibq4jkcsm6nzdmbol5k3mpotpkjhj63guuxci6r57sa6kecqorsr4",
+  "dnslink_records": {
+    "_dnslink.skynet.aetherion-oracle.com": "dnslink=/ipns/k51qzi5uqu5dhgx5v1zp19ly9boliz5hd1vmbc6h5cj955z0eicir1vgk07z0k",
+    "_dnslink.aetherionexcal.eth": "dnslink=/ipfs/bafybeibq4jkcsm6nzdmbol5k3mpotpkjhj63guuxci6r57sa6kecqorsr4"
+  },
+  "gateways": [
+    "https://dweb.link/ipns/k51qzi5uqu5dhgx5v1zp19ly9boliz5hd1vmbc6h5cj955z0eicir1vgk07z0k",
+    "https://ipfs.io/ipns/k51qzi5uqu5dhgx5v1zp19ly9boliz5hd1vmbc6h5cj955z0eicir1vgk07z0k",
+    "https://bafybeibq4jkcsm6nzdmbol5k3mpotpkjhj63guuxci6r57sa6kecqorsr4.ipfs.dweb.link/"
+  ]
+}
