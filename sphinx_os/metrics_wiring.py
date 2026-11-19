@@ -65,9 +65,9 @@ class MetricsWiring:
         except Exception as e:
             logger.debug(f"Could not set node info: {e}")
 
-        # Start HTTP server on port 9435
+        # Start HTTP server on port 9438
         try:
-            start_http_server(9435)
+            start_http_server(9438)
         except Exception as e:
             logger.debug(f"Could not start metrics server: {e}")
 

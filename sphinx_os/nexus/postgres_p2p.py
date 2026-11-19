@@ -269,8 +269,8 @@ class P2PDatabase:
             """, (count,)).fetchall()
             return [(r["host"], r["port"]) for r in rows]
     
-    def prune_stale_peers(self, max_age: float = 3600.0):
-        """Remove peers not seen within max_age seconds."""
+    def prune_stale_peers(self, max_age: float = 604800.0):
+        """Remove peers not seen within max_age seconds (default: 7 days)."""
         cutoff = time.time() - max_age
         with self._lock, self._connect() as conn:
             conn.execute("DELETE FROM peers WHERE last_seen < ?", (cutoff,))

@@ -85,9 +85,9 @@ DEFAULT_BROADCAST_PORT = 9437
 DEFAULT_BROADCAST_ADDRESS = "255.255.255.255"
 DEFAULT_METRICS_PORT = 9438
 
-PEER_TTL = 600  # seconds before peer is considered stale
+PEER_TTL = 604800  # seconds before peer is pruned (7 days, allows reconnection)
 HEARTBEAT_INTERVAL = 60  # seconds between heartbeats
-PRUNE_INTERVAL = 300  # seconds between peer pruning
+PRUNE_INTERVAL = 3600  # seconds between peer pruning (1 hour)
 DISCOVERY_INTERVAL = 15  # seconds between peer discovery attempts
 CHAIN_SYNC_INTERVAL = 10  # seconds between chain sync attempts
 ENTANGLE_UPDATE_INTERVAL = 5  # seconds between entanglement graph updates

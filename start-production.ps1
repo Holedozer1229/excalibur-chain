@@ -36,6 +36,7 @@ if (-not $env:FORK_RPC_HOST) { $env:FORK_RPC_HOST = "0.0.0.0" }
 if (-not $env:STRATUM_HOST) { $env:STRATUM_HOST = "0.0.0.0" }
 if (-not $env:STRATUM_PORT) { $env:STRATUM_PORT = "9434" }
 if (-not $env:GAME_API_PORT) { $env:GAME_API_PORT = "9436" }
+if (-not $env:EXCAL_PROMETHEUS_PORT) { $env:EXCAL_PROMETHEUS_PORT = "9438" }
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
@@ -139,8 +140,9 @@ try {
     Write-Host "  P2P (EREPR):    0.0.0.0:9433"
     Write-Host "  Bitcoin Bridge: 0.0.0.0:8333"
     Write-Host "  Stratum:        $env:STRATUM_HOST`:$env:STRATUM_PORT"
-    Write-Host "  Health Check:   0.0.0.0:9435"
+    Write-Host "  Beacon/Health:  0.0.0.0:9435"
     Write-Host "  Game API:       0.0.0.0`:$env:GAME_API_PORT"
+    Write-Host "  Prometheus:     127.0.0.1`:$env:EXCAL_PROMETHEUS_PORT/metrics"
     Write-Host ""
     Write-Host "Press Ctrl+C to stop all services" -ForegroundColor Yellow
     Write-Host ""

@@ -67,9 +67,10 @@ DEFAULT_MULTICAST_GROUP = "239.1.1.1"
 DEFAULT_MULTICAST_TTL = 32
 DEFAULT_BROADCAST_PORT = 9437
 DEFAULT_BROADCAST_ADDRESS = "255.255.255.255"
-PEER_TTL = 600
+PEER_ACTIVE_TIMEOUT = 1800  # 30 minutes before peer is considered inactive for active count
+PEER_TTL = 604800  # 7 days before peer is pruned, allowing peers to reconnect
 HEARTBEAT_INTERVAL = 60
-PRUNE_INTERVAL = 300
+PRUNE_INTERVAL = 3600  # prune check once per hour
 CENTRAL_BOOTSTRAP_SERVERS = [
     "https://skynet-beacon.aetherion.workers.dev",
 ]
@@ -387,7 +388,7 @@ class SkyNetBeacon:
         with self._lock:
             total = len(self._peers)
             active = sum(1 for p in self._peers.values()
-                        if now - p.get("last_seen", 0) < PEER_TTL)
+                        if now - p.get("last_seen", 0) < PEER_ACTIVE_TIMEOUT)
         
         db_stats = self.db.get_stats()
         return {
@@ -511,30 +512,34 @@ class SkyNetBeacon:
     def _prune_loop(self):
         """Periodically prune stale peers."""
         while self._running:
-            try:
-                self.prune_stale_peers()
-            except Exception as e:
-                logger.warning(f"Prune error: {e}")
-            
+            # Wait PRUNE_INTERVAL before running prune so startup does not immediately drop persisted peers
             for _ in range(PRUNE_INTERVAL * 10):
                 if not self._running:
                     break
                 time.sleep(0.1)
+
+            if not self._running:
+                break
+
+            try:
+                self.prune_stale_peers()
+            except Exception as e:
+                logger.warning(f"Prune error: {e}")
     
     def prune_stale_peers(self):
-        """Remove stale peers."""
+        """Remove stale peers older than PEER_TTL."""
         now = time.time()
         with self._lock:
             stale = [
                 node_id for node_id, peer in self._peers.items()
-                if now - peer["last_seen"] > PEER_TTL
+                if now - peer.get("last_seen", 0) > PEER_TTL
             ]
             for node_id in stale:
                 del self._peers[node_id]
         
         if stale:
             self.db.prune_stale_peers(PEER_TTL)
-            logger.info(f"Pruned {len(stale)} stale peers")
+            logger.info(f"Pruned {len(stale)} stale peers (inactive > {PEER_TTL}s)")
 
 
 # ---------------------------------------------------------------------------
