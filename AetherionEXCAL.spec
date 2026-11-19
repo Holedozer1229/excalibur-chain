@@ -31,6 +31,13 @@ import os
 # Blockers
 # ---------------------------------------------------------------------------
 block_cipher = None
+icon_path = os.path.join(os.getcwd(), 'assets', 'aetherion-logo.ico')
+app_icon = icon_path if sys.platform == 'win32' and os.path.exists(icon_path) else None
+platform_excludes = (
+    ['darkdetect._mac_detect']
+    if sys.platform == 'win32'
+    else ['win32com', 'pythoncom']
+)
 
 # ---------------------------------------------------------------------------
 # Assembly — the main wallet script
@@ -248,7 +255,7 @@ a = Analysis(
         'setuptools',
         'pip',
         'ensurepip',
-    ],
+    ] + platform_excludes,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -280,6 +287,7 @@ if sys.platform == 'win32':
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
+        icon=app_icon,
     )
 else:
     # macOS / Linux

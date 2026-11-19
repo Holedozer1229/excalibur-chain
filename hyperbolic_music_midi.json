@@ -51,7 +51,7 @@
     "tick": 720,
     "type": "note_on",
     "channel": 0,
-    "note": 71,
+    "note": 72,
     "velocity": 80,
     "duration": 480
   },
@@ -59,7 +59,7 @@
     "tick": 1200,
     "type": "note_on",
     "channel": 0,
-    "note": 71,
+    "note": 72,
     "velocity": 80,
     "duration": 480
   },
@@ -67,7 +67,7 @@
     "tick": 1200,
     "type": "note_on",
     "channel": 1,
-    "note": 66,
+    "note": 67,
     "velocity": 60,
     "duration": 480
   },
@@ -75,7 +75,7 @@
     "tick": 1680,
     "type": "note_on",
     "channel": 0,
-    "note": 71,
+    "note": 72,
     "velocity": 80,
     "duration": 960
   },
@@ -83,7 +83,7 @@
     "tick": 1680,
     "type": "note_on",
     "channel": 1,
-    "note": 66,
+    "note": 67,
     "velocity": 60,
     "duration": 960
   },
@@ -91,7 +91,7 @@
     "tick": 2640,
     "type": "note_on",
     "channel": 0,
-    "note": 70,
+    "note": 72,
     "velocity": 80,
     "duration": 960
   },
@@ -99,7 +99,7 @@
     "tick": 2640,
     "type": "note_on",
     "channel": 1,
-    "note": 65,
+    "note": 67,
     "velocity": 60,
     "duration": 960
   },
@@ -107,7 +107,7 @@
     "tick": 3600,
     "type": "note_on",
     "channel": 0,
-    "note": 70,
+    "note": 72,
     "velocity": 80,
     "duration": 960
   },
@@ -115,7 +115,7 @@
     "tick": 4560,
     "type": "note_on",
     "channel": 0,
-    "note": 70,
+    "note": 71,
     "velocity": 80,
     "duration": 960
   },
@@ -123,7 +123,7 @@
     "tick": 5520,
     "type": "note_on",
     "channel": 0,
-    "note": 70,
+    "note": 71,
     "velocity": 80,
     "duration": 960
   },
@@ -131,7 +131,7 @@
     "tick": 5520,
     "type": "note_on",
     "channel": 1,
-    "note": 65,
+    "note": 66,
     "velocity": 60,
     "duration": 960
   },
@@ -139,7 +139,7 @@
     "tick": 6480,
     "type": "note_on",
     "channel": 0,
-    "note": 70,
+    "note": 71,
     "velocity": 80,
     "duration": 960
   },
@@ -147,7 +147,7 @@
     "tick": 6480,
     "type": "note_on",
     "channel": 1,
-    "note": 65,
+    "note": 66,
     "velocity": 60,
     "duration": 960
   },
@@ -155,7 +155,7 @@
     "tick": 7440,
     "type": "note_on",
     "channel": 0,
-    "note": 70,
+    "note": 71,
     "velocity": 80,
     "duration": 960
   },
@@ -195,7 +195,7 @@
     "tick": 10320,
     "type": "note_on",
     "channel": 0,
-    "note": 70,
+    "note": 69,
     "velocity": 80,
     "duration": 960
   },
@@ -203,7 +203,7 @@
     "tick": 10320,
     "type": "note_on",
     "channel": 1,
-    "note": 65,
+    "note": 64,
     "velocity": 60,
     "duration": 960
   },
@@ -211,7 +211,7 @@
     "tick": 11280,
     "type": "note_on",
     "channel": 0,
-    "note": 70,
+    "note": 69,
     "velocity": 80,
     "duration": 960
   },
@@ -323,7 +323,7 @@
     "tick": 19920,
     "type": "note_on",
     "channel": 0,
-    "note": 69,
+    "note": 68,
     "velocity": 80,
     "duration": 960
   },
@@ -331,7 +331,7 @@
     "tick": 20880,
     "type": "note_on",
     "channel": 0,
-    "note": 69,
+    "note": 68,
     "velocity": 80,
     "duration": 960
   },
@@ -339,7 +339,7 @@
     "tick": 20880,
     "type": "note_on",
     "channel": 1,
-    "note": 64,
+    "note": 63,
     "velocity": 60,
     "duration": 960
   },
@@ -363,7 +363,7 @@
     "tick": 23760,
     "type": "note_on",
     "channel": 0,
-    "note": 68,
+    "note": 67,
     "velocity": 80,
     "duration": 960
   },
@@ -371,7 +371,7 @@
     "tick": 23760,
     "type": "note_on",
     "channel": 1,
-    "note": 63,
+    "note": 62,
     "velocity": 60,
     "duration": 960
   },
@@ -379,7 +379,7 @@
     "tick": 24720,
     "type": "note_on",
     "channel": 0,
-    "note": 68,
+    "note": 67,
     "velocity": 80,
     "duration": 960
   },
@@ -387,7 +387,7 @@
     "tick": 24720,
     "type": "note_on",
     "channel": 1,
-    "note": 63,
+    "note": 62,
     "velocity": 60,
     "duration": 960
   },
@@ -395,7 +395,7 @@
     "tick": 25680,
     "type": "note_on",
     "channel": 0,
-    "note": 68,
+    "note": 67,
     "velocity": 80,
     "duration": 960
   },
@@ -403,7 +403,7 @@
     "tick": 25680,
     "type": "note_on",
     "channel": 1,
-    "note": 63,
+    "note": 62,
     "velocity": 60,
     "duration": 960
   },
@@ -411,7 +411,7 @@
     "tick": 26640,
     "type": "note_on",
     "channel": 0,
-    "note": 68,
+    "note": 67,
     "velocity": 80,
     "duration": 960
   },
@@ -419,7 +419,7 @@
     "tick": 27600,
     "type": "note_on",
     "channel": 0,
-    "note": 68,
+    "note": 67,
     "velocity": 80,
     "duration": 960
   },
@@ -427,7 +427,7 @@
     "tick": 27600,
     "type": "note_on",
     "channel": 1,
-    "note": 63,
+    "note": 62,
     "velocity": 60,
     "duration": 960
   },
@@ -531,7 +531,7 @@
     "tick": 35280,
     "type": "note_on",
     "channel": 0,
-    "note": 66,
+    "note": 67,
     "velocity": 80,
     "duration": 960
   },
@@ -539,7 +539,7 @@
     "tick": 35280,
     "type": "note_on",
     "channel": 1,
-    "note": 61,
+    "note": 62,
     "velocity": 60,
     "duration": 960
   },

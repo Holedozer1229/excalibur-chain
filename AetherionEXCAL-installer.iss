@@ -21,7 +21,7 @@ OutputBaseFilename=AetherionEXCAL-Setup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=installer-icon.ico
+SetupIconFile=assets\aetherion-logo.ico
 WizardStyle=modern
 PrivilegesRequired=lowest
 
@@ -36,6 +36,7 @@ Name: "ipfsautostart"; Description: "Start the local IPFS daemon when I sign in"
 
 [Files]
 Source: "dist\AetherionEXCAL.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "assets\aetherion-logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\AetherionEXCAL-Beacon.exe"; DestDir: "{app}"; Flags: ignoreversion; Components:beacon
 Source: "dist\AetherionEXCAL-StratumMiner.exe"; DestDir: "{app}"; Flags: ignoreversion; Components:miner
 Source: "dist\AetherionEXCAL-P2P.exe"; DestDir: "{app}"; Flags: ignoreversion; Components:p2p
@@ -50,8 +51,8 @@ Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion; Components:docs
 
 [Icons]
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: quicklaunchicon
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\aetherion-logo.ico"; Tasks: desktopicon
+Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\aetherion-logo.ico"; Tasks: quicklaunchicon
 Name: "{group}\SkyNet Beacon"; Filename: "{app}\AetherionEXCAL-Beacon.exe"; Tasks: quicklaunchicon; Components:beacon
 Name: "{group}\Stratum Miner"; Filename: "{app}\AetherionEXCAL-StratumMiner.exe"; Tasks: quicklaunchicon; Components:miner
 Name: "{group}\Autonomous Node"; Filename: "{app}\AetherionEXCAL-AutonomousNode.exe"; Tasks: quicklaunchicon; Components:autonomous

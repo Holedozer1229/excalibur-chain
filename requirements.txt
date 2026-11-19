@@ -35,4 +35,5 @@ pyinstaller
 customtkinter
 prometheus-client>=0.20,<1
 aiortc>=1.9,<2
-zeroconf>=0.149.16,<1
+zeroconf>=0.132,<1
+pywin32>=306; sys_platform == "win32"
