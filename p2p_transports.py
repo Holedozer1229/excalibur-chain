@@ -25,6 +25,7 @@ def _local_addresses():
                 or address.is_loopback
                 or address.is_multicast
                 or address.is_link_local
+                or not address.is_private
             ):
                 continue
             addresses.add(address.packed)

@@ -117,6 +117,7 @@ MAX_TX_SIZE = 1_000_000
 MAX_ADDR_SIZE = 1000
 MAX_MESSAGE_SIZE = 4_000_000
 MAX_PEERS = 128
+MAX_MDNS_PEERS = 128
 IDEAL_PEERS = 8
 EREPR_MAX_ADDRESSES = 64
 EREPR_ADDRESS_SIZE = 18
@@ -1201,13 +1202,20 @@ class P2PNode:
             or remote_node_id == local_node_id
             or local_node_id > remote_node_id
             or remote_node_id in self._mdns_peer_addrs
+            or len(self._mdns_peer_addrs) >= MAX_MDNS_PEERS
         ):
             return
         try:
-            address = (str(ipaddress.ip_address(host)), int(port))
+            parsed_address = ipaddress.ip_address(host)
+            address = (str(parsed_address), int(port))
         except (TypeError, ValueError):
             return
-        if not 0 < address[1] <= 65535:
+        # mDNS is LAN discovery, not a public-address bootstrap mechanism.
+        if (not 0 < address[1] <= 65535
+                or not parsed_address.is_private
+                or parsed_address.is_loopback or parsed_address.is_multicast
+                or parsed_address.is_unspecified
+                or address in self._mdns_addrs):
             return
         self._mdns_peer_addrs[remote_node_id] = address
         self._mdns_addrs.add(address)

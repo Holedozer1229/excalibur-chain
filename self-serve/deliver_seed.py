@@ -38,7 +38,7 @@ Outputs (public): self-serve/claim-seeds/<lot>-<funding_txid>.json
 The claim seed itself is NEVER printed or written anywhere in the clear.
 State: self-serve/watch_state.json (per lot: seen txids, delivered txid).
 """
-import argparse, hashlib, json, os, re, subprocess, sys
+import argparse, fcntl, hashlib, json, os, re, subprocess, sys
 from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -90,13 +90,29 @@ def load_state():
     try:
         with open(STATE_FILE) as f:
             s = json.load(f)
-    except Exception:
+    except FileNotFoundError:
         return {"lots": {}}
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            f"watch state is unreadable; refusing seed delivery: {exc}"
+        ) from exc
+    if not isinstance(s, dict):
+        raise RuntimeError("watch state is malformed; refusing seed delivery")
     # Migrate the old single-lot format, if present.
     if "delivered_txid" in s or "seen" in s:
         s = {"lots": {"1k": {"seen": s.get("seen", []),
                              "delivered_txid": s.get("delivered_txid")}}}
+    if not isinstance(s.get("lots", {}), dict):
+        raise RuntimeError("watch state lots field is malformed; refusing seed delivery")
     s.setdefault("lots", {})
+    for name, entry in s["lots"].items():
+        if (not isinstance(entry, dict)
+                or not isinstance(entry.get("seen", []), list)
+                or (entry.get("delivered_txid") is not None
+                    and not re.fullmatch(r"[0-9a-f]{64}", str(entry["delivered_txid"]).lower()))):
+            raise RuntimeError(
+                f"watch state for lot {name!r} is malformed; refusing seed delivery"
+            )
     return s
 
 def save_state(s):
@@ -297,13 +313,20 @@ def verify_htlc(script_hex, htlc_value, lot):
     from btc_htlc import parse_witness_script
     script = bytes.fromhex(script_hex)
     p = parse_witness_script(script)
-    assert p["maker_pubkey"].hex() == MAKER_PUB_HEX, "maker pubkey is not Lux's miner key"
-    assert p["secret_hash"].hex() == lot["secret_hash"], "secret hash mismatch for this lot"
-    assert p["timeout"] > 0, "bad timeout"
-    assert htlc_value > 0, "HTLC value must be positive"
+    if p["maker_pubkey"].hex() != MAKER_PUB_HEX:
+        raise ValueError("maker pubkey is not Lux's miner key")
+    if p["secret_hash"].hex() != lot["secret_hash"]:
+        raise ValueError("secret hash mismatch for this lot")
+    if not isinstance(p["timeout"], int) or p["timeout"] <= 0:
+        raise ValueError("bad HTLC timeout")
+    if not isinstance(htlc_value, int) or htlc_value <= 0:
+        raise ValueError("HTLC value must be a positive integer")
     ask = lot.get("ask_sats")
-    assert ask is None or htlc_value == ask, \
-        f"HTLC value {htlc_value} sats does not match the {lot['label']} lot's ask of {ask} sats"
+    if ask is not None and htlc_value != ask:
+        raise ValueError(
+            f"HTLC value {htlc_value} sats does not match the "
+            f"{lot['label']} lot's ask of {ask} sats"
+        )
     return p
 
 def encrypt_seed(seed_hex, delivery_pub_hex):
@@ -321,7 +344,7 @@ def encrypt_seed(seed_hex, delivery_pub_hex):
     ct = AESGCM(key).encrypt(nonce, bytes.fromhex(seed_hex), None)
     return {"ephemeral_pubkey": eph_pub.hex(), "nonce": nonce.hex(), "ciphertext": ct.hex()}
 
-def deliver(funding_txid, witness_script_hex, lot):
+def _deliver_locked(funding_txid, witness_script_hex, lot):
     state = load_state()
     ls = lot_state(state, lot["lot"])
     if ls.get("delivered_txid"):
@@ -382,6 +405,18 @@ def deliver(funding_txid, witness_script_hex, lot):
     print("delivery pubkey:", delivery_pub.hex())
     print("NOTE: push claim-seeds/ to the repo so the taker can fetch it.")
     return True
+
+def deliver(funding_txid, witness_script_hex, lot):
+    """Serialize the complete verify-and-deliver transaction across processes."""
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    lock_path = STATE_FILE + ".lock"
+    with open(lock_path, "a") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            return _deliver_locked(funding_txid, witness_script_hex, lot)
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
 
 def check_once():
     lots = all_lots()

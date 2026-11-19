@@ -12,7 +12,7 @@
 #   Install: pip install numpy
 #
 # pyinstaller — required to build Holo-wallet.exe and EXCAL-Wallet.exe.
-#   Install: pip install pyinstaller
+#   Install: pip install pyinstaller>=6.22.1,<7
 #
 # customtkinter — required by excal_wallet.py for the GUI wallet.
 #   Install: pip install customtkinter

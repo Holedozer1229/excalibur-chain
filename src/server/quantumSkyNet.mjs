@@ -21,6 +21,9 @@ import { EventEmitter } from 'events';
 export const P2P_MAGIC = Buffer.from('XCAL');
 export const DATA_CHANNEL_LABEL = 'excal-p2p-v1';
 export const DEFAULT_PORT = 9436;
+export const MAX_SIGNAL_BODY_BYTES = 64 * 1024;
+export const MAX_SIGNAL_PEERS = 256;
+export const MAX_CANDIDATES_PER_PEER = 64;
 
 /**
  * Encodes a message for transmission over WebRTC Data Channel or TCP/WS.
@@ -156,6 +159,9 @@ export class QuantumSkyNetHub extends EventEmitter {
     super();
     this.nodeId = options.nodeId || randomBytes(16).toString('hex');
     this.port = options.port || DEFAULT_PORT;
+    // Keep the unauthenticated signaling endpoint local by default. Deployments
+    // that intentionally expose it must configure a protected reverse proxy.
+    this.host = options.host || process.env.EXCAL_SIGNAL_HOST || '127.0.0.1';
     this.peers = new Map();
     this.pendingOffers = new Map();
     this.candidates = new Map();
@@ -165,10 +171,11 @@ export class QuantumSkyNetHub extends EventEmitter {
   start() {
     this.server = http.createServer((req, res) => this.handleHttpRequest(req, res));
     return new Promise((resolve, reject) => {
-      this.server.listen(this.port, () => {
+      this.server.listen(this.port, this.host, () => {
         resolve({
           nodeId: this.nodeId,
           port: this.port,
+          host: this.host,
         });
       });
       this.server.on('error', reject);
@@ -230,12 +237,20 @@ export class QuantumSkyNetHub extends EventEmitter {
 
     if (url.pathname === '/webrtc/signal/offer' && req.method === 'POST') {
       this.readJsonBody(req, (err, body) => {
-        if (err || !body || !body.peerId || !body.sdp) {
+        if (err || !body || typeof body.peerId !== 'string' ||
+            body.peerId.length < 1 || body.peerId.length > 128 ||
+            typeof body.sdp !== 'string' || body.sdp.length < 1 ||
+            Buffer.byteLength(body.sdp, 'utf8') > 48 * 1024) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid offer payload. Required: peerId, sdp' }));
           return;
         }
 
+        if (!this.peers.has(body.peerId) && this.peers.size >= MAX_SIGNAL_PEERS) {
+          res.writeHead(429, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Signaling peer capacity reached' }));
+          return;
+        }
         const peer = new WebRTCMeshPeer(body.peerId, this);
         this.peers.set(body.peerId, peer);
         this.pendingOffers.set(body.peerId, body.sdp);
@@ -252,16 +267,30 @@ export class QuantumSkyNetHub extends EventEmitter {
 
     if (url.pathname === '/webrtc/signal/candidate' && req.method === 'POST') {
       this.readJsonBody(req, (err, body) => {
-        if (err || !body || !body.peerId || !body.candidate) {
+        if (err || !body || typeof body.peerId !== 'string' ||
+            body.peerId.length < 1 || body.peerId.length > 128 ||
+            typeof body.candidate !== 'string' || body.candidate.length < 1 ||
+            Buffer.byteLength(body.candidate, 'utf8') > 4096) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid candidate payload. Required: peerId, candidate' }));
           return;
         }
 
+        if (!this.peers.has(body.peerId)) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unknown signaling peer' }));
+          return;
+        }
         if (!this.candidates.has(body.peerId)) {
           this.candidates.set(body.peerId, []);
         }
-        this.candidates.get(body.peerId).push(body.candidate);
+        const queue = this.candidates.get(body.peerId);
+        if (queue.length >= MAX_CANDIDATES_PER_PEER) {
+          res.writeHead(429, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Candidate queue capacity reached' }));
+          return;
+        }
+        queue.push(body.candidate);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'candidate_queued' }));
@@ -275,15 +304,35 @@ export class QuantumSkyNetHub extends EventEmitter {
 
   readJsonBody(req, callback) {
     let raw = '';
-    req.on('data', (chunk) => { raw += chunk; });
+    let received = 0;
+    let finished = false;
+    const finish = (err, value) => {
+      if (finished) return;
+      finished = true;
+      callback(err, value);
+    };
+    req.on('data', (chunk) => {
+      received += chunk.length;
+      if (received > MAX_SIGNAL_BODY_BYTES) {
+        finish(new Error('Request body too large'), null);
+        req.destroy();
+        return;
+      }
+      raw += chunk;
+    });
     req.on('end', () => {
+      if (finished) return;
       try {
         const json = JSON.parse(raw);
-        callback(null, json);
+        if (!json || typeof json !== 'object' || Array.isArray(json)) {
+          throw new Error('JSON body must be an object');
+        }
+        finish(null, json);
       } catch (err) {
-        callback(err, null);
+        finish(err, null);
       }
     });
+    req.on('error', (err) => finish(err, null));
   }
 }
 
