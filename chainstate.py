@@ -479,15 +479,16 @@ class ChainState:
         if bad:
             return {"accepted": False, "event": None, "reason": bad}
         rec = dict(norm, height=height, hash=hh, txs=txs)
-        # append first: crash-safe, the record is fully validated
-        with open(self.chain_path, "a") as f:
-            f.write(json.dumps(_enc_rec(rec)) + "\n")
-        self._index_record(rec)
-        new_work = rec["work"]
+        # Compute candidate work and branch paths without indexing or
+        # persisting the candidate. A rejected deep reorg must leave no
+        # durable record that could become the best tip after restart.
+        new_work = prev.get("work", 0) + _block_work(rec["bits"])
+        old_path = None
+        removed = []
+        added = []
         if new_work > self._active_work:
-            # new best chain: reorg (or plain extension)
             old_path = self._path_to(self._tip_hash)
-            new_path = self._path_to(hh)
+            new_path = self._path_to(prev_hash) + [rec]
             fork = 0
             while (fork < len(old_path) and fork < len(new_path)
                    and old_path[fork]["hash"] == new_path[fork]["hash"]):
@@ -507,8 +508,12 @@ class ChainState:
                 if not stale:
                     return {"accepted": False, "event": None,
                             "reason": "reorg too deep"}
-            # fork_utxo is already a private UtxoSet (tip copy or fresh
-            # side-branch replay): apply the block onto it directly.
+        # Persist and index only after every acceptance guard has passed.
+        with open(self.chain_path, "a") as f:
+            f.write(json.dumps(_enc_rec(rec)) + "\n")
+        self._index_record(rec)
+        # fork_utxo is already a private UtxoSet (tip copy or fresh
+        # side-branch replay): apply the block onto it directly.
             apply_block_txs(txs, fork_utxo, height)
             self.utxo = fork_utxo
             self._tip_hash = hh
