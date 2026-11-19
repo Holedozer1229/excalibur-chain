@@ -16,7 +16,7 @@
  * Free tier: 100K requests/day, 1GB KV storage, 1K writes/day
  */
 
-const PEER_TTL = 600; // seconds before peer is considered stale
+const PEER_TTL = 604800; // seconds before peer is considered stale (7 days)
 const MAX_PEERS = 10000; // max peers in KV
 
 // CORS headers for cross-origin requests

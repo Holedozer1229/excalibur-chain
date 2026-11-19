@@ -30,7 +30,7 @@ const MULTICAST_GROUP = '239.1.1.1';
 const MULTICAST_PORT = 9436;
 const BROADCAST_PORT = 9437;
 const BROADCAST_ADDRESS = '255.255.255.255';
-const PEER_TTL = 600; // seconds
+const PEER_TTL = 604800; // seconds (7 days, allows reconnection)
 const HEARTBEAT_INTERVAL = 60000; // ms
 
 // ---------------------------------------------------------------------------

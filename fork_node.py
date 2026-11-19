@@ -1276,7 +1276,7 @@ def main():
         version="2.0.0", network="excal-fork", sword=str(gf.SWORD)
     ).info({"status": "running"})
     metrics_host = os.environ.get("EXCAL_PROMETHEUS_HOST", "127.0.0.1")
-    metrics_port = int(os.environ.get("EXCAL_PROMETHEUS_PORT", "9435"))
+    metrics_port = int(os.environ.get("EXCAL_PROMETHEUS_PORT", "9438"))
 
     rpc_host = os.environ.get("FORK_RPC_HOST", "0.0.0.0")
     server = ThreadedHTTPServer((rpc_host, RPC_PORT), ForkRPCHandler)

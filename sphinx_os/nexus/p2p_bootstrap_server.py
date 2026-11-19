@@ -42,7 +42,8 @@ DEFAULT_PORT = 9435
 DEFAULT_MULTICAST_PORT = 9436
 DEFAULT_MULTICAST_GROUP = "239.1.1.1"
 DEFAULT_MULTICAST_TTL = 32  # Increased from 2 for cross-subnet discovery
-PEER_TTL = 600  # seconds before peer is considered stale (increased from 300)
+PEER_ACTIVE_TIMEOUT = 1800  # seconds before peer is considered inactive for active count
+PEER_TTL = 604800  # 7 days before peer is considered stale, allowing peers to reconnect
 HEALTH_CHECK_INTERVAL = 60  # seconds between health checks
 
 # Central bootstrap servers for cross-network discovery
@@ -281,7 +282,7 @@ class BootstrapServer:
         with self._lock:
             total = len(self._peers)
             active = sum(1 for p in self._peers.values() 
-                        if now - p.get("last_seen", 0) < PEER_TTL)
+                        if now - p.get("last_seen", 0) < PEER_ACTIVE_TIMEOUT)
         
         db_stats = self.db.get_stats()
         return {

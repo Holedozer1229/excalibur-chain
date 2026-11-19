@@ -4868,7 +4868,7 @@ class EXCALWallet(ctk.CTk):
     def _start_prometheus(self):
         """Start the Prometheus metrics server."""
         try:
-            start_http_server(9435)
+            start_http_server(9438)
         except Exception:
             pass
 

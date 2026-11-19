@@ -25,12 +25,14 @@ export FORK_RPC_HOST="${FORK_RPC_HOST:-0.0.0.0}"
 export STRATUM_HOST="${STRATUM_HOST:-0.0.0.0}"
 export STRATUM_PORT="${STRATUM_PORT:-9434}"
 export GAME_API_PORT="${GAME_API_PORT:-9436}"
+export EXCAL_PROMETHEUS_PORT="${EXCAL_PROMETHEUS_PORT:-9438}"
 
 echo "Configuration:"
 echo "  Workspace: $EXCAL_WORKSPACE"
 echo "  RPC: $FORK_RPC_HOST:$FORK_RPC_PORT"
 echo "  Stratum: $STRATUM_HOST:$STRATUM_PORT"
 echo "  Game API: 0.0.0.0:$GAME_API_PORT"
+echo "  Prometheus: 127.0.0.1:$EXCAL_PROMETHEUS_PORT/metrics"
 echo
 
 # Check chain file
@@ -85,8 +87,9 @@ echo "  RPC:            $FORK_RPC_HOST:$FORK_RPC_PORT"
 echo "  P2P (EREPR):    0.0.0.0:9433"
 echo "  Bitcoin Bridge: 0.0.0.0:8333"
 echo "  Stratum:        $STRATUM_HOST:$STRATUM_PORT"
-echo "  Health Check:   0.0.0.0:9435"
+echo "  Beacon/Health:  0.0.0.0:9435"
 echo "  Game API:       0.0.0.0:$GAME_API_PORT"
+echo "  Prometheus:     127.0.0.1:$EXCAL_PROMETHEUS_PORT/metrics"
 echo
 echo "Press Ctrl+C to stop all services"
 echo

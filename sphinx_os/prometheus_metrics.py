@@ -15,8 +15,8 @@ Usage:
     metrics.peers_connected.set(5)
     metrics.transactions_total.inc()
 
-    # Start HTTP server on port 9435 (default)
-    start_http_server(9435)
+    # Start HTTP server on port 9438 (default)
+    start_http_server(9438)
 """
 
 import time
@@ -520,11 +520,11 @@ def get_metrics() -> PrometheusMetrics:
     return _metrics
 
 
-def start_http_server(port: int = 9435, addr: str = "127.0.0.1") -> Optional[threading.Thread]:
+def start_http_server(port: int = 9438, addr: str = "127.0.0.1") -> Optional[threading.Thread]:
     """Start the Prometheus HTTP metrics server.
 
     Args:
-        port: Port to serve metrics on (default: 9435)
+        port: Port to serve metrics on (default: 9438)
         addr: Address to bind to (default: 127.0.0.1)
 
     Returns:

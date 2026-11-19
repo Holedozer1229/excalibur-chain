@@ -38,7 +38,7 @@ exe = EXE(
     a.datas,
     [],
     name='AetherionEXCAL-AutonomousNode',
-    debug=True,
+    debug=False,
     console=True,  # Console output for headless operation
     disable_windowed_traceback=False,
     argv_emulation=False,

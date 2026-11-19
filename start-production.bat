@@ -23,12 +23,14 @@ if not defined FORK_RPC_HOST set FORK_RPC_HOST=0.0.0.0
 if not defined STRATUM_HOST set STRATUM_HOST=0.0.0.0
 if not defined STRATUM_PORT set STRATUM_PORT=9434
 if not defined GAME_API_PORT set GAME_API_PORT=9436
+if not defined EXCAL_PROMETHEUS_PORT set EXCAL_PROMETHEUS_PORT=9438
 
 echo Configuration:
 echo   Workspace: %EXCAL_WORKSPACE%
 echo   RPC: %FORK_RPC_HOST%:%FORK_RPC_PORT%
 echo   Stratum: %STRATUM_HOST%:%STRATUM_PORT%
 echo   Game API: 0.0.0.0:%GAME_API_PORT%
+echo   Prometheus: 127.0.0.1:%EXCAL_PROMETHEUS_PORT%/metrics
 echo.
 
 REM Check chain file
@@ -68,8 +70,9 @@ echo   RPC:            %FORK_RPC_HOST%:%FORK_RPC_PORT%
 echo   P2P (EREPR):    0.0.0.0:9433
 echo   Bitcoin Bridge: 0.0.0.0:8333
 echo   Stratum:        %STRATUM_HOST%:%STRATUM_PORT%
-echo   Health Check:   0.0.0.0:9435
+echo   Beacon/Health:  0.0.0.0:9435
 echo   Game API:       0.0.0.0:%GAME_API_PORT%
+echo   Prometheus:     127.0.0.1:%EXCAL_PROMETHEUS_PORT%/metrics
 echo.
 echo Press Ctrl+C to stop all services
 echo.
