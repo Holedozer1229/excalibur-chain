@@ -72,13 +72,13 @@ Filename: "{app}\AetherionEXCAL-Beacon.exe"; Description: "Start SkyNet Beacon";
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Start-IPFS.ps1"" -ConfigureOnly"; StatusMsg: "Configuring the local IPFS repository..."; Flags: runhidden runasoriginaluser postinstall; Components: ipfs
 
 [Components]
-Name: "main"; Description: "AetherionEXCAL Wallet"; Types: custom full; Flags: fixed
+Name: "main"; Description: "AetherionEXCAL Core (PQH Wallet, BTC-EXCAL Atomic Swaps, Living Chain, Quantum Oracle)"; Types: custom full; Flags: fixed
 Name: "ipfs"; Description: "Local IPFS Node (localhost API; pin and serve content)"; Types: full
 Name: "beacon"; Description: "SkyNet Beacon (always-on P2P node)"; Types: full
 Name: "miner"; Description: "Stratum Miner (CPU/GPU mining)"; Types: full
 Name: "p2p"; Description: "Node.js P2P Client"; Types: full
-Name: "autonomous"; Description: "Autonomous Node (headless SkyNet/SpinxOS node)"; Types: full
-Name: "docs"; Description: "Documentation"; Types: full
+Name: "autonomous"; Description: "Autonomous Node (headless SkyNet/SphinxOS node)"; Types: full
+Name: "docs"; Description: "Documentation & Technical Specifications"; Types: full
 
 [Code]
 function ShouldSkipFile(filename: String): Boolean;
