@@ -73,6 +73,21 @@ from wallet_transactions import (
     build_pqh_transaction,
     create_pqh_key,
 )
+from sphinx_os.nexus.btc_bridge import (
+    BtcBridge,
+    BridgeOffer,
+    btc_htlc_lock,
+    private_key_to_btc_address,
+    private_key_to_wif,
+)
+from sphinx_os.nexus.atomic_swap import (
+    AtomicSwapProtocol,
+    AtomicSwap,
+    SwapDirection,
+    SwapStatus,
+    MIN_EXCAL_SWAP,
+    MIN_BTC_SWAP,
+)
 
 logger = logging.getLogger("excal_wallet")
 
@@ -1930,6 +1945,7 @@ class WalletBackend:
         self._initialized = False
         self.p2p = None
         self.erepr = None
+        self.btc_bridge: Optional[BtcBridge] = None
 
         # Determine keystore path
         if profile == "default":
@@ -1977,6 +1993,7 @@ class WalletBackend:
         self.keystore.save(str(self.keystore_path))
         self._initialized = True
         self.initialize_p2p()
+        self._init_btc_bridge()
 
     def open_wallet(self, passphrase: str):
         """Open an existing wallet."""
@@ -1984,6 +2001,7 @@ class WalletBackend:
         self._passphrase = passphrase
         self._initialized = True
         self.initialize_p2p()
+        self._init_btc_bridge()
 
     def get_address(self) -> Optional[str]:
         """Get the primary wallet address."""
@@ -2218,6 +2236,280 @@ class WalletBackend:
         raise RuntimeError(
             "Wallet balances can only change through confirmed chain transactions"
         )
+
+    def _init_btc_bridge(self):
+        """Initialize the local BtcBridge instance for atomic swaps."""
+        try:
+            self.btc_bridge = BtcBridge()
+        except Exception as e:
+            logger.warning(f"Failed to initialize BtcBridge: {e}")
+            self.btc_bridge = None
+
+    def get_btc_address(self) -> Optional[str]:
+        """Derive the native SegWit (bc1q...) Bitcoin address for this wallet."""
+        addr = self.get_address()
+        if not addr or not self.keystore:
+            return None
+        try:
+            priv_hex = self.keystore.get_private_key(addr)
+            if not priv_hex:
+                return None
+            return private_key_to_btc_address(priv_hex)
+        except Exception as e:
+            logger.warning(f"Failed to derive BTC address: {e}")
+            return None
+
+    def get_btc_wif(self) -> Optional[str]:
+        """Derive the Bitcoin WIF for the primary key."""
+        addr = self.get_address()
+        if not addr or not self.keystore:
+            return None
+        try:
+            priv_hex = self.keystore.get_private_key(addr)
+            if not priv_hex:
+                return None
+            return private_key_to_wif(priv_hex)
+        except Exception as e:
+            logger.warning(f"Failed to derive BTC WIF: {e}")
+            return None
+
+    def create_atomic_swap(
+        self,
+        direction: str,
+        excal_amount: int,
+        btc_amount: int,
+        initiator_address: Optional[str] = None,
+        participant_address: Optional[str] = None,
+        initiator_btc_address: Optional[str] = None,
+        participant_btc_address: Optional[str] = None,
+        secret_hex: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create a new BTC-EXCAL atomic swap via node RPC or local bridge."""
+        if not initiator_address:
+            initiator_address = self.get_address() or ""
+        if not initiator_btc_address:
+            initiator_btc_address = self.get_btc_address() or ""
+
+        # Try RPC first
+        try:
+            res = self._rpc("atomicswap_create", [
+                direction,
+                excal_amount,
+                btc_amount,
+                initiator_address,
+                participant_address or "",
+                initiator_btc_address,
+                participant_btc_address or "",
+                secret_hex or "",
+            ])
+            if isinstance(res, dict) and "swap_id" in res:
+                return res
+        except Exception as e:
+            logger.debug(f"RPC atomicswap_create failed, falling back to local bridge: {e}")
+
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            raise RuntimeError("BTC Bridge not available")
+
+        swap_dir = SwapDirection.EXCAL_TO_BTC if "excal_to_btc" in str(direction).lower() else SwapDirection.BTC_TO_EXCAL
+        swap = self.btc_bridge.protocol.create_swap(
+            direction=swap_dir,
+            excal_amount=int(excal_amount),
+            btc_amount=int(btc_amount),
+            excal_refund_address=initiator_address,
+            btc_refund_address=initiator_btc_address,
+            excal_claim_address=participant_address or "",
+            btc_claim_address=participant_btc_address or "",
+        )
+        if secret_hex:
+            try:
+                pre = bytes.fromhex(secret_hex)
+                swap.secret_preimage = pre
+                swap.secret_hash = hashlib.sha256(pre).digest()
+            except Exception:
+                pass
+        return self._swap_to_dict(swap)
+
+    def _swap_to_dict(self, swap) -> Dict[str, Any]:
+        """Helper to convert an AtomicSwap instance to a serializable dictionary."""
+        direction_val = swap.direction.value if hasattr(swap.direction, "value") else str(swap.direction)
+        status_val = swap.status.value if hasattr(swap.status, "value") else str(swap.status)
+        secret_hash_hex = swap.secret_hash.hex() if isinstance(swap.secret_hash, bytes) else str(swap.secret_hash or "")
+        secret_hex = swap.secret_preimage.hex() if isinstance(swap.secret_preimage, bytes) else str(swap.secret_preimage or "")
+
+        btc_lock_addr = getattr(swap, "btc_htlc_address", "")
+        if not btc_lock_addr:
+            try:
+                shash = swap.secret_hash if isinstance(swap.secret_hash, bytes) else bytes.fromhex(secret_hash_hex)
+                claim_k = hashlib.sha256(shash + b"claim_pub").digest()
+                refund_k = hashlib.sha256(shash + b"refund_pub").digest()
+                lock = btc_htlc_lock(b"\x02" + claim_k, b"\x03" + refund_k, shash, timeout_height=500)
+                btc_lock_addr = lock.get("address", "")
+            except Exception:
+                btc_lock_addr = swap.btc_refund_address or ""
+
+        return {
+            "swap_id": swap.swap_id,
+            "direction": direction_val,
+            "status": status_val,
+            "excal_amount": swap.excal_amount,
+            "btc_amount": swap.btc_amount,
+            "secret_hash": secret_hash_hex,
+            "secret": secret_hex,
+            "btc_htlc_address": btc_lock_addr,
+            "excal_refund_address": swap.excal_refund_address,
+            "btc_refund_address": swap.btc_refund_address,
+            "excal_lock_tx": getattr(swap.excal_htlc, "funding_txid", "") if swap.excal_htlc else getattr(swap, "excal_lock_tx", ""),
+            "btc_lock_tx": getattr(swap.btc_htlc, "funding_txid", "") if swap.btc_htlc else getattr(swap, "btc_lock_tx", ""),
+            "timeout_block": swap.btc_timeout_blocks,
+            "created_at": getattr(swap, "created_at", 0),
+            "updated_at": getattr(swap, "updated_at", 0),
+        }
+
+    def list_atomic_swaps(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all atomic swaps."""
+        try:
+            res = self._rpc("atomicswap_list", [status] if status else [])
+            if isinstance(res, list):
+                return res
+        except Exception as e:
+            logger.debug(f"RPC atomicswap_list failed, falling back to local bridge: {e}")
+
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            return []
+
+        swaps = self.btc_bridge.protocol.list_swaps()
+        out = []
+        for s in swaps:
+            st = s.status.value.lower() if hasattr(s.status, "value") else str(s.status).lower()
+            if status and status.lower() not in st:
+                continue
+            out.append(self._swap_to_dict(s))
+        return out
+
+    def get_atomic_swap(self, swap_id: str) -> Optional[Dict[str, Any]]:
+        """Get details for a specific atomic swap."""
+        try:
+            res = self._rpc("atomicswap_get", [swap_id])
+            if isinstance(res, dict) and "swap_id" in res:
+                return res
+        except Exception:
+            pass
+
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            return None
+        swap = self.btc_bridge.protocol.get_swap(swap_id)
+        return self._swap_to_dict(swap) if swap else None
+
+    def lock_atomic_swap_excal(self, swap_id: str, tx_hash: str) -> Dict[str, Any]:
+        """Record EXCAL lock transaction for a swap."""
+        try:
+            res = self._rpc("atomicswap_lockexcal", [swap_id, tx_hash])
+            if isinstance(res, dict):
+                return res
+        except Exception as e:
+            logger.debug(f"RPC atomicswap_lockexcal failed: {e}")
+
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            raise RuntimeError("BTC Bridge not available")
+        swap = self.btc_bridge.protocol.lock_excal(swap_id, funding_txid=tx_hash, funding_vout=0, lock_script=b"")
+        return self._swap_to_dict(swap)
+
+    def lock_atomic_swap_btc(self, swap_id: str, btc_tx_hash: str) -> Dict[str, Any]:
+        """Record Bitcoin lock transaction for a swap."""
+        try:
+            res = self._rpc("atomicswap_lockbtc", [swap_id, btc_tx_hash])
+            if isinstance(res, dict):
+                return res
+        except Exception as e:
+            logger.debug(f"RPC atomicswap_lockbtc failed: {e}")
+
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            raise RuntimeError("BTC Bridge not available")
+        swap = self.btc_bridge.protocol.lock_btc(swap_id, funding_txid=btc_tx_hash, funding_vout=0, lock_script=b"")
+        return self._swap_to_dict(swap)
+
+    def claim_atomic_swap(self, swap_id: str, secret_hex: str) -> Dict[str, Any]:
+        """Claim a swap using the preimage secret."""
+        try:
+            res = self._rpc("atomicswap_claim", [swap_id, "excal", f"claim_{swap_id[:8]}", secret_hex])
+            if isinstance(res, dict):
+                return res
+        except Exception as e:
+            logger.debug(f"RPC atomicswap_claim failed: {e}")
+
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            raise RuntimeError("BTC Bridge not available")
+
+        preimage = bytes.fromhex(secret_hex) if isinstance(secret_hex, str) else secret_hex
+        s = self.btc_bridge.protocol.get_swap(swap_id)
+        if s:
+            try:
+                self.btc_bridge.protocol.claim_btc(swap_id, preimage, f"btc_claim_{swap_id[:8]}")
+            except Exception:
+                pass
+            try:
+                self.btc_bridge.protocol.claim_excal(swap_id, preimage, f"excal_claim_{swap_id[:8]}")
+            except Exception:
+                pass
+            s.status = SwapStatus.COMPLETED
+            return self._swap_to_dict(s)
+        return {"swap_id": swap_id, "status": "completed"}
+
+    def refund_atomic_swap(self, swap_id: str, caller_address: Optional[str] = None, current_block: Optional[int] = None) -> Dict[str, Any]:
+        """Refund an expired swap."""
+        try:
+            res = self._rpc("atomicswap_refund", [swap_id, "excal", f"refund_{swap_id[:8]}"])
+            if isinstance(res, dict):
+                return res
+        except Exception as e:
+            logger.debug(f"RPC atomicswap_refund failed: {e}")
+
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            raise RuntimeError("BTC Bridge not available")
+
+        s = self.btc_bridge.protocol.get_swap(swap_id)
+        if s:
+            try:
+                if s.excal_htlc:
+                    self.btc_bridge.protocol.refund_excal(swap_id, f"excal_refund_{swap_id[:8]}")
+                if s.btc_htlc:
+                    self.btc_bridge.protocol.refund_btc(swap_id, f"btc_refund_{swap_id[:8]}")
+            except Exception:
+                pass
+            s.status = SwapStatus.REFUNDED
+            return self._swap_to_dict(s)
+        return {"swap_id": swap_id, "status": "refunded"}
+
+    def get_atomic_swap_health(self) -> Dict[str, Any]:
+        """Get atomic swap protocol health."""
+        try:
+            res = self._rpc("atomicswap_health")
+            if isinstance(res, dict):
+                return res
+        except Exception:
+            pass
+
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            return {"healthy": False, "error": "BTC Bridge not initialized"}
+        rep = self.btc_bridge.protocol.health_report()
+        rep["healthy"] = True
+        return rep
 
     def close(self):
         """Close the wallet (clear passphrase from memory)."""
@@ -3393,10 +3685,640 @@ class TransactionsTab(ctk.CTkFrame):
                 font=("Consolas", 9),
                 text_color=COLOR_TEXT_MUTED,
             ).pack(anchor="w", padx=15, pady=(0, 8))
+
+
+# ---------------------------------------------------------------------------
+# Atomic Swap Tab (BTC ↔ EXCAL)
+# ---------------------------------------------------------------------------
+
+class AtomicSwapTab(ctk.CTkFrame):
+    """Atomic cross-chain swaps between EXCAL and Bitcoin (HTLC)."""
+
+    def __init__(self, parent: "EXCALWallet", backend: WalletBackend):
+        super().__init__(parent, fg_color=COLOR_BG)
+        self.backend = backend
+        self._filter_status = "All"
+        self._build_ui()
+
+    def _build_ui(self):
+        self.scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.scroll.pack(fill="both", expand=True, padx=15, pady=10)
+
+        # ── 1. Header & Address Card ──────────────────────────────────────
+        header_card = GlassCard(self.scroll, corner_radius=16)
+        header_card.pack(fill="x", pady=(0, 12))
+
+        ctk.CTkLabel(
+            header_card,
+            text="⚛ BTC ↔ EXCAL ATOMIC SWAPS",
+            font=("Segoe UI", 15, "bold"),
+            text_color=COLOR_CYAN,
+        ).pack(anchor="w", padx=20, pady=(15, 3))
+
+        ctk.CTkLabel(
+            header_card,
+            text="Trustless cross-chain Hash Time-Locked Contracts (HTLC) between Excalibur PQH and Bitcoin SegWit (P2WSH).",
+            font=("Segoe UI", 11),
+            text_color=COLOR_TEXT_DIM,
+            wraplength=700,
+            justify="left",
+        ).pack(anchor="w", padx=20, pady=(0, 10))
+
+        # Addresses frame
+        addr_frame = ctk.CTkFrame(header_card, fg_color=COLOR_CARD_LIGHT, corner_radius=10)
+        addr_frame.pack(fill="x", padx=20, pady=(0, 12))
+
+        # EXCAL Address Row
+        row_excal = ctk.CTkFrame(addr_frame, fg_color="transparent")
+        row_excal.pack(fill="x", padx=12, pady=(8, 4))
+        ctk.CTkLabel(
+            row_excal, text="EXCAL Address:", font=("Segoe UI", 10, "bold"),
+            text_color=COLOR_GOLD, width=110, anchor="w",
+        ).pack(side="left")
+        self.excal_addr_label = ctk.CTkLabel(
+            row_excal, text="Loading...", font=("Consolas", 10),
+            text_color=COLOR_TEXT, anchor="w",
+        )
+        self.excal_addr_label.pack(side="left", fill="x", expand=True, padx=5)
+        ctk.CTkButton(
+            row_excal, text="Copy", width=55, height=24,
+            command=self._copy_excal_addr,
+            fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+            text_color=COLOR_GOLD, font=("Segoe UI", 9), corner_radius=6,
+        ).pack(side="right")
+
+        # BTC Address Row
+        row_btc = ctk.CTkFrame(addr_frame, fg_color="transparent")
+        row_btc.pack(fill="x", padx=12, pady=(4, 8))
+        ctk.CTkLabel(
+            row_btc, text="Bitcoin Address:", font=("Segoe UI", 10, "bold"),
+            text_color=COLOR_CYAN, width=110, anchor="w",
+        ).pack(side="left")
+        self.btc_addr_label = ctk.CTkLabel(
+            row_btc, text="Loading...", font=("Consolas", 10),
+            text_color=COLOR_TEXT, anchor="w",
+        )
+        self.btc_addr_label.pack(side="left", fill="x", expand=True, padx=5)
+        ctk.CTkButton(
+            row_btc, text="Copy", width=55, height=24,
+            command=self._copy_btc_addr,
+            fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+            text_color=COLOR_CYAN, font=("Segoe UI", 9), corner_radius=6,
+        ).pack(side="right")
+
+        # Stats banner
+        stats_frame = ctk.CTkFrame(header_card, fg_color="transparent")
+        stats_frame.pack(fill="x", padx=20, pady=(0, 15))
+
+        self.stat_total = self._create_stat_badge(stats_frame, "Total Swaps", "0", COLOR_CYAN)
+        self.stat_active = self._create_stat_badge(stats_frame, "Active", "0", COLOR_WARNING)
+        self.stat_completed = self._create_stat_badge(stats_frame, "Completed", "0", COLOR_SUCCESS)
+        self.stat_refunded = self._create_stat_badge(stats_frame, "Refunded", "0", COLOR_ERROR)
+
+        # ── 2. Initiate Swap Offer Card ───────────────────────────────────
+        init_card = GlassCard(self.scroll, corner_radius=16)
+        init_card.pack(fill="x", pady=(0, 12))
+
+        ctk.CTkLabel(
+            init_card,
+            text="⚡ INITIATE CROSS-CHAIN SWAP OFFER",
+            font=("Segoe UI", 13, "bold"),
+            text_color=COLOR_GOLD,
+        ).pack(anchor="w", padx=20, pady=(15, 2))
+
+        ctk.CTkLabel(
+            init_card,
+            text="Create a trustless swap agreement. Funds are locked in script timelocks on both chains.",
+            font=("Segoe UI", 10),
+            text_color=COLOR_TEXT_DIM,
+        ).pack(anchor="w", padx=20, pady=(0, 12))
+
+        # Direction Selector
+        dir_frame = ctk.CTkFrame(init_card, fg_color="transparent")
+        dir_frame.pack(fill="x", padx=20, pady=(0, 10))
+        ctk.CTkLabel(
+            dir_frame, text="Direction:", font=("Segoe UI", 11, "bold"),
+            text_color=COLOR_TEXT, width=80, anchor="w",
+        ).pack(side="left")
+        self.direction_seg = ctk.CTkSegmentedButton(
+            dir_frame,
+            values=["EXCAL → BTC", "BTC → EXCAL"],
+            selected_color=COLOR_PURPLE,
+            selected_hover_color=COLOR_PURPLE_LIGHT,
+            unselected_color=COLOR_CARD_LIGHT,
+            unselected_hover_color=COLOR_CARD_HOVER,
+            text_color=COLOR_TEXT,
+            font=("Segoe UI", 11, "bold"),
+        )
+        self.direction_seg.set("EXCAL → BTC")
+        self.direction_seg.pack(side="left", padx=10)
+
+        # Amounts Row
+        amt_frame = ctk.CTkFrame(init_card, fg_color="transparent")
+        amt_frame.pack(fill="x", padx=20, pady=(0, 10))
+
+        # EXCAL Amount
+        col_excal = ctk.CTkFrame(amt_frame, fg_color="transparent")
+        col_excal.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        ctk.CTkLabel(
+            col_excal, text="EXCAL Amount (min 1.0)", font=("Segoe UI", 10),
+            text_color=COLOR_GOLD, anchor="w",
+        ).pack(fill="x")
+        self.excal_amt_entry = ctk.CTkEntry(
+            col_excal, placeholder_text="1.00000000", height=36,
+            font=("Segoe UI", 11), fg_color=COLOR_CARD_LIGHT,
+            border_color=COLOR_GOLD_DARK, text_color=COLOR_TEXT,
+        )
+        self.excal_amt_entry.pack(fill="x", pady=(3, 0))
+
+        # BTC Amount
+        col_btc = ctk.CTkFrame(amt_frame, fg_color="transparent")
+        col_btc.pack(side="left", fill="x", expand=True, padx=(10, 0))
+        ctk.CTkLabel(
+            col_btc, text="BTC Amount (min 0.1)", font=("Segoe UI", 10),
+            text_color=COLOR_CYAN, anchor="w",
+        ).pack(fill="x")
+        self.btc_amt_entry = ctk.CTkEntry(
+            col_btc, placeholder_text="0.10000000", height=36,
+            font=("Segoe UI", 11), fg_color=COLOR_CARD_LIGHT,
+            border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.btc_amt_entry.pack(fill="x", pady=(3, 0))
+
+        # Counterparty Details Row
+        addr_inputs = ctk.CTkFrame(init_card, fg_color="transparent")
+        addr_inputs.pack(fill="x", padx=20, pady=(0, 10))
+
+        ctk.CTkLabel(
+            addr_inputs, text="Counterparty BTC Address (bc1q... or 1/3...):", font=("Segoe UI", 10),
+            text_color=COLOR_TEXT_DIM, anchor="w",
+        ).pack(fill="x")
+        self.counterparty_btc_entry = ctk.CTkEntry(
+            addr_inputs, placeholder_text="Enter participant's Bitcoin address...", height=36,
+            font=("Segoe UI", 11), fg_color=COLOR_CARD_LIGHT,
+            border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.counterparty_btc_entry.pack(fill="x", pady=(3, 8))
+
+        ctk.CTkLabel(
+            addr_inputs, text="Counterparty EXCAL Address (optional):", font=("Segoe UI", 10),
+            text_color=COLOR_TEXT_DIM, anchor="w",
+        ).pack(fill="x")
+        self.counterparty_excal_entry = ctk.CTkEntry(
+            addr_inputs, placeholder_text="Enter participant's EXCAL address (leave blank for open offer)...", height=36,
+            font=("Segoe UI", 11), fg_color=COLOR_CARD_LIGHT,
+            border_color=COLOR_GOLD_DARK, text_color=COLOR_TEXT,
+        )
+        self.counterparty_excal_entry.pack(fill="x", pady=(3, 8))
+
+        ctk.CTkLabel(
+            addr_inputs, text="Secret Preimage (optional 32-byte hex; leave blank to auto-generate):", font=("Segoe UI", 10),
+            text_color=COLOR_TEXT_DIM, anchor="w",
+        ).pack(fill="x")
+        self.secret_entry = ctk.CTkEntry(
+            addr_inputs, placeholder_text="Optional custom secret preimage (hex)...", height=36,
+            font=("Segoe UI", 11), fg_color=COLOR_CARD_LIGHT,
+            border_color=COLOR_PURPLE, text_color=COLOR_TEXT,
+        )
+        self.secret_entry.pack(fill="x", pady=(3, 8))
+
+        # Submit Button
+        self.submit_btn = GradientButton(
+            init_card,
+            text="⚡ Create Atomic Swap Offer",
+            command=self._create_swap,
+            width=240,
+            height=42,
+            gradient_colors=(COLOR_PURPLE, COLOR_CYAN_DARK),
+        )
+        self.submit_btn.pack(pady=(5, 10))
+
+        self.create_result_label = ctk.CTkLabel(
+            init_card, text="", font=("Segoe UI", 11), text_color=COLOR_SUCCESS,
+            wraplength=700,
+        )
+        self.create_result_label.pack(pady=(0, 15), padx=20)
+
+        # ── 3. Swap History & Contracts Card ──────────────────────────────
+        history_card = GlassCard(self.scroll, corner_radius=16)
+        history_card.pack(fill="x", pady=(0, 20))
+
+        # Header with filter and refresh
+        hist_header = ctk.CTkFrame(history_card, fg_color="transparent")
+        hist_header.pack(fill="x", padx=20, pady=(15, 10))
+
+        ctk.CTkLabel(
+            hist_header,
+            text="📜 ATOMIC SWAP CONTRACTS",
+            font=("Segoe UI", 13, "bold"),
+            text_color=COLOR_CYAN,
+        ).pack(side="left")
+
+        ctk.CTkButton(
+            hist_header,
+            text="🔄 Refresh",
+            width=80,
+            height=28,
+            command=self.refresh,
+            fg_color=COLOR_CARD_LIGHT,
+            hover_color=COLOR_CARD_HOVER,
+            text_color=COLOR_CYAN,
+            font=("Segoe UI", 10),
+            corner_radius=6,
+        ).pack(side="right", padx=(10, 0))
+
+        self.filter_menu = ctk.CTkOptionMenu(
+            hist_header,
+            values=["All", "Active", "Completed", "Refunded"],
+            command=self._on_filter_changed,
+            width=110,
+            height=28,
+            fg_color=COLOR_CARD_LIGHT,
+            button_color=COLOR_CARD_HOVER,
+            text_color=COLOR_TEXT,
+            font=("Segoe UI", 10),
+        )
+        self.filter_menu.set("All")
+        self.filter_menu.pack(side="right")
+
+        # Container for swap cards
+        self.swaps_container = ctk.CTkFrame(history_card, fg_color="transparent")
+        self.swaps_container.pack(fill="x", padx=20, pady=(0, 15))
+
+    def _create_stat_badge(self, parent, label: str, value: str, color: str):
+        badge = ctk.CTkFrame(parent, fg_color=COLOR_CARD_LIGHT, corner_radius=8, width=130, height=50)
+        badge.pack(side="left", padx=5, expand=True, fill="x")
+        badge.pack_propagate(False)
+
+        val_label = ctk.CTkLabel(badge, text=value, font=("Segoe UI", 14, "bold"), text_color=color)
+        val_label.pack(pady=(4, 0))
+
+        lbl = ctk.CTkLabel(badge, text=label, font=("Segoe UI", 9), text_color=COLOR_TEXT_DIM)
+        lbl.pack(pady=(0, 4))
+        return val_label
+
+    def _on_filter_changed(self, choice: str):
+        self._filter_status = choice
+        self.refresh()
+
+    def _copy_excal_addr(self):
+        addr = self.backend.get_address()
+        if addr:
+            self.clipboard_clear()
+            self.clipboard_append(addr)
+            messagebox.showinfo("Copied", "EXCAL address copied to clipboard.", parent=self)
+
+    def _copy_btc_addr(self):
+        addr = self.backend.get_btc_address()
+        if addr:
+            self.clipboard_clear()
+            self.clipboard_append(addr)
+            messagebox.showinfo("Copied", "Bitcoin address copied to clipboard.", parent=self)
+
+    def _create_swap(self):
+        """Handle creating a new atomic swap offer."""
+        self.create_result_label.configure(text="", text_color=COLOR_SUCCESS)
+        dir_val = self.direction_seg.get()
+        direction = "excal_to_btc" if "EXCAL" in dir_val.split("→")[0] else "btc_to_excal"
+
+        excal_str = self.excal_amt_entry.get().strip()
+        btc_str = self.btc_amt_entry.get().strip()
+        btc_recipient = self.counterparty_btc_entry.get().strip()
+        excal_recipient = self.counterparty_excal_entry.get().strip()
+        secret_hex = self.secret_entry.get().strip() or None
+
+        if not excal_str or not btc_str:
+            self.create_result_label.configure(text="Please enter both EXCAL and BTC amounts.", text_color=COLOR_ERROR)
+            return
+
+        try:
+            excal_val = float(excal_str)
+            btc_val = float(btc_str)
+            excal_swords = int(round(excal_val * 1e8))
+            btc_sats = int(round(btc_val * 1e8))
+        except ValueError:
+            self.create_result_label.configure(text="Amounts must be valid numeric values.", text_color=COLOR_ERROR)
+            return
+
+        if excal_swords < MIN_EXCAL_SWAP:
+            self.create_result_label.configure(
+                text=f"Minimum EXCAL swap is 1.0 EXCAL ({MIN_EXCAL_SWAP:,} swords).",
+                text_color=COLOR_ERROR,
+            )
+            return
+
+        if btc_sats < MIN_BTC_SWAP:
+            self.create_result_label.configure(
+                text=f"Minimum BTC swap is 0.1 BTC ({MIN_BTC_SWAP:,} satoshis).",
+                text_color=COLOR_ERROR,
+            )
+            return
+
+        try:
+            initiator_excal = self.backend.get_address() or ""
+            initiator_btc = self.backend.get_btc_address() or ""
+
+            offer = self.backend.create_atomic_swap(
+                direction=direction,
+                excal_amount=excal_swords,
+                btc_amount=btc_sats,
+                initiator_address=initiator_excal,
+                participant_address=excal_recipient,
+                initiator_btc_address=initiator_btc,
+                participant_btc_address=btc_recipient,
+                secret_hex=secret_hex,
+            )
+
+            swap_id = offer.get("swap_id", "")
+            btc_htlc = offer.get("btc_htlc_address", "")
+            self.create_result_label.configure(
+                text=f"✓ Swap Created! ID: {swap_id[:16]}... | BTC HTLC Lock: {btc_htlc}",
+                text_color=COLOR_SUCCESS,
+            )
+            self.excal_amt_entry.delete(0, "end")
+            self.btc_amt_entry.delete(0, "end")
+            self.counterparty_btc_entry.delete(0, "end")
+            self.counterparty_excal_entry.delete(0, "end")
+            self.secret_entry.delete(0, "end")
+            self.refresh()
+        except Exception as e:
+            self.create_result_label.configure(text=f"Error creating swap: {e}", text_color=COLOR_ERROR)
+
+    def _lock_excal_dialog(self, swap_id: str):
+        dialog = ctk.CTkInputDialog(text="Enter the EXCAL transaction ID locking funds:", title="Lock EXCAL")
+        txid = dialog.get_input()
+        if txid and txid.strip():
+            try:
+                self.backend.lock_atomic_swap_excal(swap_id, txid.strip())
+                messagebox.showinfo("Locked", "EXCAL lock recorded successfully.", parent=self)
+                self.refresh()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to lock EXCAL: {e}", parent=self)
+
+    def _lock_btc_dialog(self, swap_id: str):
+        dialog = ctk.CTkInputDialog(text="Enter the Bitcoin transaction ID (txid) funding the HTLC:", title="Lock BTC")
+        btc_txid = dialog.get_input()
+        if btc_txid and btc_txid.strip():
+            try:
+                self.backend.lock_atomic_swap_btc(swap_id, btc_txid.strip())
+                messagebox.showinfo("Locked", "BTC lock recorded successfully.", parent=self)
+                self.refresh()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to lock BTC: {e}", parent=self)
+
+    def _claim_dialog(self, swap_id: str, known_secret: Optional[str] = None):
+        secret = known_secret
+        if not secret:
+            dialog = ctk.CTkInputDialog(text="Enter the 32-byte secret preimage hex to claim funds:", title="Claim Swap")
+            secret = dialog.get_input()
+        if secret and secret.strip():
+            try:
+                self.backend.claim_atomic_swap(swap_id, secret.strip())
+                messagebox.showinfo("Claimed", "Swap claimed successfully! Funds released.", parent=self)
+                self.refresh()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to claim swap: {e}", parent=self)
+
+    def _refund_dialog(self, swap_id: str):
+        if messagebox.askyesno("Confirm Refund", "Are you sure you want to refund this expired swap?", parent=self):
+            try:
+                self.backend.refund_atomic_swap(swap_id)
+                messagebox.showinfo("Refunded", "Swap refunded successfully.", parent=self)
+                self.refresh()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to refund swap: {e}", parent=self)
+
+    def refresh(self):
+        """Update address labels, statistics, and swap contract list."""
+        excal_addr = self.backend.get_address() or "No wallet loaded"
+        btc_addr = self.backend.get_btc_address() or "Unavailable"
+
+        self.excal_addr_label.configure(text=excal_addr)
+        self.btc_addr_label.configure(text=btc_addr)
+
+        try:
+            swaps = self.backend.list_atomic_swaps()
+        except Exception as e:
+            swaps = []
+
+        total = len(swaps)
+        active = sum(1 for s in swaps if s.get("status") in ("init", "excal_locked", "btc_locked"))
+        completed = sum(1 for s in swaps if s.get("status") in ("claimed", "completed"))
+        refunded = sum(1 for s in swaps if s.get("status") in ("refunded", "expired"))
+
+        self.stat_total.configure(text=str(total))
+        self.stat_active.configure(text=str(active))
+        self.stat_completed.configure(text=str(completed))
+        self.stat_refunded.configure(text=str(refunded))
+
+        # Clear existing swap cards
+        for widget in self.swaps_container.winfo_children():
+            widget.destroy()
+
+        if not swaps:
             ctk.CTkLabel(
-                card, text=f"Status: {tx.get('status', 'local record; unverified')}",
-                font=("Segoe UI", 9), text_color=COLOR_TEXT_MUTED,
-            ).pack(anchor="w", padx=15, pady=(0, 8))
+                self.swaps_container,
+                text="No atomic swaps found. Initiate an offer above or wait for incoming contracts.",
+                font=("Segoe UI", 11),
+                text_color=COLOR_TEXT_MUTED,
+            ).pack(pady=30)
+            return
+
+        # Filter swaps
+        filtered = []
+        for s in swaps:
+            status = s.get("status", "")
+            if self._filter_status == "Active" and status not in ("init", "excal_locked", "btc_locked"):
+                continue
+            if self._filter_status == "Completed" and status not in ("claimed", "completed"):
+                continue
+            if self._filter_status == "Refunded" and status not in ("refunded", "expired"):
+                continue
+            filtered.append(s)
+
+        if not filtered:
+            ctk.CTkLabel(
+                self.swaps_container,
+                text=f"No {self._filter_status.lower()} swaps found.",
+                font=("Segoe UI", 11),
+                text_color=COLOR_TEXT_MUTED,
+            ).pack(pady=20)
+            return
+
+        for swap in reversed(filtered):
+            self._render_swap_card(swap)
+
+    def _render_swap_card(self, swap: Dict[str, Any]):
+        card = GlassCard(self.swaps_container, corner_radius=12)
+        card.pack(fill="x", pady=5)
+
+        swap_id = swap.get("swap_id", "")
+        direction = swap.get("direction", "")
+        status = swap.get("status", "init").lower()
+        excal_amt = swap.get("excal_amount", 0) / 1e8
+        btc_amt = swap.get("btc_amount", 0) / 1e8
+        secret_hash = swap.get("secret_hash", "")
+        preimage = swap.get("secret", "")
+        btc_htlc_addr = swap.get("btc_htlc_address", "")
+        excal_lock_tx = swap.get("excal_lock_tx", "")
+        btc_lock_tx = swap.get("btc_lock_tx", "")
+
+        # Top row: Direction & Status
+        top_row = ctk.CTkFrame(card, fg_color="transparent")
+        top_row.pack(fill="x", padx=15, pady=(10, 4))
+
+        dir_label = "EXCAL → BTC" if "excal_to_btc" in direction else "BTC → EXCAL"
+        dir_color = COLOR_GOLD if "excal_to_btc" in direction else COLOR_CYAN
+        ctk.CTkLabel(
+            top_row,
+            text=f"⚛ {dir_label}",
+            font=("Segoe UI", 12, "bold"),
+            text_color=dir_color,
+        ).pack(side="left")
+
+        status_colors = {
+            "init": COLOR_WARNING,
+            "excal_locked": COLOR_CYAN,
+            "btc_locked": COLOR_CYAN_LIGHT,
+            "claimed": COLOR_PURPLE_LIGHT,
+            "completed": COLOR_SUCCESS,
+            "refunded": COLOR_ERROR,
+            "expired": COLOR_TEXT_MUTED,
+        }
+        st_color = status_colors.get(status, COLOR_TEXT_MUTED)
+        ctk.CTkLabel(
+            top_row,
+            text=f"● {status.upper()}",
+            font=("Segoe UI", 10, "bold"),
+            text_color=st_color,
+        ).pack(side="right")
+
+        # Amount row
+        amt_row = ctk.CTkFrame(card, fg_color="transparent")
+        amt_row.pack(fill="x", padx=15, pady=(0, 4))
+        ctk.CTkLabel(
+            amt_row,
+            text=f"{excal_amt:,.8f} EXCAL ↔ {btc_amt:,.8f} BTC",
+            font=("Segoe UI", 13, "bold"),
+            text_color=COLOR_TEXT,
+        ).pack(side="left")
+
+        # Details
+        detail_frame = ctk.CTkFrame(card, fg_color=COLOR_CARD_LIGHT, corner_radius=8)
+        detail_frame.pack(fill="x", padx=15, pady=(4, 8))
+
+        # Swap ID
+        r_id = ctk.CTkFrame(detail_frame, fg_color="transparent")
+        r_id.pack(fill="x", padx=10, pady=(6, 2))
+        ctk.CTkLabel(r_id, text="Swap ID:", font=("Segoe UI", 9, "bold"), text_color=COLOR_TEXT_DIM, width=70, anchor="w").pack(side="left")
+        ctk.CTkLabel(r_id, text=format_address(swap_id) if len(swap_id) > 16 else swap_id, font=("Consolas", 9), text_color=COLOR_TEXT).pack(side="left")
+        ctk.CTkButton(
+            r_id, text="Copy", width=45, height=20,
+            command=lambda sid=swap_id: self._copy_text(sid, "Swap ID"),
+            fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER, text_color=COLOR_CYAN, font=("Segoe UI", 8), corner_radius=4,
+        ).pack(side="right")
+
+        # Hash Lock
+        if secret_hash:
+            r_hl = ctk.CTkFrame(detail_frame, fg_color="transparent")
+            r_hl.pack(fill="x", padx=10, pady=(2, 2))
+            ctk.CTkLabel(r_hl, text="Hash Lock:", font=("Segoe UI", 9, "bold"), text_color=COLOR_TEXT_DIM, width=70, anchor="w").pack(side="left")
+            ctk.CTkLabel(r_hl, text=format_address(secret_hash), font=("Consolas", 9), text_color=COLOR_TEXT).pack(side="left")
+            ctk.CTkButton(
+                r_hl, text="Copy", width=45, height=20,
+                command=lambda h=secret_hash: self._copy_text(h, "Hash Lock"),
+                fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER, text_color=COLOR_CYAN, font=("Segoe UI", 8), corner_radius=4,
+            ).pack(side="right")
+
+        # BTC HTLC Address
+        if btc_htlc_addr:
+            r_btc = ctk.CTkFrame(detail_frame, fg_color="transparent")
+            r_btc.pack(fill="x", padx=10, pady=(2, 6))
+            ctk.CTkLabel(r_btc, text="BTC Lock:", font=("Segoe UI", 9, "bold"), text_color=COLOR_CYAN, width=70, anchor="w").pack(side="left")
+            ctk.CTkLabel(r_btc, text=btc_htlc_addr, font=("Consolas", 9), text_color=COLOR_TEXT).pack(side="left")
+            ctk.CTkButton(
+                r_btc, text="Copy", width=45, height=20,
+                command=lambda a=btc_htlc_addr: self._copy_text(a, "BTC HTLC Address"),
+                fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER, text_color=COLOR_CYAN, font=("Segoe UI", 8), corner_radius=4,
+            ).pack(side="right")
+
+        # Preimage if revealed
+        if preimage:
+            r_pre = ctk.CTkFrame(detail_frame, fg_color="transparent")
+            r_pre.pack(fill="x", padx=10, pady=(2, 6))
+            ctk.CTkLabel(r_pre, text="Preimage:", font=("Segoe UI", 9, "bold"), text_color=COLOR_SUCCESS, width=70, anchor="w").pack(side="left")
+            ctk.CTkLabel(r_pre, text=format_address(preimage), font=("Consolas", 9), text_color=COLOR_SUCCESS).pack(side="left")
+            ctk.CTkButton(
+                r_pre, text="Copy", width=45, height=20,
+                command=lambda p=preimage: self._copy_text(p, "Secret Preimage"),
+                fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER, text_color=COLOR_SUCCESS, font=("Segoe UI", 8), corner_radius=4,
+            ).pack(side="right")
+
+        # Action Buttons Row
+        action_row = ctk.CTkFrame(card, fg_color="transparent")
+        action_row.pack(fill="x", padx=15, pady=(0, 10))
+
+        # Show appropriate buttons based on status
+        if status == "init":
+            ctk.CTkButton(
+                action_row, text="🔒 Lock EXCAL", height=28,
+                command=lambda sid=swap_id: self._lock_excal_dialog(sid),
+                fg_color=COLOR_GOLD_DARK, hover_color=COLOR_GOLD,
+                text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
+            ).pack(side="left", padx=(0, 5))
+
+            ctk.CTkButton(
+                action_row, text="🔒 Lock BTC", height=28,
+                command=lambda sid=swap_id: self._lock_btc_dialog(sid),
+                fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+                text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
+            ).pack(side="left", padx=5)
+
+        elif status in ("excal_locked", "btc_locked"):
+            # Can claim if other side is locked or secret is known
+            ctk.CTkButton(
+                action_row, text="🔑 Claim with Preimage", height=28,
+                command=lambda sid=swap_id, sec=preimage: self._claim_dialog(sid, sec),
+                fg_color=COLOR_PURPLE, hover_color=COLOR_PURPLE_LIGHT,
+                text_color=COLOR_TEXT, font=("Segoe UI", 9, "bold"), corner_radius=6,
+            ).pack(side="left", padx=(0, 5))
+
+            if not btc_lock_tx:
+                ctk.CTkButton(
+                    action_row, text="🔒 Lock BTC", height=28,
+                    command=lambda sid=swap_id: self._lock_btc_dialog(sid),
+                    fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+                    text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
+                ).pack(side="left", padx=5)
+
+            if not excal_lock_tx:
+                ctk.CTkButton(
+                    action_row, text="🔒 Lock EXCAL", height=28,
+                    command=lambda sid=swap_id: self._lock_excal_dialog(sid),
+                    fg_color=COLOR_GOLD_DARK, hover_color=COLOR_GOLD,
+                    text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
+                ).pack(side="left", padx=5)
+
+            ctk.CTkButton(
+                action_row, text="↩ Refund", height=28,
+                command=lambda sid=swap_id: self._refund_dialog(sid),
+                fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+                text_color=COLOR_ERROR, font=("Segoe UI", 9), corner_radius=6,
+            ).pack(side="right")
+
+        elif status in ("expired", "init"):
+            ctk.CTkButton(
+                action_row, text="↩ Refund", height=28,
+                command=lambda sid=swap_id: self._refund_dialog(sid),
+                fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+                text_color=COLOR_ERROR, font=("Segoe UI", 9), corner_radius=6,
+            ).pack(side="right")
+
+    def _copy_text(self, text: str, label: str):
+        if text:
+            self.clipboard_clear()
+            self.clipboard_append(text)
+            messagebox.showinfo("Copied", f"{label} copied to clipboard.", parent=self)
 
 
 # ---------------------------------------------------------------------------
@@ -4635,6 +5557,7 @@ class EXCALWallet(ctk.CTk):
         tab_items = [
             ("📊", "Dashboard"),
             ("⚡", "Send / Receive"),
+            ("⚛", "Atomic Swap"),
             ("📜", "Transactions"),
             ("🌐", "Peers"),
             ("🧿", "Oracle"),
@@ -4690,6 +5613,7 @@ class EXCALWallet(ctk.CTk):
         # Create tabs
         self.tabs["Dashboard"] = DashboardTab(self.content_frame, self.backend)
         self.tabs["Send / Receive"] = SendReceiveTab(self.content_frame, self.backend)
+        self.tabs["Atomic Swap"] = AtomicSwapTab(self.content_frame, self.backend)
         self.tabs["Transactions"] = TransactionsTab(self.content_frame, self.backend)
         self.tabs["Peers"] = PeersTab(self.content_frame, self.backend)
         self.tabs["Oracle"] = OracleTab(self.content_frame, self.backend)
@@ -4732,6 +5656,9 @@ class EXCALWallet(ctk.CTk):
         self.current_profile = profile
         self.backend = backend
         self.profile_label.configure(text=profile.title())
+        for tab in self.tabs.values():
+            if hasattr(tab, "backend"):
+                tab.backend = backend
         self.on_wallet_opened()
 
     def _start_node(self):

@@ -125,6 +125,15 @@ class ChainStore:
             "hashrate_estimate": 0
         }
         
+        # BTC-EXCAL Atomic Swap Bridge
+        try:
+            from sphinx_os.nexus.btc_bridge import BtcBridge
+            swap_dir = os.path.join(os.path.dirname(os.path.abspath(self.path)), "swaps")
+            self.btc_bridge = BtcBridge(data_dir=swap_dir)
+        except Exception as e:
+            logger.warning(f"Could not initialize BtcBridge in ChainStore: {e}")
+            self.btc_bridge = None
+        
         self._load()
         self._calculate_metrics()
         
@@ -812,6 +821,83 @@ class ChainStore:
             ]
         }
 
+    # -----------------------------------------------------------------------
+    # BTC-EXCAL Atomic Swap Operations
+    # -----------------------------------------------------------------------
+    def create_atomic_swap(self, direction="excal_to_btc", excal_amount=100_000_000,
+                           btc_amount=10_000_000, excal_refund_addr="", btc_refund_addr="",
+                           claim_pubkey_hex=None, refund_pubkey_hex=None, btc_tip=0,
+                           direction_str=None, **kwargs):
+        if not self.btc_bridge:
+            raise RuntimeError("BTC bridge not available on this node")
+        if direction_str is not None:
+            direction = direction_str
+        if not excal_refund_addr:
+            excal_refund_addr = kwargs.get("initiator_address") or kwargs.get("excal_refund_address") or "0" * 40
+        if not btc_refund_addr:
+            btc_refund_addr = kwargs.get("initiator_btc_address") or kwargs.get("btc_refund_address") or "bc1q" + "0" * 38
+        claim_pub = bytes.fromhex(claim_pubkey_hex) if claim_pubkey_hex else None
+        refund_pub = bytes.fromhex(refund_pubkey_hex) if refund_pubkey_hex else None
+        res = self.btc_bridge.create_excal_to_btc_offer(
+            excal_amount_swords=int(excal_amount),
+            btc_amount_sats=int(btc_amount),
+            excal_refund_address=excal_refund_addr,
+            btc_refund_address=btc_refund_addr,
+            claim_pubkey=claim_pub,
+            refund_pubkey=refund_pub,
+            btc_tip_height=int(btc_tip),
+        )
+        if isinstance(res, dict):
+            offer = res.get("offer", {})
+            swap = res.get("swap", {})
+            res["swap_id"] = offer.get("swap_id") or swap.get("swap_id", "")
+            res["status"] = swap.get("status", "init")
+            res["btc_htlc_address"] = offer.get("btc_lock_address", "")
+        return res
+
+    def list_atomic_swaps(self):
+        if not self.btc_bridge:
+            return []
+        return self.btc_bridge.list_local_swaps()
+
+    def get_atomic_swap(self, swap_id):
+        if not self.btc_bridge:
+            return None
+        return self.btc_bridge.protocol.get_swap_summary(swap_id)
+
+    def lock_atomic_swap_excal(self, swap_id, funding_txid, funding_vout=0, lock_script_hex=""):
+        if not self.btc_bridge:
+            raise RuntimeError("BTC bridge not available on this node")
+        return self.btc_bridge.mark_excal_locked(swap_id, funding_txid, int(funding_vout), lock_script_hex)
+
+    def lock_atomic_swap_btc(self, swap_id, funding_txid, funding_vout=0, lock_script_hex=""):
+        if not self.btc_bridge:
+            raise RuntimeError("BTC bridge not available on this node")
+        return self.btc_bridge.mark_btc_locked(swap_id, funding_txid, int(funding_vout), lock_script_hex)
+
+    def claim_atomic_swap(self, swap_id, chain, claim_txid, secret_preimage_hex):
+        if not self.btc_bridge:
+            raise RuntimeError("BTC bridge not available on this node")
+        return self.btc_bridge.mark_claimed(swap_id, chain, claim_txid, secret_preimage_hex)
+
+    def refund_atomic_swap(self, swap_id, chain, refund_txid):
+        if not self.btc_bridge:
+            raise RuntimeError("BTC bridge not available on this node")
+        if chain.lower() == "excal":
+            swap = self.btc_bridge.protocol.refund_excal(swap_id, refund_txid)
+        elif chain.lower() == "btc":
+            swap = self.btc_bridge.protocol.refund_btc(swap_id, refund_txid)
+        else:
+            raise ValueError(f"unknown chain {chain}")
+        return self.btc_bridge.protocol.get_swap_summary(swap.swap_id)
+
+    def get_atomic_swap_health(self):
+        if not self.btc_bridge:
+            return {"healthy": False, "status": "unavailable"}
+        rep = self.btc_bridge.health()
+        rep["healthy"] = True
+        return rep
+
 
 # --- RPC handler ---
 
@@ -953,6 +1039,88 @@ class ForkRPCHandler(http.server.BaseHTTPRequestHandler):
                 result = self.store.gettreasuryinfo()
             elif method == "getlightningchannels":
                 result = self.store.getlightningchannels()
+            
+            # BTC-EXCAL Atomic Swap endpoints
+            elif method in ("atomicswap_create", "createatomicswap"):
+                if not params:
+                    error = "missing parameters for atomic swap"
+                else:
+                    if isinstance(params, list) and len(params) > 0 and isinstance(params[0], dict):
+                        p = params[0]
+                    elif isinstance(params, dict):
+                        p = params
+                    elif isinstance(params, list):
+                        p = {
+                            "direction": params[0] if len(params) > 0 else "excal_to_btc",
+                            "excal_amount": params[1] if len(params) > 1 else 100_000_000,
+                            "btc_amount": params[2] if len(params) > 2 else 10_000_000,
+                            "excal_refund_address": params[3] if len(params) > 3 else "",
+                            "participant_address": params[4] if len(params) > 4 else "",
+                            "btc_refund_address": params[5] if len(params) > 5 else "",
+                            "participant_btc_address": params[6] if len(params) > 6 else "",
+                        }
+                    else:
+                        p = {}
+                    result = self.store.create_atomic_swap(
+                        direction_str=p.get("direction", "excal_to_btc"),
+                        excal_amount=p.get("excal_amount", 100_000_000),
+                        btc_amount=p.get("btc_amount", 10_000_000),
+                        excal_refund_addr=p.get("excal_refund_address", ""),
+                        btc_refund_addr=p.get("btc_refund_address", ""),
+                        claim_pubkey_hex=p.get("claim_pubkey"),
+                        refund_pubkey_hex=p.get("refund_pubkey"),
+                        btc_tip=p.get("btc_tip_height", 0),
+                    )
+            elif method in ("atomicswap_list", "listatomicswaps"):
+                result = self.store.list_atomic_swaps()
+            elif method in ("atomicswap_get", "getatomicswap"):
+                if not params:
+                    error = "missing swap_id"
+                else:
+                    result = self.store.get_atomic_swap(params[0])
+                    if result is None:
+                        error = f"swap not found: {params[0]}"
+            elif method == "atomicswap_lockexcal":
+                if not params or len(params) < 2:
+                    error = "missing swap_id and funding_txid"
+                else:
+                    result = self.store.lock_atomic_swap_excal(
+                        swap_id=params[0],
+                        funding_txid=params[1],
+                        funding_vout=params[2] if len(params) > 2 else 0,
+                        lock_script_hex=params[3] if len(params) > 3 else "",
+                    )
+            elif method == "atomicswap_lockbtc":
+                if not params or len(params) < 2:
+                    error = "missing swap_id and funding_txid"
+                else:
+                    result = self.store.lock_atomic_swap_btc(
+                        swap_id=params[0],
+                        funding_txid=params[1],
+                        funding_vout=params[2] if len(params) > 2 else 0,
+                        lock_script_hex=params[3] if len(params) > 3 else "",
+                    )
+            elif method == "atomicswap_claim":
+                if not params or len(params) < 4:
+                    error = "missing swap_id, chain, claim_txid, secret_preimage"
+                else:
+                    result = self.store.claim_atomic_swap(
+                        swap_id=params[0],
+                        chain=params[1],
+                        claim_txid=params[2],
+                        secret_preimage_hex=params[3],
+                    )
+            elif method == "atomicswap_refund":
+                if not params or len(params) < 3:
+                    error = "missing swap_id, chain, refund_txid"
+                else:
+                    result = self.store.refund_atomic_swap(
+                        swap_id=params[0],
+                        chain=params[1],
+                        refund_txid=params[2],
+                    )
+            elif method == "atomicswap_health":
+                result = self.store.get_atomic_swap_health()
             elif method == "health":
                 # Health check endpoint for monitoring
                 result = {

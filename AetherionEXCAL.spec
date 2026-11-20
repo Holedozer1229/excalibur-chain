@@ -91,6 +91,10 @@ a = Analysis(
         'sphinx_os.nexus.ai_oracle_knight',
         'sphinx_os.nexus.knight_nft',
         'sphinx_os.nexus.erepr_protocol',
+        'sphinx_os.nexus.atomic_swap',
+        'sphinx_os.nexus.btc_bridge',
+        'sphinx_os.nexus.quantum_atomic_swap',
+        'sphinx_os.nexus.quantum_atomic_bridge',
         'sphinx_os.secure_store',
         'sphinx_os.prometheus_metrics',
         # Prometheus metrics (optional)
