@@ -19,7 +19,7 @@
   "best_hash": "000000040da1f3cae5664eca29e24f86703290bc3af622fc1bf0ef70afe3c859",
   "best_note": "28 leading zero bits on this template (tier 1 near-miss). A block needs 79.",
   "odds": "A full 2^32 sweep has about a 7 in 1,000,000,000,000,000 chance of a block. This is a lottery ticket, not a path. One shot per block, winner takes all. The template rolls to a fresh block every ~10 minutes.",
-  "updated_unix": 1795237852,
-  "updated": "2026-11-20 23:10:52 CST",
+  "updated_unix": 1795238109,
+  "updated": "2026-11-20 23:15:09 CST",
   "status": "RUNNING"
 }
