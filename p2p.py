@@ -28,7 +28,7 @@ import struct
 import threading
 import time
 
-from txscript import txid_internal, validate_tx, _view_copy
+from txscript import validate_tx, _view_copy
 from genesis_fork import ser_header, sha256d
 
 

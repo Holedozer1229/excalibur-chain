@@ -87,7 +87,6 @@ class SnapshotDB:
 def build_snapshot_db(dat_path, db_path, snapshot_hash_hex, height,
                       log=print):
     """Build utxo.db from a verified snapshot_968698.dat. Deterministic."""
-    import hashlib
     digest = _sha256d_file(dat_path)
     if digest != snapshot_hash_hex:
         raise ValueError(

@@ -48,6 +48,14 @@ def extract_pairs_from_txs(txs):
     return [pair for raw_tx in txs for pair in extract_pairs(raw_tx)]
 
 
+def pair_key(root: bytes, index: int) -> tuple[str, int]:
+    """Return a hashable key for a Trifold (root, index) pair.
+
+    Used by chainstate.py to deduplicate spent-leaf pairs across blocks.
+    """
+    return (root.hex(), index)
+
+
 def _registry_path() -> str:
     """Return the path to the spent-leaf registry file."""
     workspace = os.environ.get(

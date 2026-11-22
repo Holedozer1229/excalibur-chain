@@ -8,15 +8,15 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import secp256k1 as secp
 from genesis_fork import (sha256d, ser_varint, push, subsidy,
-                          QLOCK_ACTIVATION, qlock_activation,
-                          QDAY_ACTIVATION, qday_activation,
-                          HTLC_ACTIVATION, htlc_activation,
-                          QHTLC_ACTIVATION, qhtlc_activation,
-                          BRIDGE_ACTIVATION, bridge_activation,
-                          KNOT_ACTIVATION, knot_activation)
+                          qlock_activation,
+                          qday_activation,
+                          htlc_activation,
+                          qhtlc_activation,
+                          bridge_activation,
+                          knot_activation)
 from txpq import decode_witness, trifold_verify, encode_witness
 from txpq import FIXED as _TRIFOLD_FIXED
-from knot_math import (knot_point_bytes, knot_commitment,
+from knot_math import (knot_commitment,
                        MAX_PQ as _KNOT_MAX_PQ, MAX_N as _KNOT_MAX_N)
 
 SIGHASH_ALL = 0x01
@@ -121,7 +121,6 @@ def make_coinbase_v2(height: int, bits: int, tag: bytes, fees: int = 0,
     at the snapshot activation height). check_coinbase_lineage only
     constrains pushes[0], so extra pushes are consensus-safe.
     """
-    from genesis_fork import make_coinbase as _mk
     scriptsig = (push(struct.pack("<I", bits)) + push(tag)
                  + push(struct.pack("<I", height)))
     if extra_pushes:
@@ -856,7 +855,6 @@ def _view_copy(utxo):
     shares the immutable snapshot); plain dicts get a deep copy so that
     neither the entry lists nor the tuples inside can mutate the caller's
     data."""
-    import copy as _copy
     if isinstance(utxo, dict):
         return {k: list(v) for k, v in utxo.items()}
     if hasattr(utxo, "copy"):

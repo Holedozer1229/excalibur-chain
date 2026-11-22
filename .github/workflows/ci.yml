@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main, fix/*]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Ruff check (core files)
+        run: ruff check node_rpc.py chainstate.py txscript.py genesis_fork.py mempool.py utxodb.py p2p.py genealogy_verify.py excal_wallet.py
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install pytest
+          pip install -r requirements.txt 2>/dev/null || true
+      - name: Run tests
+        run: |
+          pytest test_excalibur_wallet.py test_fork_node_rpc.py test_genesis_fork_auxpow.py test_full_node_p2p_broadcast.py -v --tb=short

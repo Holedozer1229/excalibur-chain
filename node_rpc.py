@@ -6,12 +6,13 @@ Read methods plus sendrawtransaction and a minimal wallet.
 import json
 import math
 import os
+import socket
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import secp256k1 as secp
 from genesis_fork import sha256d, ser_header
-from txscript import (parse_tx, ser_tx, txid_internal, p2pk_script,
+from txscript import (ser_tx, txid_internal, p2pk_script,
                       COINBASE_MATURITY, lock_pkh_for_pubkey, lock_pkh,
                       lock_type, sign_pkh_input, sign_input, validate_tx)
 import caduceus
@@ -24,6 +25,21 @@ DEFAULT_FEE_RATE_SVB = 1    # swords per vbyte when the caller gives no rate
 _VIN_PKH_VBYTES = 139       # 32 prev + 4 idx + 1 varint + 98 scriptSig + 4 seq
 _VOUT_VBYTES = 30           # 8 value + 1 varint + 21-byte PKH lock
 _TX_OVERHEAD_VBYTES = 10    # 4 version + 1 + 1 varints + 4 locktime
+
+# Security: network timeouts and input limits
+RPC_SOCKET_TIMEOUT = 30     # seconds — prevents handlers from hanging
+RPC_MAX_BODY_BYTES = 1_000_000  # 1 MB max JSON-RPC body
+RPC_MAX_PARAMS = 100         # max params array length
+
+# Security: read-only mode (set EXCALIBUR_READ_ONLY=1 to disable writes)
+_READ_ONLY = os.environ.get("EXCALIBUR_READ_ONLY", "").lower() in ("1", "true", "yes")
+
+# Write methods that are blocked in read-only mode
+_WRITE_METHODS = {
+    "sendrawtransaction",
+    "submitblock",
+    "sendtoaddress",
+}
 
 
 def _est_fee(n_in, n_out, rate):
@@ -197,15 +213,29 @@ class Node:
                 self.wfile.write(body)
 
             def do_POST(self):
+                # Security: set socket timeout to prevent hanging
+                self.rfile.socket.settimeout(RPC_SOCKET_TIMEOUT)
+                self.wfile.socket.settimeout(RPC_SOCKET_TIMEOUT)
                 try:
                     n = int(self.headers.get("Content-Length", 0))
+                    # Security: reject oversized bodies
+                    if n > RPC_MAX_BODY_BYTES:
+                        return self._reply({"error": "request body too large",
+                                            "id": None})
                     req = json.loads(self.rfile.read(n) or b"{}")
+                except socket.timeout:
+                    return self._reply({"error": "request timeout",
+                                        "id": None})
                 except Exception:
                     return self._reply({"error": "bad request",
                                         "id": None})
                 method = req.get("method")
                 params = req.get("params", [])
                 rid = req.get("id")
+                # Security: limit params array length
+                if isinstance(params, list) and len(params) > RPC_MAX_PARAMS:
+                    return self._reply({"error": "too many parameters",
+                                        "id": rid})
                 try:
                     result = node.dispatch(method, params)
                     self._reply({"result": result, "error": None,
@@ -233,6 +263,11 @@ class Node:
 
     # ------------------------------------------------------------ methods
     def dispatch(self, method, params):
+        # Security: block write methods in read-only mode
+        if _READ_ONLY and method in _WRITE_METHODS:
+            raise ValueError(
+                f"read-only mode: {method} is disabled "
+                f"(set EXCALIBUR_READ_ONLY=0 to enable writes)")
         fn = {"getblockcount": self.rpc_getblockcount,
               "getbestblockhash": self.rpc_getbestblockhash,
               "getchaintips": self.rpc_getchaintips,

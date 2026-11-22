@@ -42,3 +42,29 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["sphinx_os*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+exclude = [
+    ".venv", "dist", "build", "node_modules", ".git", "__pycache__",
+    "sphinx_os", "kivy_wallet", "webgpu", "excalibur-dist",
+    "dist", "excalibur_wallet", "hooks", "installer",
+    "self-serve",
+]
+
+[tool.ruff.lint]
+# Focus on safety-critical rules for core files only
+# Full linting is run selectively on: node_rpc.py, chainstate.py, txscript.py,
+# genesis_fork.py, mempool.py, utxodb.py, p2p.py, genealogy_verify.py, excal_wallet.py
+select = ["F"]  # F = pyflakes (unused imports, undefined names, etc.)
+ignore = ["E501", "B905", "E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["sphinx_os", "genesis_fork", "chainstate", "txscript", "mempool", "utxodb", "secp256k1", "caduceus", "wallet_crypto", "p2p", "p2p_layer", "p2p_transports", "node_rpc", "fork_node", "fork_child", "stratum_fork", "stratum_miner", "fork_sniper", "excal_wallet", "genealogy_verify", "auxlib", "lightledger", "file_locks", "spent_leaf_registry", "payment_watcher", "inventory_board", "living_ledger", "skynet_beacon", "skynet_client", "skynet_autonomous_node", "skynet_scalar_wave", "quantum_p2p_glue", "holo_wallet", "knot_wallet", "caduceus_store", "frostgate_cli", "txpq", "trifold_lockbox", "wallet_transactions"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "test_*.py"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

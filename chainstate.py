@@ -11,15 +11,12 @@ import json
 import os
 import time
 
-from genesis_fork import (GENESIS, genesis_for, genesis_txs,
-                          genesis_hash_for,
+from genesis_fork import (genesis_for, genesis_txs,
                           verify_genesis, use_network, NETWORKS,
-                          ser_header, sha256d, txid, merkle_root,
-                          bits_to_target, required_bits, subsidy,
-                          check_coinbase_lineage, validate_block,
+                          ser_header, sha256d, bits_to_target, validate_block,
                           validate_auxpow, _parse_pushes)
-from txscript import (validate_block_txs, apply_block_txs, build_utxo,
-                      utxo_stats, txid_internal, parse_tx)
+from txscript import (apply_block_txs, build_utxo,
+                      txid_internal)
 from spent_leaf_registry import (SpentLeafRegistry, extract_pairs,
                                  pair_key)
 from utxodb import UtxoSet, SnapshotDB, build_snapshot_db
