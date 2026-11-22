@@ -41,10 +41,12 @@
   <a class="cta" href="https://github.com/Holedozer1229/excalibur-chain/tree/master/self-serve">Get the self-serve kit</a>
 
   <div class="status">
-    <b>Live chain, verified 2026-11-14:</b> tip height 47,233 &middot; 47,234 headers
-    walked from the Bitcoin-968,698 anchor &middot; 31,836 self-PoW + 15,397 AuxPoW
-    blocks &middot; fork-native work 1.91 &times; 10<sup>12</sup> hashes &middot;
-    reference verifier verdict: <b>ALL CHECKS PASS</b> (73.8 s).
+    <b>Live chain, verified 2026-11-22:</b> tip height 49,999 &middot; 50,000 headers
+    walked from the Bitcoin-968,698 anchor. <b>Heads up:</b> the fork is stalled
+    at 49,999 &mdash; block 50,000 needs the Golden Stone fusion lock, so no new
+    fork blocks are landing right now. The three lots below are already confirmed
+    on-chain; the BTC leg of a swap works today, but an EXCAL claim can only
+    confirm once the fork is mining again.
   </div>
 
   <!-- ONESHOT-BANNER: re-add after any regenerate from lots JSON -->
@@ -61,6 +63,7 @@
         <dt>Locked</dt><dd>1 EXCAL</dd>
         <dt>Funding tx</dt><dd class="mono">449fb35dafc7dc8f40faca892845730725961840b0fb945fa8b88b4e902287f1</dd>
         <dt>Confirmed</dt><dd>fork block 42,900</dd>
+        <dt>Funding UTXO</dt><dd>vout 0 of the funding tx above</dd>
         <dt>QHTLC lock</dt><dd class="mono">04584460868d15769e5cefba276dc43709e904258f</dd>
         <dt>Secret hash (SHA256)</dt><dd class="mono">95d706ed8b3397cfbcefabd827a58b5d24dac1d63308cb74171549f7ce75d294</dd>
         <dt>Claim root</dt><dd class="mono">1f4a1780152c0b5cba2c315a1fc2e034547048dee7896531cef9fc5c45b4d7e9</dd>
@@ -76,6 +79,7 @@
         <dt>Locked</dt><dd>1,000 EXCAL</dd>
         <dt>Funding tx</dt><dd class="mono">4873ebb3a40b83f2401266587aba9f73bf837dd51349e07029b06819fcccfc95</dd>
         <dt>Confirmed</dt><dd>fork block 42,899</dd>
+        <dt>Funding UTXO</dt><dd>vout 0 of the funding tx above</dd>
         <dt>QHTLC lock</dt><dd class="mono">045220338521d9905441244e566634f227b72bbb92</dd>
         <dt>Secret hash (SHA256)</dt><dd class="mono">d1baf924987ec0b2c4885f31b62abecf46919b113d2f0f3b9de83156c8564663</dd>
         <dt>Claim root</dt><dd class="mono">91f33e7fe8f40b990da7f0911e9ae1ef8292273ce673d8965101ff1da1238d58</dd>
@@ -91,6 +95,7 @@
         <dt>Locked</dt><dd>0.001 EXCAL</dd>
         <dt>Funding tx</dt><dd class="mono">6ee1f5da1aaa83c0652603a3f2f07018603b8d1d32b7fda26edfa500b0e1c439</dd>
         <dt>Confirmed</dt><dd>fork block 43,571</dd>
+        <dt>Funding UTXO</dt><dd>vout 0 of the funding tx above</dd>
         <dt>QHTLC lock</dt><dd class="mono">04e1f59c409dbdf7aff0ded74513a608a7d1943b63</dd>
         <dt>Secret hash (SHA256)</dt><dd class="mono">59db7d74824126b4a8d6e9290c3afa36ec6d230442658767187db487a1c77601</dd>
         <dt>Claim root</dt><dd class="mono">1efd23e36b3fb58f00999b9e60eb9d6a91434f8b384263ff61ccbde95265f7fd</dd>
@@ -100,18 +105,102 @@
       </dl>
     </section>
   <h2>How it works &mdash; no DMs, no trust, just code</h2>
+  <p>Each lot is a two-leg atomic swap with one shared secret. The maker locked the
+  EXCAL first, in a QHTLC lock. You lock the BTC second, in a P2WSH HTLC with the
+  same secret hash. He claims your BTC &mdash; the secret appears on-chain &mdash; and you
+  claim the EXCAL with it. If anything goes wrong, your BTC refunds to you after the
+  BTC timeout; his EXCAL can only refund after the BTC leg has already expired, so he
+  cannot take both.</p>
   <ol>
-    <li>Run the kit (<a href="https://github.com/Holedozer1229/excalibur-chain/tree/master/self-serve">self-serve/</a>): it builds your BTC HTLC funding transaction. 1 EXCAL lot takes exactly 100,000,000 sats; the 1,000 EXCAL lot takes any amount you choose; the 0.001 EXCAL pilot takes exactly 100,000 sats.</li>
-    <li>Sign in your own wallet and broadcast. Your funding carries a 1,000-sat signal and an OP_RETURN tag (<span class="mono">EXCAL1</span> or <span class="mono">EXCAL1K</span>) with your delivery key.</li>
-    <li>The watcher verifies your funding and publishes your encrypted claim seed. Decrypt it, take the secret from the BTC claim, and claim your EXCAL on the fork. If anything goes wrong, your BTC refunds to you after the timeout.</li>
+    <li><b>Build the BTC leg with the self-serve kit.</b> Run from the kit&rsquo;s
+    <span class="mono">self-serve/</span> directory. The kit&rsquo;s
+    <span class="mono">taker_htlc.py</span> builds your BTC HTLC funding PSBT and adds the
+    1,000-sat signal plus the OP_RETURN tag the watcher keys on. The wallet&rsquo;s
+    <span class="mono">btc-htlc lock</span> builds the same HTLC but without the signal, so the
+    watcher would never see it &mdash; use the kit for this step on these lots:
+    <br><span class="mono">python3 taker_htlc.py --lot 1excal --amount 100000000 --utxo TXID:VOUT --refund-pubkey YOUR_COMPRESSED_PUBKEY --change-address bc1q... --btc-height CURRENT_BTC_TIP</span>
+    <br>Amounts: 1 EXCAL lot takes exactly 100,000,000 sats; the 1,000 EXCAL lot takes any amount you choose; the 0.001 EXCAL pilot takes exactly 100,000 sats. The HTLC timeout is the BTC tip + 144 blocks (~24h). The kit writes <span class="mono">funding.psbt</span> and <span class="mono">delivery_key.txt</span> (0600) &mdash; keep the delivery key, it decrypts your claim seed in step 5.</li>
+    <li><b>Sign, broadcast, and post the witness script.</b> Sign
+    <span class="mono">funding.psbt</span> in your own wallet and broadcast it &mdash; from your
+    wallet, or with the wallet CLI (from the repo root):
+    <span class="mono">python3 -m excalibur_wallet wallet broadcast --tx &lt;signed hex&gt; --network bitcoin --yes</span>
+    (BTC broadcast needs your Bitcoin node RPC.) Then post your funding txid and
+    witness-script hex as a comment on the lot&rsquo;s GitHub issue, so the watcher can
+    verify your funding. Get the witness script from the wallet with the lot&rsquo;s secret
+    hash, the maker&rsquo;s claim pubkey
+    <span class="mono">02e8311342cb7accd4edef31462fcda1ef56bfbf7d4f03d3c8872dbec9a1bba1b3</span>,
+    your refund pubkey, and the timeout:
+    <span class="mono">python3 -m excalibur_wallet wallet btc-htlc show --claim-pubkey 02e8311342cb7accd4edef31462fcda1ef56bfbf7d4f03d3c8872dbec9a1bba1b3 --refund-pubkey YOUR_COMPRESSED_PUBKEY --secret-hash &lt;lot secret hash above&gt; --timeout &lt;BTC tip + 144&gt;</span></li>
+    <li><b>Wait for the claim seed.</b> After 6 Bitcoin confirmations the watcher publishes
+    your encrypted claim seed to
+    <span class="mono">self-serve/claim-seeds/&lt;lot&gt;-&lt;funding_txid&gt;.json</span>.
+    Only the first verified funding per lot is served.</li>
+    <li><b>The maker claims your BTC.</b> He claims with the wallet &mdash;
+    <span class="mono">python3 -m excalibur_wallet wallet btc-htlc claim --utxo &lt;HTLC TXID:VOUT&gt; --utxo-value &lt;sats&gt; --secret &lt;secret&gt; --dest-address bc1q... --witness-script &lt;hex&gt;</span>
+    &mdash; and the secret appears in his claim transaction&rsquo;s witness.</li>
+    <li><b>Decrypt the seed and take the secret.</b>
+    <span class="mono">python3 decrypt_seed.py --ciphertext claim-seeds/&lt;lot&gt;-&lt;funding_txid&gt;.json --delivery-key delivery_key.txt</span>
+    Read the secret from the maker&rsquo;s BTC claim transaction on mempool.space; its witness
+    carries the preimage.</li>
+    <li><b>Claim the EXCAL with the kit.</b> The lot&rsquo;s QHTLC claim witness is a Trifold
+    signature from the maker&rsquo;s claim seed, which only the watcher delivers &mdash; so this
+    step stays in the kit, not the wallet:
+    <br><span class="mono">python3 taker_claim.py --lot 1excal --secret REVEALED_SECRET --claim-seed DECRYPTED_SEED --destination 1YOUR_LEGACY_ADDRESS</span>
+    <br>Your destination must be a legacy P2PKH address (<span class="mono">1...</span>); the
+    fork does not accept SegWit outputs. Broadcast the signed claim with
+    <span class="mono">python3 -m excalibur_wallet wallet broadcast --tx &lt;signed hex&gt; --network fork --yes</span>.
+    It can only confirm once the fork is mining again (see the stall note above).</li>
+    <li><b>If it goes wrong, refund.</b> If the maker never claims, refund your BTC after the
+    BTC timeout:
+    <span class="mono">python3 -m excalibur_wallet wallet btc-htlc refund --utxo &lt;HTLC TXID:VOUT&gt; --utxo-value &lt;sats&gt; --dest-address bc1q... --btc-height CURRENT_BTC_TIP --witness-script &lt;hex&gt;</span>
+    The EXCAL leg refunds to the maker only after its fork timeout &mdash; and only after the
+    BTC leg has expired.</li>
   </ol>
   <h2>Why this is real</h2>
   <ul>
     <li>All three lots are funded on-chain on the Excalibur fork (blocks 42,900, 42,899 and 43,571) &mdash; the EXCAL is locked, not promised.</li>
-    <li>QHTLC locks: hash-based, quantum-resistant Trifold signatures, not ECDSA.</li>
+    <li>QHTLC locks: hash-based, quantum-resistant Trifold signatures, not ECDSA. The claim needs the secret <i>and</i> the maker&rsquo;s claim seed, delivered encrypted to the taker &mdash; neither alone unlocks the lot.</li>
     <li>Opcode-free locks, AuxPoW merge-mined with Bitcoin. The fork split from Bitcoin at block 968,698.</li>
+    <li>One secret, two legs: the maker can only refund the EXCAL after the BTC leg has already expired, so he cannot take both. Your BTC refunds to you after the BTC timeout (tip + 144).</li>
+    <li>Broadcast is real: the wallet builds, signs and verifies every signature locally, then <span class="mono">wallet broadcast</span> submits to the fork or to Bitcoin. Nothing here is a demo.</li>
     <li>Only the first verified funding per lot is served. The secret is the same for everyone per lot, so the first funded HTLC wins and later fundings refund.</li>
   </ul>
+
+  <section class="lot">
+    <h2>New swaps &mdash; the wallet flow, end to end</h2>
+    <p>For a <b>new</b> swap &mdash; not the three lots above &mdash; the wallet runs the whole
+    thing with HTLC legs on both chains and one shared secret hash. Both sides need an
+    <span class="mono">excalibur</span> wallet first (run the commands below from the repo root).
+    The maker creates the swap and the secret; the taker joins with the published secret hash.</p>
+    <ol>
+      <li>Maker creates:
+      <span class="mono">python3 -m excalibur_wallet wallet swap create --role maker --counterparty-pubkey TAKER_PUBKEY --excal-amount SWORDS --btc-amount SATS --excal-timeout FORK_H --btc-timeout BTC_H --fork-height CUR_FORK --btc-height CUR_BTC</span>
+      &mdash; the secret is generated and shown once, never stored. (Taker side:
+      <span class="mono">--role taker --secret-hash &lt;published hash&gt;</span> instead of a secret.)</li>
+      <li>Maker funds the EXCAL leg:
+      <span class="mono">python3 -m excalibur_wallet wallet swap fund-excal --swap-id ID --save excal-fund.json</span>, then
+      <span class="mono">python3 -m excalibur_wallet wallet broadcast --file excal-fund.json --network fork --yes</span>.</li>
+      <li>Taker records it and funds the BTC leg:
+      <span class="mono">python3 -m excalibur_wallet wallet swap note-excal-funded --swap-id ID --raw-hex &lt;funding tx&gt;</span>, then
+      <span class="mono">python3 -m excalibur_wallet wallet swap fund-btc --swap-id ID --utxo TXID:VOUT --utxo-value SATS --utxo-scriptpubkey HEX --save btc-fund.json</span>
+      and <span class="mono">python3 -m excalibur_wallet wallet broadcast --file btc-fund.json --network bitcoin --yes</span>.</li>
+      <li>Maker claims the BTC, revealing the secret:
+      <span class="mono">python3 -m excalibur_wallet wallet swap claim-btc --swap-id ID --secret SECRET --dest-address bc1q... --save btc-claim.json</span>,
+      then broadcast it.</li>
+      <li>Taker learns the secret and claims the EXCAL:
+      <span class="mono">python3 -m excalibur_wallet wallet swap note-btc-claimed --swap-id ID --raw-hex &lt;maker&rsquo;s claim tx&gt;</span>, then
+      <span class="mono">python3 -m excalibur_wallet wallet swap claim-excal --swap-id ID --secret SECRET --dest LOCKHEX --utxo TXID:VOUT --fork-height CUR_FORK</span>,
+      then broadcast it.</li>
+      <li>Refunds: the taker refunds BTC after its timeout
+      (<span class="mono">python3 -m excalibur_wallet wallet swap refund-btc --swap-id ID --dest-address bc1q... --btc-height CUR_BTC</span>);
+      the maker refunds EXCAL only after the fork timeout <i>and</i> after the BTC leg expired
+      (<span class="mono">python3 -m excalibur_wallet wallet swap refund-excal --swap-id ID --dest LOCKHEX --utxo TXID:VOUT --fork-height CUR_FORK --btc-height CUR_BTC</span>)
+      &mdash; the wallet refuses an EXCAL refund while the BTC leg is still live.</li>
+    </ol>
+    <p>Timeouts: the BTC leg must expire first and the EXCAL leg at least 24 hours later in
+    wall-clock terms (defaults: BTC tip + 144, fork tip + 2880). Check a swap any time with
+    <span class="mono">python3 -m excalibur_wallet wallet swap show --swap-id ID</span>.</p>
+  </section>
 
   <section class="lot">
     <h2>Dr. Time &mdash; one countersignature, three chains</h2>
@@ -162,8 +251,14 @@
     <ul>
       <li><b>The wallet</b> &mdash; a unified <span class="mono">excalibur</span> CLI (BIP-39,
       live-RPC ledger, PKH/OPEN/PQH/HTLC/QHTLC/BRIDGE locks, Frostgate 3-of-5 FROST).
-      Send is build/sign/verify only, no broadcast path by design. Linux one-file binary built;
-      the Windows <span class="mono">.exe</span> builds on a Windows machine.</li>
+      Every send is build/sign/verify, and <span class="mono">wallet broadcast --file/--tx
+      --network fork|bitcoin --yes</span> submits it &mdash; the broadcast path is real, added
+      Nov 14. BTC-side HTLC (<span class="mono">wallet btc-htlc</span>) and the full cross-chain
+      atomic swap flow (<span class="mono">wallet swap</span> &mdash; one shared secret hash, BTC leg
+      expires first, maker cannot refund EXCAL while the BTC leg is live) were built Nov 22.
+      The three lots above are QHTLC locks funded before the swap flow existed, so their EXCAL
+      claim still goes through the claim-seed kit step; new swaps run in the wallet end to end.
+      Linux one-file binary built; the Windows <span class="mono">.exe</span> builds on a Windows machine.</li>
       <li><b>Light ledger</b> &mdash; the fork&rsquo;s UTXO set as a snapshot committed by two
       sorted-Merkle roots, Trifold-signed checkpoints, a URUU bond on zkSync Era. Real-chain
       test passed; contracts compile. Not deployed yet. Trust-minimized, not trust-free.</li>
