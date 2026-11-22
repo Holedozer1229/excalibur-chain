@@ -16,7 +16,8 @@ Protocol flow (EXCAL → BTC swap):
 
 Security:
   - SHA-256 preimage hash lock (same on both chains)
-  - Dual timelocks: BTC refund window > EXCAL refund window
+  - Direction-specific refund windows so the claimant can reveal the preimage
+    before the other chain's refund becomes available
   - State machine enforces protocol order
   - No trusted third party; purely cryptographic
 
@@ -65,6 +66,7 @@ class SwapDirection(Enum):
 # Default timelock parameters (in blocks)
 EXCAL_REFUND_BLOCKS = 144    # ~24 hours at 10 min/block
 BTC_REFUND_BLOCKS = 100      # ~16.7 hours at 10 min/block
+BTC_TO_EXCAL_REFUND_BLOCKS = 288  # BTC refund follows the 144-block EXCAL window
 EXCAL_CLAIM_BLOCKS = 72      # ~12 hours
 BTC_CLAIM_BLOCKS = 50        # ~8.3 hours
 
@@ -183,6 +185,26 @@ class AtomicSwapProtocol:
     def _dict_to_swap(self, data: dict) -> Optional[AtomicSwap]:
         """Convert dictionary to AtomicSwap object."""
         try:
+            def htlc_from_dict(htlc_data):
+                if not htlc_data:
+                    return None
+                return HtlcParameters(
+                    secret_hash=bytes.fromhex(htlc_data.get("secret_hash", "")),
+                    secret_preimage=(
+                        bytes.fromhex(htlc_data["secret_preimage"])
+                        if htlc_data.get("secret_preimage") else None
+                    ),
+                    refund_address=bytes.fromhex(htlc_data.get("refund_address", "")),
+                    claim_address=bytes.fromhex(htlc_data.get("claim_address", "")),
+                    timeout_blocks=htlc_data.get("timeout_blocks", 0),
+                    lock_script=bytes.fromhex(htlc_data.get("lock_script", "")),
+                    funding_txid=htlc_data.get("funding_txid", ""),
+                    funding_vout=htlc_data.get("funding_vout", 0),
+                    funding_amount=htlc_data.get("funding_amount", 0),
+                    claim_txid=htlc_data.get("claim_txid", ""),
+                    refund_txid=htlc_data.get("refund_txid", ""),
+                )
+
             swap = AtomicSwap(
                 swap_id=data["swap_id"],
                 direction=SwapDirection(data["direction"]),
@@ -191,6 +213,8 @@ class AtomicSwapProtocol:
                 updated_at=data.get("updated_at", time.time()),
                 secret_preimage=bytes.fromhex(data["secret_preimage"]) if data.get("secret_preimage") else None,
                 secret_hash=bytes.fromhex(data["secret_hash"]) if data.get("secret_hash") else b"",
+                excal_htlc=htlc_from_dict(data.get("excal_htlc")),
+                btc_htlc=htlc_from_dict(data.get("btc_htlc")),
                 excal_amount=data.get("excal_amount", 0),
                 excal_refund_address=data.get("excal_refund_address", ""),
                 excal_claim_address=data.get("excal_claim_address", ""),
@@ -211,6 +235,23 @@ class AtomicSwapProtocol:
     
     def _swap_to_dict(self, swap: AtomicSwap) -> dict:
         """Convert AtomicSwap to dictionary for persistence."""
+        def htlc_to_dict(htlc):
+            if not htlc:
+                return None
+            return {
+                "secret_hash": htlc.secret_hash.hex(),
+                "secret_preimage": htlc.secret_preimage.hex() if htlc.secret_preimage else "",
+                "refund_address": htlc.refund_address.hex(),
+                "claim_address": htlc.claim_address.hex(),
+                "timeout_blocks": htlc.timeout_blocks,
+                "lock_script": htlc.lock_script.hex(),
+                "funding_txid": htlc.funding_txid,
+                "funding_vout": htlc.funding_vout,
+                "funding_amount": htlc.funding_amount,
+                "claim_txid": htlc.claim_txid,
+                "refund_txid": htlc.refund_txid,
+            }
+
         return {
             "swap_id": swap.swap_id,
             "direction": swap.direction.value,
@@ -219,6 +260,8 @@ class AtomicSwapProtocol:
             "updated_at": swap.updated_at,
             "secret_preimage": swap.secret_preimage.hex() if swap.secret_preimage else "",
             "secret_hash": swap.secret_hash.hex() if swap.secret_hash else "",
+            "excal_htlc": htlc_to_dict(swap.excal_htlc),
+            "btc_htlc": htlc_to_dict(swap.btc_htlc),
             "excal_amount": swap.excal_amount,
             "excal_refund_address": swap.excal_refund_address,
             "excal_claim_address": swap.excal_claim_address,
@@ -250,7 +293,7 @@ class AtomicSwapProtocol:
                     excal_claim_address: str = "", btc_claim_address: str = "",
                     counterparty_id: str = "",
                     excal_timeout: int = EXCAL_REFUND_BLOCKS,
-                    btc_timeout: int = BTC_REFUND_BLOCKS) -> AtomicSwap:
+                    btc_timeout: Optional[int] = None) -> AtomicSwap:
         """Create a new atomic swap.
         
         Args:
@@ -294,6 +337,14 @@ class AtomicSwapProtocol:
             secret_hash + str(time.time()).encode()
         ).hexdigest()[:16]
         
+        effective_btc_timeout = btc_timeout
+        if effective_btc_timeout is None:
+            effective_btc_timeout = (
+                BTC_REFUND_BLOCKS
+                if direction == SwapDirection.EXCAL_TO_BTC
+                else BTC_TO_EXCAL_REFUND_BLOCKS
+            )
+
         swap = AtomicSwap(
             swap_id=swap_id,
             direction=direction,
@@ -308,7 +359,7 @@ class AtomicSwapProtocol:
             btc_claim_address=btc_claim_address or btc_refund_address,
             counterparty_id=counterparty_id,
             excal_timeout_blocks=excal_timeout,
-            btc_timeout_blocks=btc_timeout,
+            btc_timeout_blocks=effective_btc_timeout,
         )
         
         with self._lock:
@@ -375,9 +426,17 @@ class AtomicSwapProtocol:
         swap = self._swaps.get(swap_id)
         if not swap:
             raise AtomicSwapError(f"Swap {swap_id} not found")
-        if swap.status != SwapStatus.INIT:
+        expected_status = (
+            SwapStatus.INIT
+            if swap.direction == SwapDirection.EXCAL_TO_BTC
+            else SwapStatus.BTC_LOCKED
+        )
+        if swap.status != expected_status:
             raise AtomicSwapError(
-                f"Cannot lock EXCAL: swap is in {swap.status.value} state")
+                f"Cannot lock EXCAL: swap is in {swap.status.value} state, "
+                f"expected {expected_status.value}")
+        if swap.direction == SwapDirection.BTC_TO_EXCAL and not swap.btc_htlc:
+            raise AtomicSwapError("BTC must be locked before EXCAL")
         
         def _addr_bytes(addr: str) -> bytes:
             if not addr:
@@ -397,7 +456,8 @@ class AtomicSwapProtocol:
             funding_vout=funding_vout,
             funding_amount=swap.excal_amount,
         )
-        swap.status = SwapStatus.EXCAL_LOCKED
+        if swap.direction == SwapDirection.EXCAL_TO_BTC:
+            swap.status = SwapStatus.EXCAL_LOCKED
         
         with self._lock:
             self._save_swaps()
@@ -425,10 +485,17 @@ class AtomicSwapProtocol:
         swap = self._swaps.get(swap_id)
         if not swap:
             raise AtomicSwapError(f"Swap {swap_id} not found")
-        if swap.status != SwapStatus.EXCAL_LOCKED:
+        expected_status = (
+            SwapStatus.EXCAL_LOCKED
+            if swap.direction == SwapDirection.EXCAL_TO_BTC
+            else SwapStatus.INIT
+        )
+        if swap.status != expected_status:
             raise AtomicSwapError(
                 f"Cannot lock BTC: swap is in {swap.status.value} state, "
-                f"expected EXCAL_LOCKED")
+                f"expected {expected_status.value}")
+        if swap.direction == SwapDirection.EXCAL_TO_BTC and not swap.excal_htlc:
+            raise AtomicSwapError("EXCAL must be locked before BTC")
         
         def _addr_bytes(addr: str) -> bytes:
             if not addr:
@@ -479,6 +546,8 @@ class AtomicSwapProtocol:
                                 SwapStatus.BTC_CLAIMED):
             raise AtomicSwapError(
                 f"Cannot claim EXCAL: swap is in {swap.status.value} state")
+        if not swap.excal_htlc or not swap.btc_htlc:
+            raise AtomicSwapError("Both chain HTLCs must be locked before claiming")
         
         # Verify preimage
         computed_hash = hashlib.sha256(secret_preimage).digest()
@@ -519,9 +588,11 @@ class AtomicSwapProtocol:
         swap = self._swaps.get(swap_id)
         if not swap:
             raise AtomicSwapError(f"Swap {swap_id} not found")
-        if swap.status not in (SwapStatus.BTC_LOCKED, SwapStatus.BTC_CLAIMED):
+        if swap.status not in (SwapStatus.BTC_LOCKED, SwapStatus.EXCAL_CLAIMED):
             raise AtomicSwapError(
                 f"Cannot claim BTC: swap is in {swap.status.value} state")
+        if not swap.excal_htlc or not swap.btc_htlc:
+            raise AtomicSwapError("Both chain HTLCs must be locked before claiming")
         
         # Verify preimage
         computed_hash = hashlib.sha256(secret_preimage).digest()
@@ -535,8 +606,6 @@ class AtomicSwapProtocol:
         if swap.status == SwapStatus.BTC_LOCKED:
             swap.status = SwapStatus.BTC_CLAIMED
         elif swap.status == SwapStatus.EXCAL_CLAIMED:
-            swap.status = SwapStatus.COMPLETED
-        else:
             swap.status = SwapStatus.COMPLETED
         
         with self._lock:
@@ -558,7 +627,7 @@ class AtomicSwapProtocol:
         swap = self._swaps.get(swap_id)
         if not swap:
             raise AtomicSwapError(f"Swap {swap_id} not found")
-        if swap.status not in (SwapStatus.EXCAL_LOCKED, SwapStatus.BTC_LOCKED):
+        if swap.status not in (SwapStatus.EXCAL_LOCKED, SwapStatus.BTC_LOCKED) or not swap.excal_htlc:
             raise AtomicSwapError(
                 f"Cannot refund EXCAL: swap is in {swap.status.value} state")
         
@@ -586,8 +655,7 @@ class AtomicSwapProtocol:
         swap = self._swaps.get(swap_id)
         if not swap:
             raise AtomicSwapError(f"Swap {swap_id} not found")
-        if swap.status not in (SwapStatus.BTC_LOCKED, SwapStatus.EXCAL_CLAIMED,
-                                SwapStatus.BTC_CLAIMED):
+        if swap.status not in (SwapStatus.BTC_LOCKED, SwapStatus.EXCAL_CLAIMED) or not swap.btc_htlc:
             raise AtomicSwapError(
                 f"Cannot refund BTC: swap is in {swap.status.value} state")
         

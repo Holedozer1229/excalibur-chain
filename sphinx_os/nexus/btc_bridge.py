@@ -4,19 +4,25 @@ AetherionEXCAL BTC Bridge — EXCAL ↔ Bitcoin atomic HTLC bridge for wallets.
 
 Wraps AtomicSwapProtocol and builds Bitcoin P2WSH HTLC lock parameters so
 AetherionEXCAL.exe can propose, track, and complete cross-chain swaps over
-SkyNet. Does not sign or broadcast mainnet Bitcoin spends — it produces the
-lock scripts / addresses / swap offers that users fund from their own BTC wallet.
+SkyNet, while keeping Bitcoin transaction signing local to the wallet or its
+configured Bitcoin Core wallet.
 """
 
 from __future__ import annotations
 
 import hashlib
+import base64
 import json
 import logging
+import os
 import struct
 import time
 from dataclasses import dataclass, field
+from decimal import Decimal, ROUND_CEILING
 from typing import Dict, List, Optional, Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlparse
+from urllib.request import Request, urlopen
 
 from .atomic_swap import (
     AtomicSwapProtocol,
@@ -29,6 +35,532 @@ from .atomic_swap import (
 )
 
 logger = logging.getLogger("btc_bridge")
+
+
+def bitcoin_network_params(network: Optional[str] = None) -> tuple:
+    """Return Bitcoin address HRP and WIF prefix for the configured network."""
+    network = network or os.environ.get("AETHERION_BTC_NETWORK", "main")
+    params = {
+        "main": ("bc", 0x80),
+        "test": ("tb", 0xEF),
+        "signet": ("tb", 0xEF),
+        "regtest": ("bcrt", 0xEF),
+    }
+    if network not in params:
+        raise ValueError("AETHERION_BTC_NETWORK must be main, test, signet, or regtest")
+    return params[network]
+
+
+BITCOIN_GENESIS_HASHES = {
+    "main": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+    "test": "000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943",
+    "signet": "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+    "regtest": "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206",
+}
+
+
+class BitcoinCoreRPC:
+    """Bitcoin Core RPC client for verifying, funding, and broadcasting BTC HTLCs."""
+
+    def __init__(self, timeout: int = 15, config: Optional[dict] = None):
+        config = config or {}
+        self.network = config.get(
+            "network", os.environ.get("AETHERION_BTC_NETWORK", "main")
+        )
+        self.url = config.get(
+            "rpc_url",
+            os.environ.get("AETHERION_BTC_RPC_URL", "http://127.0.0.1:8332"),
+        )
+        wallet = config.get("wallet", os.environ.get("AETHERION_BTC_RPC_WALLET"))
+        self.wallet_url = (
+            self.url.rstrip("/") + "/wallet/" + quote(wallet, safe="")
+            if wallet else None
+        )
+        self.timeout = timeout
+        parsed = urlparse(self.url)
+        if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            raise ValueError("AETHERION_BTC_RPC_URL must be an HTTP(S) URL")
+        if parsed.scheme != "https" and parsed.hostname not in (
+            "127.0.0.1", "localhost", "::1"
+        ):
+            raise ValueError("Bitcoin Core RPC on non-local hosts requires HTTPS")
+        self._auth = self._load_auth(config)
+
+    @staticmethod
+    def _load_auth(config: Optional[dict] = None) -> str:
+        config = config or {}
+        cookie_path = config.get(
+            "cookie_file", os.environ.get("AETHERION_BTC_RPC_COOKIE_FILE")
+        )
+        if cookie_path:
+            with open(cookie_path, encoding="utf-8") as cookie_file:
+                token = cookie_file.read().strip()
+            if ":" not in token:
+                raise ValueError("Bitcoin Core RPC cookie has an invalid format")
+        else:
+            user = config.get("rpc_user", os.environ.get("AETHERION_BTC_RPC_USER"))
+            password = config.get(
+                "rpc_password", os.environ.get("AETHERION_BTC_RPC_PASSWORD")
+            )
+            if not user or not password:
+                raise RuntimeError(
+                    "Configure Bitcoin Core RPC with AETHERION_BTC_RPC_COOKIE_FILE "
+                    "or AETHERION_BTC_RPC_USER and AETHERION_BTC_RPC_PASSWORD"
+                )
+            token = f"{user}:{password}"
+        return "Basic " + base64.b64encode(token.encode("utf-8")).decode("ascii")
+
+    def _call_url(self, url: str, method: str, params: Optional[list] = None) -> Any:
+        payload = json.dumps({
+            "jsonrpc": "2.0",
+            "id": "aetherion-excal",
+            "method": method,
+            "params": params or [],
+        }).encode("utf-8")
+        request = Request(
+            url,
+            data=payload,
+            headers={
+                "Authorization": self._auth,
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                result = json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            raise RuntimeError(f"Bitcoin Core RPC HTTP error {exc.code}") from exc
+        except URLError as exc:
+            raise RuntimeError("Unable to connect to Bitcoin Core RPC") from exc
+        if result.get("error"):
+            error = result["error"]
+            raise RuntimeError(
+                f"Bitcoin Core RPC {method} failed: {error.get('message', 'unknown error')}"
+            )
+        return result.get("result")
+
+    def call(self, method: str, params: Optional[list] = None) -> Any:
+        return self._call_url(self.url, method, params)
+
+    def call_wallet(self, method: str, params: Optional[list] = None) -> Any:
+        if not self.wallet_url:
+            raise RuntimeError(
+                "Set AETHERION_BTC_RPC_WALLET to a loaded, funded Bitcoin Core wallet "
+                "to sign and broadcast BTC funding transactions"
+            )
+        return self._call_url(self.wallet_url, method, params)
+
+    def _check_network(self) -> dict:
+        expected_network = self.network
+        bitcoin_network_params(expected_network)
+        if expected_network not in BITCOIN_GENESIS_HASHES:
+            raise ValueError(f"No canonical Bitcoin genesis hash is configured for {expected_network}")
+        network = self.call("getblockchaininfo")
+        if network.get("chain") != expected_network:
+            raise RuntimeError(
+                f"Bitcoin Core network is {network.get('chain')!r}; "
+                f"expected {expected_network!r}"
+            )
+        genesis_hash = self.call("getblockhash", [0])
+        expected_genesis = BITCOIN_GENESIS_HASHES[expected_network]
+        if genesis_hash != expected_genesis:
+            raise RuntimeError(
+                f"Bitcoin Core genesis hash is {genesis_hash!r}; "
+                f"expected {expected_genesis!r} for {expected_network!r}"
+            )
+        return network
+
+    def get_tip_height(self) -> int:
+        """Return the block height after confirming the configured network."""
+        self._check_network()
+        height = self.call("getblockcount")
+        if not isinstance(height, int) or height < 0:
+            raise RuntimeError("Bitcoin Core returned an invalid block height")
+        return height
+
+    def prepare_funding(self, address: str, amount_sats: int) -> dict:
+        """Create an unsigned funding PSBT and return Core's exact fee quote."""
+        if amount_sats <= 0:
+            raise ValueError("Bitcoin HTLC amount must be positive")
+        self._check_network()
+        amount_btc = float(Decimal(amount_sats) / Decimal(100_000_000))
+        result = self.call_wallet(
+            "walletcreatefundedpsbt",
+            [[], [{address: amount_btc}], 0, {"lockUnspents": False}, True],
+        )
+        if not isinstance(result, dict) or not result.get("psbt"):
+            raise RuntimeError("Bitcoin Core did not return a funding PSBT")
+        fee = Decimal(str(result.get("fee", 0))) * 100_000_000
+        if fee != fee.to_integral_value() or fee < 0:
+            raise RuntimeError("Bitcoin Core returned an invalid funding fee")
+        return {
+            "psbt": result["psbt"],
+            "fee_sats": int(fee),
+            "address": address,
+            "amount_sats": amount_sats,
+        }
+
+    def broadcast_funding(self, psbt: str, script_pubkey: str, amount_sats: int) -> dict:
+        """Sign and broadcast a prepared PSBT using the configured Core wallet."""
+        self._check_network()
+        processed = self.call_wallet("walletprocesspsbt", [psbt])
+        if not isinstance(processed, dict) or not processed.get("complete"):
+            raise RuntimeError("Bitcoin Core wallet could not sign the funding transaction")
+        finalized = self.call_wallet("finalizepsbt", [processed["psbt"]])
+        if (
+            not isinstance(finalized, dict)
+            or not finalized.get("complete")
+            or not finalized.get("hex")
+        ):
+            raise RuntimeError("Bitcoin Core could not finalize the funding transaction")
+        decoded = self.call("decoderawtransaction", [finalized["hex"]])
+        matching = []
+        for output in decoded.get("vout", []):
+            output_script = output.get("scriptPubKey", {}).get("hex", "").lower()
+            output_value = Decimal(str(output.get("value", 0))) * 100_000_000
+            if output_script == script_pubkey.lower() and output_value == amount_sats:
+                matching.append(output.get("n"))
+        if len(matching) != 1 or not isinstance(matching[0], int):
+            raise RuntimeError("Signed funding transaction does not contain one exact HTLC output")
+        txid = self.call("sendrawtransaction", [finalized["hex"]])
+        if txid != decoded.get("txid"):
+            raise RuntimeError("Bitcoin Core returned a mismatched funding transaction ID")
+        return {"txid": txid, "vout": matching[0]}
+
+    def estimate_fee_rate(self, confirmation_target: int = 6) -> int:
+        """Return the greater of the node's estimated and relay fee rates, in sat/vB."""
+        estimate = self.call("estimatesmartfee", [confirmation_target])
+        if not isinstance(estimate, dict) or estimate.get("feerate") is None:
+            raise RuntimeError("Bitcoin Core has no fee estimate for BTC transaction signing")
+        relay = self.call("getmempoolinfo")
+        try:
+            estimate_rate = Decimal(str(estimate["feerate"])) * 100_000
+            relay_rate = Decimal(str(relay["minrelaytxfee"])) * 100_000
+        except (KeyError, ArithmeticError, ValueError) as exc:
+            raise RuntimeError("Bitcoin Core returned an invalid fee estimate") from exc
+        if not estimate_rate.is_finite() or not relay_rate.is_finite():
+            raise RuntimeError("Bitcoin Core returned a non-finite fee estimate")
+        rate = int(max(estimate_rate, relay_rate).to_integral_value(rounding=ROUND_CEILING))
+        if rate < 1:
+            raise RuntimeError("Bitcoin Core fee estimate is below 1 sat/vB")
+        return rate
+
+    def broadcast_spend(
+        self,
+        txid: str,
+        vout: int,
+        amount_sats: int,
+        witness_script: bytes,
+        destination_script: bytes,
+        private_key: bytes,
+        expected_pubkey: bytes,
+        fee_sats: int,
+        secret_preimage: Optional[bytes] = None,
+        refund_height: Optional[int] = None,
+    ) -> dict:
+        """Sign and broadcast a single-input P2WSH HTLC claim or refund."""
+        self._check_network()
+        funding = self.call("getrawtransaction", [txid, True])
+        if funding.get("txid", "").lower() != txid.lower():
+            raise RuntimeError("Bitcoin Core returned a different funding transaction ID")
+        if not isinstance(funding.get("confirmations"), int) or funding["confirmations"] < 1:
+            raise RuntimeError("Bitcoin HTLC funding transaction is not confirmed")
+        outputs = funding.get("vout", [])
+        if not isinstance(vout, int) or not 0 <= vout < len(outputs):
+            raise ValueError("Bitcoin funding output index is out of range")
+        output = outputs[vout]
+        expected_script = (bytes([OP_0]) + _push(hashlib.sha256(witness_script).digest())).hex()
+        if output.get("scriptPubKey", {}).get("hex", "").lower() != expected_script:
+            raise RuntimeError("Bitcoin funding output does not match the HTLC witness script")
+        actual_amount = Decimal(str(output.get("value", 0))) * 100_000_000
+        if actual_amount != amount_sats:
+            raise RuntimeError("Bitcoin HTLC output amount does not match the recorded swap")
+        if refund_height is not None:
+            tip = self.get_tip_height()
+            if tip < refund_height:
+                raise RuntimeError(
+                    f"Bitcoin refund timeout has not been reached (tip {tip}, timeout {refund_height})"
+                )
+        if fee_sats <= 0 or fee_sats >= amount_sats:
+            raise ValueError("Bitcoin transaction fee must be positive and less than the HTLC amount")
+
+        raw_tx, spent_txid, actual_fee = sign_htlc_spend(
+            txid=txid,
+            vout=vout,
+            amount_sats=amount_sats,
+            destination_script=destination_script,
+            witness_script=witness_script,
+            private_key=private_key,
+            expected_pubkey=expected_pubkey,
+            fee_sats=fee_sats,
+            secret_preimage=secret_preimage,
+            refund_height=refund_height,
+        )
+        broadcast_txid = self.call("sendrawtransaction", [raw_tx])
+        if broadcast_txid != spent_txid:
+            raise RuntimeError("Bitcoin Core returned a mismatched spend transaction ID")
+        return {"txid": broadcast_txid, "fee_sats": actual_fee}
+
+    def verify_funding(self, txid: str, vout: int, script_pubkey: str, amount_sats: int) -> dict:
+        """Require a confirmed, exact-value HTLC output on the configured Bitcoin network."""
+        if len(txid) != 64 or any(c not in "0123456789abcdefABCDEF" for c in txid):
+            raise ValueError("Bitcoin transaction ID must be 64 hexadecimal characters")
+        if amount_sats <= 0:
+            raise ValueError("Bitcoin HTLC amount must be positive")
+        self._check_network()
+        transaction = self.call("getrawtransaction", [txid, True])
+        if transaction.get("txid", "").lower() != txid.lower():
+            raise RuntimeError("Bitcoin Core returned a different transaction ID")
+        confirmations = transaction.get("confirmations", 0)
+        if not isinstance(confirmations, int) or confirmations < 1:
+            raise RuntimeError("Bitcoin HTLC funding transaction is not confirmed")
+        outputs = transaction.get("vout", [])
+        if not isinstance(vout, int) or not 0 <= vout < len(outputs):
+            raise ValueError("Bitcoin funding output index is out of range")
+        output = outputs[vout]
+        actual_script = output.get("scriptPubKey", {}).get("hex", "").lower()
+        if actual_script != script_pubkey.lower():
+            raise RuntimeError("Bitcoin output script does not match the swap HTLC")
+        amount = Decimal(str(output.get("value", 0))) * 100_000_000
+        if amount != amount.to_integral_value():
+            raise RuntimeError("Bitcoin Core returned an invalid BTC amount precision")
+        actual_sats = int(amount)
+        if actual_sats != amount_sats:
+            raise RuntimeError(
+                f"Bitcoin HTLC output is {actual_sats} satoshis; expected {amount_sats}"
+            )
+        return {"txid": txid, "vout": vout, "confirmations": confirmations}
+
+    def verify_spend(
+        self,
+        txid: str,
+        funding_txid: str,
+        funding_vout: int,
+        witness_script: bytes,
+        secret_hash: Optional[bytes] = None,
+        refund_height: Optional[int] = None,
+    ) -> dict:
+        """Verify a confirmed HTLC spend and its claim preimage or refund locktime."""
+        self._check_network()
+        if len(txid) != 64 or any(c not in "0123456789abcdefABCDEF" for c in txid):
+            raise ValueError("Bitcoin transaction ID must be 64 hexadecimal characters")
+        transaction = self.call("getrawtransaction", [txid, True])
+        if transaction.get("txid", "").lower() != txid.lower():
+            raise RuntimeError("Bitcoin Core returned a different transaction ID")
+        if not isinstance(transaction.get("confirmations"), int) or transaction["confirmations"] < 1:
+            raise RuntimeError("Bitcoin HTLC spend transaction is not confirmed")
+        matching_inputs = [
+            item for item in transaction.get("vin", [])
+            if item.get("txid", "").lower() == funding_txid.lower()
+            and item.get("vout") == funding_vout
+        ]
+        if not matching_inputs:
+            raise RuntimeError("Bitcoin transaction does not spend the recorded HTLC output")
+
+        expected_script = witness_script.hex()
+        if not any(
+            item.get("txinwitness", [])
+            and item["txinwitness"][-1].lower() == expected_script
+            for item in matching_inputs
+        ):
+            raise RuntimeError("Bitcoin spend does not use the recorded HTLC witness script")
+
+        if secret_hash is not None:
+            if len(secret_hash) != 32:
+                raise ValueError("HTLC secret hash must be 32 bytes")
+            for item in matching_inputs:
+                witness = item.get("txinwitness", [])
+                if len(witness) < 3 or witness[-2] not in ("01", "1"):
+                    continue
+                for witness_item in witness[:-2]:
+                    try:
+                        preimage = bytes.fromhex(witness_item)
+                    except ValueError:
+                        continue
+                    if hashlib.sha256(preimage).digest() == secret_hash:
+                        return {
+                            "txid": txid,
+                            "confirmations": transaction["confirmations"],
+                        }
+            raise RuntimeError("Bitcoin HTLC claim witness does not reveal the correct preimage")
+
+        if refund_height is not None:
+            if transaction.get("locktime", 0) < refund_height:
+                raise RuntimeError("Bitcoin refund transaction locktime is before the HTLC timeout")
+            if any(item.get("sequence", 0xFFFFFFFF) == 0xFFFFFFFF for item in matching_inputs):
+                raise RuntimeError("Bitcoin refund input disables the required locktime")
+            if not any(
+                len(item.get("txinwitness", [])) >= 3
+                and item["txinwitness"][-2] == ""
+                and item["txinwitness"][-1].lower() == expected_script
+                for item in matching_inputs
+            ):
+                raise RuntimeError("Bitcoin spend does not use the HTLC refund branch")
+            block_hash = transaction.get("blockhash")
+            if not block_hash:
+                raise RuntimeError("Bitcoin Core did not return the confirmed spend block")
+            block = self.call("getblockheader", [block_hash, True])
+            if block.get("height", -1) <= refund_height:
+                raise RuntimeError("Bitcoin HTLC refund timeout has not been reached")
+        return {"txid": txid, "confirmations": transaction["confirmations"]}
+
+
+def _compact_size(value: int) -> bytes:
+    if value < 0:
+        raise ValueError("CompactSize value cannot be negative")
+    if value < 253:
+        return bytes([value])
+    if value <= 0xFFFF:
+        return b"\xfd" + struct.pack("<H", value)
+    if value <= 0xFFFFFFFF:
+        return b"\xfe" + struct.pack("<I", value)
+    return b"\xff" + struct.pack("<Q", value)
+
+
+def _varbytes(value: bytes) -> bytes:
+    return _compact_size(len(value)) + value
+
+
+def _double_sha256(value: bytes) -> bytes:
+    return hashlib.sha256(hashlib.sha256(value).digest()).digest()
+
+
+def estimate_htlc_spend_vsize(
+    witness_script: bytes, destination_script: bytes, claiming: bool
+) -> int:
+    """Estimate a P2WSH HTLC spend vsize conservatively using a 73-byte signature."""
+    sequence = 0xFFFFFFFD if claiming else 0xFFFFFFFE
+    prevout = b"\x00" * 36
+    output = struct.pack("<Q", 1) + _varbytes(destination_script)
+    stripped = (
+        struct.pack("<I", 2) + b"\x01" + prevout + b"\x00"
+        + struct.pack("<I", sequence) + b"\x01" + output + b"\x00" * 4
+    )
+    stack_lengths = [73, 32, 1, len(witness_script)] if claiming else [
+        73, 0, len(witness_script)
+    ]
+    witness_size = len(_compact_size(len(stack_lengths))) + sum(
+        len(_varbytes(b"\x00" * size)) for size in stack_lengths
+    )
+    weight = len(stripped) * 4 + 2 + witness_size
+    return (weight + 3) // 4
+
+
+def sign_htlc_spend(
+    txid: str,
+    vout: int,
+    amount_sats: int,
+    destination_script: bytes,
+    witness_script: bytes,
+    private_key: bytes,
+    expected_pubkey: bytes,
+    fee_sats: int,
+    secret_preimage: Optional[bytes] = None,
+    refund_height: Optional[int] = None,
+) -> tuple:
+    """Build and locally sign one native-SegWit HTLC claim or refund."""
+    if (secret_preimage is None) == (refund_height is None):
+        raise ValueError("Choose exactly one HTLC branch")
+    if len(private_key) != 32 or len(expected_pubkey) != 33:
+        raise ValueError("HTLC signing requires a 32-byte key and compressed public key")
+    if len(txid) != 64 or any(c not in "0123456789abcdefABCDEF" for c in txid):
+        raise ValueError("Bitcoin transaction ID must be 64 hexadecimal characters")
+    if not 0 <= vout <= 0xFFFFFFFF or amount_sats <= fee_sats:
+        raise ValueError("Bitcoin HTLC outpoint or amount is invalid")
+    if not destination_script or not witness_script:
+        raise ValueError("Bitcoin destination and HTLC witness scripts are required")
+    if secret_preimage is not None:
+        if (
+            len(secret_preimage) != 32
+            or not witness_script.startswith(b"\x63\xa8\x20")
+            or witness_script[35:37] != b"\x88\x21"
+            or witness_script[70:72] != b"\xac\x67"
+            or hashlib.sha256(secret_preimage).digest() != witness_script[3:35]
+            or expected_pubkey != witness_script[37:70]
+        ):
+            raise ValueError("HTLC claim preimage does not match the witness script")
+    else:
+        if not isinstance(refund_height, int) or not 1 <= refund_height < LOCKTIME_THRESHOLD:
+            raise ValueError("Bitcoin refund height must be a valid block height")
+        if (
+            len(witness_script) < 36
+            or witness_script[-36] != 0x21
+            or witness_script[-35:-2] != expected_pubkey
+            or witness_script[-2:] != b"\xac\x68"
+        ):
+            raise ValueError("The wallet key does not match the HTLC refund branch")
+
+    try:
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import ec, utils
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    except ImportError as exc:
+        raise RuntimeError("Bitcoin transaction signing requires the cryptography package") from exc
+
+    signing_key = ec.derive_private_key(int.from_bytes(private_key, "big"), ec.SECP256K1())
+    actual_pubkey = signing_key.public_key().public_bytes(
+        Encoding.X962, PublicFormat.CompressedPoint
+    )
+    if actual_pubkey != expected_pubkey:
+        raise ValueError("The unlocked wallet key does not match the HTLC public key")
+
+    prevout = bytes.fromhex(txid)[::-1] + struct.pack("<I", vout)
+    sequence = 0xFFFFFFFD if secret_preimage is not None else 0xFFFFFFFE
+    locktime = 0 if secret_preimage is not None else refund_height
+    serialized_output = struct.pack("<Q", amount_sats - fee_sats) + _varbytes(destination_script)
+    digest_preimage = (
+        struct.pack("<I", 2)
+        + _double_sha256(prevout)
+        + _double_sha256(struct.pack("<I", sequence))
+        + prevout
+        + _varbytes(witness_script)
+        + struct.pack("<Q", amount_sats)
+        + struct.pack("<I", sequence)
+        + _double_sha256(serialized_output)
+        + struct.pack("<I", locktime)
+        + struct.pack("<I", 1)
+    )
+    digest = _double_sha256(digest_preimage)
+    signature = signing_key.sign(digest, ec.ECDSA(utils.Prehashed(hashes.SHA256())))
+    r, s = utils.decode_dss_signature(signature)
+    order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+    if s > order // 2:
+        s = order - s
+    signature = utils.encode_dss_signature(r, s) + b"\x01"
+
+    stripped = (
+        struct.pack("<I", 2)
+        + _compact_size(1)
+        + prevout
+        + b"\x00"
+        + struct.pack("<I", sequence)
+        + _compact_size(1)
+        + serialized_output
+        + struct.pack("<I", locktime)
+    )
+    witness_items = (
+        [signature, secret_preimage, b"\x01", witness_script]
+        if secret_preimage is not None
+        else [signature, b"", witness_script]
+    )
+    witness = _compact_size(len(witness_items)) + b"".join(
+        _varbytes(item) for item in witness_items
+    )
+    raw_tx = (
+        struct.pack("<I", 2)
+        + b"\x00\x01"
+        + _compact_size(1)
+        + prevout
+        + b"\x00"
+        + struct.pack("<I", sequence)
+        + _compact_size(1)
+        + serialized_output
+        + witness
+        + struct.pack("<I", locktime)
+    )
+    return raw_tx.hex(), _double_sha256(stripped)[::-1].hex(), fee_sats
+
 
 # Bitcoin script opcodes used by the HTLC
 OP_0 = 0x00

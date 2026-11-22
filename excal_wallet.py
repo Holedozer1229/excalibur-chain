@@ -75,8 +75,12 @@ from wallet_transactions import (
 )
 from sphinx_os.nexus.btc_bridge import (
     BtcBridge,
+    BitcoinCoreRPC,
     BridgeOffer,
+    bitcoin_network_params,
     btc_htlc_lock,
+    estimate_htlc_spend_vsize,
+    hash160,
     private_key_to_btc_address,
     private_key_to_wif,
 )
@@ -84,9 +88,10 @@ from sphinx_os.nexus.atomic_swap import (
     AtomicSwapProtocol,
     AtomicSwap,
     SwapDirection,
-    SwapStatus,
     MIN_EXCAL_SWAP,
     MIN_BTC_SWAP,
+    BTC_REFUND_BLOCKS,
+    BTC_TO_EXCAL_REFUND_BLOCKS,
 )
 
 logger = logging.getLogger("excal_wallet")
@@ -1946,6 +1951,10 @@ class WalletBackend:
         self.p2p = None
         self.erepr = None
         self.btc_bridge: Optional[BtcBridge] = None
+        self._pending_btc_funding_psbts: Dict[str, str] = {}
+        self.btc_rpc_config_path = WALLET_DIR / "bitcoin-node.json"
+        self.btc_rpc_config = self._load_btc_rpc_config()
+        self.btc_rpc_config["rpc_password"] = ""
 
         # Determine keystore path
         if profile == "default":
@@ -1958,6 +1967,56 @@ class WalletBackend:
                            "0123456789_-" for char in profile)):
                 raise ValueError("Invalid wallet profile name")
             self.keystore_path = WALLET_PROFILES_DIR / f"{profile}.json"
+
+    def _load_btc_rpc_config(self) -> Dict[str, str]:
+        config: Dict[str, str] = {}
+        if self.btc_rpc_config_path.exists():
+            try:
+                data = json.loads(self.btc_rpc_config_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning("Could not load Bitcoin node settings: %s", exc)
+            else:
+                if isinstance(data, dict):
+                    config = {
+                        key: str(data.get(key, ""))
+                        for key in ("rpc_url", "network", "wallet", "cookie_file", "rpc_user")
+                    }
+        config.setdefault("rpc_url", os.environ.get(
+            "AETHERION_BTC_RPC_URL", "http://127.0.0.1:8332"
+        ))
+        config.setdefault("network", os.environ.get("AETHERION_BTC_NETWORK", "main"))
+        config.setdefault("wallet", os.environ.get("AETHERION_BTC_RPC_WALLET", ""))
+        config.setdefault("cookie_file", os.environ.get("AETHERION_BTC_RPC_COOKIE_FILE", ""))
+        config.setdefault("rpc_user", os.environ.get("AETHERION_BTC_RPC_USER", ""))
+        return config
+
+    def save_btc_rpc_config(self, config: Dict[str, str]) -> None:
+        clean = {
+            key: str(config.get(key, "")).strip()
+            for key in ("rpc_url", "network", "wallet", "cookie_file", "rpc_user")
+        }
+        clean["network"] = clean["network"].lower() or "main"
+        bitcoin_network_params(clean["network"])
+        if not clean["rpc_url"]:
+            raise ValueError("Bitcoin Core RPC URL is required")
+        if clean["cookie_file"] and (clean["rpc_user"] or config.get("rpc_password")):
+            raise ValueError("Use either the cookie file or RPC username/password, not both")
+        if not clean["cookie_file"] and (clean["rpc_user"] or config.get("rpc_password")):
+            if not clean["rpc_user"] or not config.get("rpc_password"):
+                raise ValueError("Enter both the Bitcoin Core RPC username and password")
+        config_path = self.btc_rpc_config_path
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(
+            json.dumps(clean, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        self.btc_rpc_config = {**clean, "rpc_password": config.get("rpc_password", "")}
+
+    def _bitcoin_rpc(self) -> BitcoinCoreRPC:
+        config = dict(self.btc_rpc_config)
+        if not config.get("rpc_password") and os.environ.get("AETHERION_BTC_RPC_PASSWORD"):
+            config["rpc_password"] = os.environ["AETHERION_BTC_RPC_PASSWORD"]
+        return BitcoinCoreRPC(config=config)
 
     @staticmethod
     def list_profiles() -> List[Dict[str, str]]:
@@ -2254,7 +2313,8 @@ class WalletBackend:
             priv_hex = self.keystore.get_private_key(addr)
             if not priv_hex:
                 return None
-            return private_key_to_btc_address(priv_hex)
+            hrp, _ = bitcoin_network_params(self.btc_rpc_config.get("network"))
+            return private_key_to_btc_address(priv_hex, hrp=hrp)
         except Exception as e:
             logger.warning(f"Failed to derive BTC address: {e}")
             return None
@@ -2268,7 +2328,8 @@ class WalletBackend:
             priv_hex = self.keystore.get_private_key(addr)
             if not priv_hex:
                 return None
-            return private_key_to_wif(priv_hex)
+            _, version_byte = bitcoin_network_params(self.btc_rpc_config.get("network"))
+            return private_key_to_wif(priv_hex, version_byte=version_byte)
         except Exception as e:
             logger.warning(f"Failed to derive BTC WIF: {e}")
             return None
@@ -2283,52 +2344,109 @@ class WalletBackend:
         initiator_btc_address: Optional[str] = None,
         participant_btc_address: Optional[str] = None,
         secret_hex: Optional[str] = None,
+        participant_btc_pubkey: Optional[str] = None,
+        btc_tip_height: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """Create a new BTC-EXCAL atomic swap via node RPC or local bridge."""
+        """Create a SHA-256 HTLC swap and its BTC witness script when possible."""
         if not initiator_address:
             initiator_address = self.get_address() or ""
         if not initiator_btc_address:
             initiator_btc_address = self.get_btc_address() or ""
-
-        # Try RPC first
-        try:
-            res = self._rpc("atomicswap_create", [
-                direction,
-                excal_amount,
-                btc_amount,
-                initiator_address,
-                participant_address or "",
-                initiator_btc_address,
-                participant_btc_address or "",
-                secret_hex or "",
-            ])
-            if isinstance(res, dict) and "swap_id" in res:
-                return res
-        except Exception as e:
-            logger.debug(f"RPC atomicswap_create failed, falling back to local bridge: {e}")
+        if not participant_address or not participant_btc_address:
+            raise ValueError(
+                "Both counterparty EXCAL and Bitcoin addresses are required for a swap"
+            )
 
         if self.btc_bridge is None:
             self._init_btc_bridge()
         if self.btc_bridge is None:
             raise RuntimeError("BTC Bridge not available")
 
+        preimage = None
+        if secret_hex:
+            try:
+                preimage = bytes.fromhex(secret_hex)
+            except ValueError as exc:
+                raise ValueError("Secret preimage must be 64 hexadecimal characters") from exc
+            if len(preimage) != 32:
+                raise ValueError("Secret preimage must be exactly 32 bytes")
+
         swap_dir = SwapDirection.EXCAL_TO_BTC if "excal_to_btc" in str(direction).lower() else SwapDirection.BTC_TO_EXCAL
+        btc_timeout_blocks = (
+            BTC_REFUND_BLOCKS
+            if swap_dir == SwapDirection.EXCAL_TO_BTC
+            else BTC_TO_EXCAL_REFUND_BLOCKS
+        )
+        btc_lock_keys = None
+        if participant_btc_pubkey or btc_tip_height is not None:
+            if not participant_btc_pubkey or btc_tip_height is None:
+                raise ValueError(
+                    "Both the counterparty's compressed BTC public key and current "
+                    "Bitcoin block height are required to build the BTC HTLC"
+                )
+            try:
+                counterparty_pubkey = bytes.fromhex(participant_btc_pubkey)
+            except ValueError as exc:
+                raise ValueError("Counterparty BTC public key must be hexadecimal") from exc
+            import secp256k1 as secp
+            secp.decompress(counterparty_pubkey)
+            if (
+                not isinstance(btc_tip_height, int)
+                or not 1 <= btc_tip_height < 500_000_000 - btc_timeout_blocks
+            ):
+                raise ValueError("Bitcoin block height is outside the supported block-height range")
+            own_address = self.get_address()
+            own_private_key = self.keystore.get_private_key(own_address) if self.keystore and own_address else None
+            if not own_private_key:
+                raise RuntimeError("Wallet key unavailable for BTC HTLC")
+            own_pubkey = secp.compress(
+                secp.priv_to_pub(int.from_bytes(bytes.fromhex(own_private_key), "big"))
+            )
+            if swap_dir == SwapDirection.EXCAL_TO_BTC:
+                btc_lock_keys = (own_pubkey, counterparty_pubkey)
+            else:
+                btc_lock_keys = (counterparty_pubkey, own_pubkey)
+
         swap = self.btc_bridge.protocol.create_swap(
             direction=swap_dir,
             excal_amount=int(excal_amount),
             btc_amount=int(btc_amount),
-            excal_refund_address=initiator_address,
-            btc_refund_address=initiator_btc_address,
-            excal_claim_address=participant_address or "",
-            btc_claim_address=participant_btc_address or "",
+            excal_refund_address=(
+                initiator_address
+                if swap_dir == SwapDirection.EXCAL_TO_BTC
+                else participant_address
+            ),
+            btc_refund_address=(
+                participant_btc_address
+                if swap_dir == SwapDirection.EXCAL_TO_BTC
+                else initiator_btc_address
+            ),
+            excal_claim_address=(
+                participant_address
+                if swap_dir == SwapDirection.EXCAL_TO_BTC
+                else initiator_address
+            ),
+            btc_claim_address=(
+                initiator_btc_address
+                if swap_dir == SwapDirection.EXCAL_TO_BTC
+                else participant_btc_address
+            ),
         )
-        if secret_hex:
-            try:
-                pre = bytes.fromhex(secret_hex)
-                swap.secret_preimage = pre
-                swap.secret_hash = hashlib.sha256(pre).digest()
-            except Exception:
-                pass
+        if preimage is not None:
+            swap.secret_preimage = preimage
+            swap.secret_hash = hashlib.sha256(preimage).digest()
+
+        if btc_lock_keys:
+            btc_lock = btc_htlc_lock(
+                btc_lock_keys[0],
+                btc_lock_keys[1],
+                swap.secret_hash,
+                timeout_height=btc_tip_height + swap.btc_timeout_blocks,
+                hrp=bitcoin_network_params(self.btc_rpc_config.get("network"))[0],
+            )
+            swap.metadata["btc_lock"] = btc_lock
+        if preimage is not None or btc_lock_keys:
+            self.btc_bridge.protocol._save_swaps()
         return self._swap_to_dict(swap)
 
     def _swap_to_dict(self, swap) -> Dict[str, Any]:
@@ -2338,16 +2456,10 @@ class WalletBackend:
         secret_hash_hex = swap.secret_hash.hex() if isinstance(swap.secret_hash, bytes) else str(swap.secret_hash or "")
         secret_hex = swap.secret_preimage.hex() if isinstance(swap.secret_preimage, bytes) else str(swap.secret_preimage or "")
 
-        btc_lock_addr = getattr(swap, "btc_htlc_address", "")
-        if not btc_lock_addr:
-            try:
-                shash = swap.secret_hash if isinstance(swap.secret_hash, bytes) else bytes.fromhex(secret_hash_hex)
-                claim_k = hashlib.sha256(shash + b"claim_pub").digest()
-                refund_k = hashlib.sha256(shash + b"refund_pub").digest()
-                lock = btc_htlc_lock(b"\x02" + claim_k, b"\x03" + refund_k, shash, timeout_height=500)
-                btc_lock_addr = lock.get("address", "")
-            except Exception:
-                btc_lock_addr = swap.btc_refund_address or ""
+        btc_lock = getattr(swap, "metadata", {}).get("btc_lock", {})
+        pending_funding = swap.metadata.get("pending_btc_funding", {})
+        pending_claim = swap.metadata.get("pending_btc_claim", {})
+        pending_refund = swap.metadata.get("pending_btc_refund", {})
 
         return {
             "swap_id": swap.swap_id,
@@ -2357,41 +2469,63 @@ class WalletBackend:
             "btc_amount": swap.btc_amount,
             "secret_hash": secret_hash_hex,
             "secret": secret_hex,
-            "btc_htlc_address": btc_lock_addr,
+            "btc_htlc_address": btc_lock.get("address", ""),
+            "btc_witness_script_hex": btc_lock.get("witness_script_hex", ""),
+            "btc_witness_script_hash": btc_lock.get("witness_script_hash", ""),
+            "btc_script_pubkey_hex": btc_lock.get("script_pubkey_hex", ""),
+            "btc_claim_pubkey": btc_lock.get("claim_pubkey", ""),
+            "btc_refund_pubkey": btc_lock.get("refund_pubkey", ""),
+            "btc_timeout": btc_lock.get("timeout", 0),
+            "btc_htlc_ready": bool(btc_lock),
             "excal_refund_address": swap.excal_refund_address,
+            "excal_claim_address": swap.excal_claim_address,
             "btc_refund_address": swap.btc_refund_address,
+            "btc_claim_address": swap.btc_claim_address,
             "excal_lock_tx": getattr(swap.excal_htlc, "funding_txid", "") if swap.excal_htlc else getattr(swap, "excal_lock_tx", ""),
             "btc_lock_tx": getattr(swap.btc_htlc, "funding_txid", "") if swap.btc_htlc else getattr(swap, "btc_lock_tx", ""),
-            "timeout_block": swap.btc_timeout_blocks,
+            "pending_btc_funding_tx": pending_funding.get("txid", ""),
+            "pending_btc_funding_vout": pending_funding.get("vout"),
+            "pending_btc_claim_tx": pending_claim.get("txid", ""),
+            "pending_btc_refund_tx": pending_refund.get("txid", ""),
+            "timeout_block": btc_lock.get("timeout", 0),
             "created_at": getattr(swap, "created_at", 0),
             "updated_at": getattr(swap, "updated_at", 0),
         }
 
     def list_atomic_swaps(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all atomic swaps."""
+        local_swaps = []
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is not None:
+            for swap in self.btc_bridge.protocol.list_swaps():
+                state = swap.status.value.lower() if hasattr(swap.status, "value") else str(swap.status).lower()
+                if not status or status.lower() in state:
+                    local_swaps.append(self._swap_to_dict(swap))
+
         try:
             res = self._rpc("atomicswap_list", [status] if status else [])
             if isinstance(res, list):
-                return res
+                known_ids = {swap["swap_id"] for swap in local_swaps}
+                local_swaps.extend(
+                    swap for swap in res
+                    if isinstance(swap, dict) and swap.get("swap_id") not in known_ids
+                )
+                return local_swaps
         except Exception as e:
             logger.debug(f"RPC atomicswap_list failed, falling back to local bridge: {e}")
 
-        if self.btc_bridge is None:
-            self._init_btc_bridge()
-        if self.btc_bridge is None:
-            return []
-
-        swaps = self.btc_bridge.protocol.list_swaps()
-        out = []
-        for s in swaps:
-            st = s.status.value.lower() if hasattr(s.status, "value") else str(s.status).lower()
-            if status and status.lower() not in st:
-                continue
-            out.append(self._swap_to_dict(s))
-        return out
+        return local_swaps
 
     def get_atomic_swap(self, swap_id: str) -> Optional[Dict[str, Any]]:
         """Get details for a specific atomic swap."""
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is not None:
+            swap = self.btc_bridge.protocol.get_swap(swap_id)
+            if swap:
+                return self._swap_to_dict(swap)
+
         try:
             res = self._rpc("atomicswap_get", [swap_id])
             if isinstance(res, dict) and "swap_id" in res:
@@ -2399,22 +2533,10 @@ class WalletBackend:
         except Exception:
             pass
 
-        if self.btc_bridge is None:
-            self._init_btc_bridge()
-        if self.btc_bridge is None:
-            return None
-        swap = self.btc_bridge.protocol.get_swap(swap_id)
-        return self._swap_to_dict(swap) if swap else None
+        return None
 
     def lock_atomic_swap_excal(self, swap_id: str, tx_hash: str) -> Dict[str, Any]:
         """Record EXCAL lock transaction for a swap."""
-        try:
-            res = self._rpc("atomicswap_lockexcal", [swap_id, tx_hash])
-            if isinstance(res, dict):
-                return res
-        except Exception as e:
-            logger.debug(f"RPC atomicswap_lockexcal failed: {e}")
-
         if self.btc_bridge is None:
             self._init_btc_bridge()
         if self.btc_bridge is None:
@@ -2422,77 +2544,328 @@ class WalletBackend:
         swap = self.btc_bridge.protocol.lock_excal(swap_id, funding_txid=tx_hash, funding_vout=0, lock_script=b"")
         return self._swap_to_dict(swap)
 
-    def lock_atomic_swap_btc(self, swap_id: str, btc_tx_hash: str) -> Dict[str, Any]:
-        """Record Bitcoin lock transaction for a swap."""
-        try:
-            res = self._rpc("atomicswap_lockbtc", [swap_id, btc_tx_hash])
-            if isinstance(res, dict):
-                return res
-        except Exception as e:
-            logger.debug(f"RPC atomicswap_lockbtc failed: {e}")
+    def get_bitcoin_tip_height(self) -> int:
+        """Get the tip height from the configured Bitcoin Core node."""
+        return self._bitcoin_rpc().get_tip_height()
 
+    def lock_atomic_swap_btc(
+        self, swap_id: str, btc_tx_hash: str, funding_vout: int = 0
+    ) -> Dict[str, Any]:
+        """Verify and record a confirmed Bitcoin HTLC funding transaction."""
         if self.btc_bridge is None:
             self._init_btc_bridge()
         if self.btc_bridge is None:
             raise RuntimeError("BTC Bridge not available")
-        swap = self.btc_bridge.protocol.lock_btc(swap_id, funding_txid=btc_tx_hash, funding_vout=0, lock_script=b"")
+        swap = self.btc_bridge.protocol.get_swap(swap_id)
+        if not swap:
+            raise RuntimeError(f"Swap {swap_id} not found")
+        btc_lock = swap.metadata.get("btc_lock", {})
+        if not btc_lock.get("script_pubkey_hex"):
+            raise RuntimeError(
+                "BTC HTLC script is missing. Create the swap with the counterparty "
+                "public key and Bitcoin block height before funding it."
+            )
+        verification = self._bitcoin_rpc().verify_funding(
+            txid=btc_tx_hash,
+            vout=funding_vout,
+            script_pubkey=btc_lock["script_pubkey_hex"],
+            amount_sats=swap.btc_amount,
+        )
+        swap = self.btc_bridge.protocol.lock_btc(
+            swap_id,
+            funding_txid=verification["txid"],
+            funding_vout=verification["vout"],
+            lock_script=bytes.fromhex(btc_lock["witness_script_hex"]),
+        )
         return self._swap_to_dict(swap)
 
-    def claim_atomic_swap(self, swap_id: str, secret_hex: str) -> Dict[str, Any]:
-        """Claim a swap using the preimage secret."""
-        try:
-            res = self._rpc("atomicswap_claim", [swap_id, "excal", f"claim_{swap_id[:8]}", secret_hex])
-            if isinstance(res, dict):
-                return res
-        except Exception as e:
-            logger.debug(f"RPC atomicswap_claim failed: {e}")
+    def prepare_atomic_swap_btc_funding(self, swap_id: str) -> Dict[str, Any]:
+        """Prepare a Bitcoin Core wallet PSBT for the swap's exact HTLC output."""
+        swap = self.btc_bridge.protocol.get_swap(swap_id) if self.btc_bridge else None
+        if not swap:
+            raise RuntimeError(f"Swap {swap_id} not found")
+        if swap.btc_htlc or swap.metadata.get("pending_btc_funding"):
+            raise RuntimeError("BTC funding is already recorded or pending")
+        btc_lock = swap.metadata.get("btc_lock", {})
+        if not btc_lock.get("address") or not btc_lock.get("script_pubkey_hex"):
+            raise RuntimeError("The swap has no complete Bitcoin HTLC address and script")
+        prepared = self._bitcoin_rpc().prepare_funding(btc_lock["address"], swap.btc_amount)
+        self._pending_btc_funding_psbts[swap_id] = prepared["psbt"]
+        return {**prepared, "swap_id": swap_id}
 
+    def broadcast_atomic_swap_btc_funding(
+        self, swap_id: str, psbt: str
+    ) -> Dict[str, Any]:
+        """Sign and broadcast a prepared Bitcoin funding PSBT, then persist its txid."""
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            raise RuntimeError("BTC Bridge not available")
+        swap = self.btc_bridge.protocol.get_swap(swap_id)
+        if not swap:
+            raise RuntimeError(f"Swap {swap_id} not found")
+        if swap.btc_htlc or swap.metadata.get("pending_btc_funding"):
+            raise RuntimeError("BTC funding is already recorded or pending")
+        prepared_psbt = self._pending_btc_funding_psbts.get(swap_id)
+        if not prepared_psbt or psbt != prepared_psbt:
+            raise RuntimeError("Funding PSBT is missing or differs from the reviewed transaction")
+        btc_lock = swap.metadata.get("btc_lock", {})
+        result = self._bitcoin_rpc().broadcast_funding(
+            prepared_psbt,
+            script_pubkey=btc_lock.get("script_pubkey_hex", ""),
+            amount_sats=swap.btc_amount,
+        )
+        self._pending_btc_funding_psbts.pop(swap_id, None)
+        swap.metadata["pending_btc_funding"] = result
+        self.btc_bridge.protocol._save_swaps()
+        return result
+
+    def confirm_pending_atomic_swap_btc_funding(self, swap_id: str) -> Dict[str, Any]:
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            raise RuntimeError("BTC Bridge not available")
+        swap = self.btc_bridge.protocol.get_swap(swap_id)
+        pending = swap.metadata.get("pending_btc_funding", {}) if swap else {}
+        if not pending.get("txid") or not isinstance(pending.get("vout"), int):
+            raise RuntimeError("No pending Bitcoin HTLC funding transaction was found")
+        result = self.lock_atomic_swap_btc(
+            swap_id, pending["txid"], funding_vout=pending["vout"]
+        )
+        swap.metadata.pop("pending_btc_funding", None)
+        self.btc_bridge.protocol._save_swaps()
+        return result
+
+    def _atomic_swap_btc_spend_details(self, swap_id: str, action: str) -> tuple:
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None or not self.keystore:
+            raise RuntimeError("Unlock the wallet and initialize the BTC bridge first")
+        swap = self.btc_bridge.protocol.get_swap(swap_id)
+        if not swap or not swap.btc_htlc:
+            raise RuntimeError("Bitcoin HTLC funding must be confirmed before spending")
+        btc_lock = swap.metadata.get("btc_lock", {})
+        key_address = self.get_address()
+        private_hex = self.keystore.get_private_key(key_address) if key_address else None
+        if not private_hex:
+            raise RuntimeError("The unlocked wallet's Bitcoin signing key is unavailable")
+        try:
+            private_key = bytes.fromhex(private_hex)
+            if len(private_key) != 32:
+                raise ValueError
+            import secp256k1 as secp
+            public_key = secp.compress(
+                secp.priv_to_pub(int.from_bytes(private_key, "big"))
+            )
+        except (ValueError, TypeError) as exc:
+            raise RuntimeError("The unlocked wallet key is not a valid Bitcoin private key") from exc
+
+        if action == "claim":
+            expected_pubkey = bytes.fromhex(btc_lock.get("claim_pubkey", ""))
+            destination = swap.btc_claim_address
+            preimage = swap.secret_preimage
+            refund_height = None
+            if not preimage or hashlib.sha256(preimage).digest() != swap.secret_hash:
+                raise RuntimeError("The swap's local claim preimage is missing or invalid")
+            pending_key = "pending_btc_claim"
+        elif action == "refund":
+            expected_pubkey = bytes.fromhex(btc_lock.get("refund_pubkey", ""))
+            destination = swap.btc_refund_address
+            preimage = None
+            refund_height = btc_lock.get("timeout")
+            pending_key = "pending_btc_refund"
+        else:
+            raise ValueError("BTC spend action must be 'claim' or 'refund'")
+        if public_key != expected_pubkey:
+            raise RuntimeError(
+                f"This wallet is not the Bitcoin HTLC {action} key for this swap"
+            )
+        own_btc_address = self.get_btc_address()
+        if not destination or destination != own_btc_address:
+            raise RuntimeError(
+                "The BTC payout address must match the unlocked wallet key; "
+                "refusing to sign a payment to another address"
+            )
+        destination_script = b"\x00\x14" + hash160(public_key)
+        return (
+            swap, btc_lock, private_key, public_key, destination, destination_script,
+            preimage, refund_height, pending_key,
+        )
+
+    def quote_atomic_swap_btc_spend(self, swap_id: str, action: str) -> Dict[str, Any]:
+        details = self._atomic_swap_btc_spend_details(swap_id, action)
+        swap, btc_lock, _, _, destination, destination_script, preimage, refund_height, _ = details
+        if action == "refund":
+            if not isinstance(refund_height, int):
+                raise RuntimeError("Bitcoin HTLC refund timeout is unavailable")
+            tip = self._bitcoin_rpc().get_tip_height()
+            if tip < refund_height:
+                raise RuntimeError(
+                    f"Bitcoin refund timeout has not been reached (tip {tip}, timeout {refund_height})"
+                )
+        rate = self._bitcoin_rpc().estimate_fee_rate()
+        witness_script = bytes.fromhex(btc_lock["witness_script_hex"])
+        vsize = estimate_htlc_spend_vsize(
+            witness_script, destination_script, claiming=preimage is not None
+        )
+        fee_sats = rate * vsize
+        if fee_sats >= swap.btc_amount:
+            raise RuntimeError("Estimated Bitcoin fee is greater than or equal to the HTLC value")
+        return {
+            "action": action,
+            "address": destination,
+            "amount_sats": swap.btc_amount - fee_sats,
+            "fee_sats": fee_sats,
+            "fee_rate_sat_vb": rate,
+            "estimated_vsize": vsize,
+        }
+
+    def broadcast_atomic_swap_btc_spend(
+        self, swap_id: str, action: str, fee_sats: int
+    ) -> Dict[str, Any]:
+        details = self._atomic_swap_btc_spend_details(swap_id, action)
+        (
+            swap, btc_lock, private_key, public_key, _, destination_script,
+            preimage, refund_height, pending_key,
+        ) = details
+        if swap.metadata.get(pending_key):
+            raise RuntimeError(f"A Bitcoin {action} transaction is already pending confirmation")
+        quote = self.quote_atomic_swap_btc_spend(swap_id, action)
+        if fee_sats < quote["fee_sats"]:
+            raise RuntimeError(
+                "Bitcoin fee estimate increased; review the new fee quote before signing"
+            )
+        result = self._bitcoin_rpc().broadcast_spend(
+            txid=swap.btc_htlc.funding_txid,
+            vout=swap.btc_htlc.funding_vout,
+            amount_sats=swap.btc_amount,
+            witness_script=bytes.fromhex(btc_lock["witness_script_hex"]),
+            destination_script=destination_script,
+            private_key=private_key,
+            expected_pubkey=public_key,
+            fee_sats=fee_sats,
+            secret_preimage=preimage,
+            refund_height=refund_height,
+        )
+        swap.metadata[pending_key] = result
+        self.btc_bridge.protocol._save_swaps()
+        return result
+
+    def confirm_pending_atomic_swap_btc_spend(
+        self, swap_id: str, action: str
+    ) -> Dict[str, Any]:
+        if self.btc_bridge is None:
+            self._init_btc_bridge()
+        if self.btc_bridge is None:
+            raise RuntimeError("BTC Bridge not available")
+        swap = self.btc_bridge.protocol.get_swap(swap_id)
+        pending_key = f"pending_btc_{action}"
+        pending = swap.metadata.get(pending_key, {}) if swap else {}
+        if not pending.get("txid"):
+            raise RuntimeError(f"No pending Bitcoin {action} transaction was found")
+        if action == "claim":
+            result = self.claim_atomic_swap(
+                swap_id, swap.secret_preimage.hex(), chain="btc",
+                claim_txid=pending["txid"],
+            )
+        elif action == "refund":
+            result = self.refund_atomic_swap(
+                swap_id, chain="btc", refund_txid=pending["txid"]
+            )
+        else:
+            raise ValueError("BTC spend action must be 'claim' or 'refund'")
+        swap.metadata.pop(pending_key, None)
+        self.btc_bridge.protocol._save_swaps()
+        return result
+
+    def claim_atomic_swap(
+        self, swap_id: str, secret_hex: str, chain: str = "btc",
+        claim_txid: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Record a claim transaction after it has been broadcast."""
+        if not claim_txid or not claim_txid.strip():
+            raise ValueError("A broadcast claim transaction ID is required")
         if self.btc_bridge is None:
             self._init_btc_bridge()
         if self.btc_bridge is None:
             raise RuntimeError("BTC Bridge not available")
 
-        preimage = bytes.fromhex(secret_hex) if isinstance(secret_hex, str) else secret_hex
-        s = self.btc_bridge.protocol.get_swap(swap_id)
-        if s:
-            try:
-                self.btc_bridge.protocol.claim_btc(swap_id, preimage, f"btc_claim_{swap_id[:8]}")
-            except Exception:
-                pass
-            try:
-                self.btc_bridge.protocol.claim_excal(swap_id, preimage, f"excal_claim_{swap_id[:8]}")
-            except Exception:
-                pass
-            s.status = SwapStatus.COMPLETED
-            return self._swap_to_dict(s)
-        return {"swap_id": swap_id, "status": "completed"}
-
-    def refund_atomic_swap(self, swap_id: str, caller_address: Optional[str] = None, current_block: Optional[int] = None) -> Dict[str, Any]:
-        """Refund an expired swap."""
         try:
-            res = self._rpc("atomicswap_refund", [swap_id, "excal", f"refund_{swap_id[:8]}"])
-            if isinstance(res, dict):
-                return res
-        except Exception as e:
-            logger.debug(f"RPC atomicswap_refund failed: {e}")
+            preimage = bytes.fromhex(secret_hex)
+        except ValueError as exc:
+            raise ValueError("Secret preimage must be hexadecimal") from exc
+        if len(preimage) != 32:
+            raise ValueError("Secret preimage must be exactly 32 bytes")
+        chain = chain.lower()
+        if chain == "btc":
+            swap = self.btc_bridge.protocol.get_swap(swap_id)
+            if not swap or not swap.btc_htlc:
+                raise RuntimeError("Bitcoin HTLC funding must be verified before claiming")
+            self._bitcoin_rpc().verify_spend(
+                txid=claim_txid.strip(),
+                funding_txid=swap.btc_htlc.funding_txid,
+                funding_vout=swap.btc_htlc.funding_vout,
+                witness_script=swap.btc_htlc.lock_script,
+                secret_hash=swap.secret_hash,
+            )
+            swap = self.btc_bridge.protocol.claim_btc(swap_id, preimage, claim_txid.strip())
+        elif chain == "excal":
+            try:
+                res = self._rpc(
+                    "atomicswap_claim",
+                    [swap_id, chain, claim_txid.strip(), secret_hex],
+                )
+                if isinstance(res, dict):
+                    return res
+            except Exception as e:
+                logger.debug(f"atomicswap_claim failed: {e}")
+            swap = self.btc_bridge.protocol.claim_excal(swap_id, preimage, claim_txid.strip())
+        else:
+            raise ValueError("Claim chain must be 'btc' or 'excal'")
+        return self._swap_to_dict(swap)
 
+    def refund_atomic_swap(
+        self, swap_id: str, chain: str = "excal",
+        refund_txid: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Record a refund transaction after it has been broadcast."""
+        if not refund_txid or not refund_txid.strip():
+            raise ValueError("A broadcast refund transaction ID is required")
         if self.btc_bridge is None:
             self._init_btc_bridge()
         if self.btc_bridge is None:
             raise RuntimeError("BTC Bridge not available")
 
-        s = self.btc_bridge.protocol.get_swap(swap_id)
-        if s:
+        chain = chain.lower()
+        if chain == "btc":
+            swap = self.btc_bridge.protocol.get_swap(swap_id)
+            if not swap or not swap.btc_htlc:
+                raise RuntimeError("Bitcoin HTLC funding must be verified before refunding")
+            btc_timeout = swap.metadata.get("btc_lock", {}).get("timeout")
+            if not btc_timeout:
+                raise RuntimeError("Bitcoin HTLC refund timeout is unavailable")
+            self._bitcoin_rpc().verify_spend(
+                txid=refund_txid.strip(),
+                funding_txid=swap.btc_htlc.funding_txid,
+                funding_vout=swap.btc_htlc.funding_vout,
+                witness_script=swap.btc_htlc.lock_script,
+                refund_height=btc_timeout,
+            )
+            swap = self.btc_bridge.protocol.refund_btc(swap_id, refund_txid.strip())
+        elif chain == "excal":
             try:
-                if s.excal_htlc:
-                    self.btc_bridge.protocol.refund_excal(swap_id, f"excal_refund_{swap_id[:8]}")
-                if s.btc_htlc:
-                    self.btc_bridge.protocol.refund_btc(swap_id, f"btc_refund_{swap_id[:8]}")
-            except Exception:
-                pass
-            s.status = SwapStatus.REFUNDED
-            return self._swap_to_dict(s)
-        return {"swap_id": swap_id, "status": "refunded"}
+                res = self._rpc(
+                    "atomicswap_refund",
+                    [swap_id, chain, refund_txid.strip()],
+                )
+                if isinstance(res, dict):
+                    return res
+            except Exception as e:
+                logger.debug(f"atomicswap_refund failed: {e}")
+            swap = self.btc_bridge.protocol.refund_excal(swap_id, refund_txid.strip())
+        else:
+            raise ValueError("Refund chain must be 'btc' or 'excal'")
+        return self._swap_to_dict(swap)
 
     def get_atomic_swap_health(self) -> Dict[str, Any]:
         """Get atomic swap protocol health."""
@@ -3710,19 +4083,21 @@ class AtomicSwapTab(ctk.CTkFrame):
 
         ctk.CTkLabel(
             header_card,
-            text="⚛ BTC ↔ EXCAL ATOMIC SWAPS",
+            text="⚛ BTC ↔ EXCAL QHTCL SWAPS",
             font=("Segoe UI", 15, "bold"),
             text_color=COLOR_CYAN,
         ).pack(anchor="w", padx=20, pady=(15, 3))
 
         ctk.CTkLabel(
             header_card,
-            text="Trustless cross-chain Hash Time-Locked Contracts (HTLC) between Excalibur PQH and Bitcoin SegWit (P2WSH).",
+            text="Cross-chain SHA-256 HTLC offers for EXCAL and Bitcoin SegWit (P2WSH). Secrets use the operating system CSPRNG; Bitcoin's secp256k1 signatures are not quantum-resistant.",
             font=("Segoe UI", 11),
             text_color=COLOR_TEXT_DIM,
             wraplength=700,
             justify="left",
         ).pack(anchor="w", padx=20, pady=(0, 10))
+
+        self._build_bitcoin_node_config(header_card)
 
         # Addresses frame
         addr_frame = ctk.CTkFrame(header_card, fg_color=COLOR_CARD_LIGHT, corner_radius=10)
@@ -3788,7 +4163,7 @@ class AtomicSwapTab(ctk.CTkFrame):
 
         ctk.CTkLabel(
             init_card,
-            text="Create a trustless swap agreement. Funds are locked in script timelocks on both chains.",
+            text="Create a swap offer with the counterparty's compressed BTC public key and current Bitcoin block height. BTC funding, claims, and refunds can be signed and broadcast through configured Bitcoin Core after transaction confirmation.",
             font=("Segoe UI", 10),
             text_color=COLOR_TEXT_DIM,
         ).pack(anchor="w", padx=20, pady=(0, 12))
@@ -3861,18 +4236,48 @@ class AtomicSwapTab(ctk.CTkFrame):
         self.counterparty_btc_entry.pack(fill="x", pady=(3, 8))
 
         ctk.CTkLabel(
-            addr_inputs, text="Counterparty EXCAL Address (optional):", font=("Segoe UI", 10),
+            addr_inputs, text="Counterparty compressed BTC public key (33-byte hex):", font=("Segoe UI", 10),
+            text_color=COLOR_TEXT_DIM, anchor="w",
+        ).pack(fill="x")
+        self.counterparty_btc_pubkey_entry = ctk.CTkEntry(
+            addr_inputs, placeholder_text="02... or 03... (required to build the BTC HTLC)", height=36,
+            font=("Segoe UI", 11), fg_color=COLOR_CARD_LIGHT,
+            border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.counterparty_btc_pubkey_entry.pack(fill="x", pady=(3, 8))
+
+        ctk.CTkLabel(
+            addr_inputs, text="Current Bitcoin block height:", font=("Segoe UI", 10),
+            text_color=COLOR_TEXT_DIM, anchor="w",
+        ).pack(fill="x")
+        tip_row = ctk.CTkFrame(addr_inputs, fg_color="transparent")
+        tip_row.pack(fill="x", pady=(3, 8))
+        self.btc_tip_height_entry = ctk.CTkEntry(
+            tip_row, placeholder_text="Fetch from configured Bitcoin Core node", height=36,
+            font=("Segoe UI", 11), fg_color=COLOR_CARD_LIGHT,
+            border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.btc_tip_height_entry.pack(side="left", fill="x", expand=True)
+        ctk.CTkButton(
+            tip_row, text="Fetch tip", width=85, height=36,
+            command=self._fetch_btc_tip,
+            fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+            text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
+        ).pack(side="right", padx=(8, 0))
+
+        ctk.CTkLabel(
+            addr_inputs, text="Counterparty EXCAL Address (required):", font=("Segoe UI", 10),
             text_color=COLOR_TEXT_DIM, anchor="w",
         ).pack(fill="x")
         self.counterparty_excal_entry = ctk.CTkEntry(
-            addr_inputs, placeholder_text="Enter participant's EXCAL address (leave blank for open offer)...", height=36,
+            addr_inputs, placeholder_text="Enter the counterparty's EXCAL address...", height=36,
             font=("Segoe UI", 11), fg_color=COLOR_CARD_LIGHT,
             border_color=COLOR_GOLD_DARK, text_color=COLOR_TEXT,
         )
         self.counterparty_excal_entry.pack(fill="x", pady=(3, 8))
 
         ctk.CTkLabel(
-            addr_inputs, text="Secret Preimage (optional 32-byte hex; leave blank to auto-generate):", font=("Segoe UI", 10),
+            addr_inputs,             text="Secret Preimage (optional 32-byte hex; generated with OS CSPRNG if blank):", font=("Segoe UI", 10),
             text_color=COLOR_TEXT_DIM, anchor="w",
         ).pack(fill="x")
         self.secret_entry = ctk.CTkEntry(
@@ -3945,6 +4350,104 @@ class AtomicSwapTab(ctk.CTkFrame):
         self.swaps_container = ctk.CTkFrame(history_card, fg_color="transparent")
         self.swaps_container.pack(fill="x", padx=20, pady=(0, 15))
 
+    def _build_bitcoin_node_config(self, parent):
+        config = self.backend.btc_rpc_config
+        panel = ctk.CTkFrame(parent, fg_color=COLOR_CARD_LIGHT, corner_radius=10)
+        panel.pack(fill="x", padx=20, pady=(0, 12))
+        ctk.CTkLabel(
+            panel, text="BITCOIN CORE NODE", font=("Segoe UI", 10, "bold"),
+            text_color=COLOR_CYAN,
+        ).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(9, 3))
+
+        self.btc_rpc_url_entry = ctk.CTkEntry(
+            panel, placeholder_text="RPC URL (e.g. http://127.0.0.1:8332)", height=30,
+            fg_color=COLOR_CARD, border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.btc_rpc_url_entry.insert(0, config.get("rpc_url", ""))
+        self.btc_rpc_url_entry.grid(row=1, column=0, columnspan=3, sticky="ew", padx=(12, 6), pady=4)
+
+        self.btc_network_menu = ctk.CTkOptionMenu(
+            panel, values=["main", "test", "signet", "regtest"], width=110, height=30,
+            fg_color=COLOR_CARD, button_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.btc_network_menu.set(config.get("network", "main"))
+        self.btc_network_menu.grid(row=1, column=3, sticky="ew", padx=(6, 12), pady=4)
+
+        self.btc_rpc_wallet_entry = ctk.CTkEntry(
+            panel, placeholder_text="Loaded Bitcoin Core wallet name (funding)", height=30,
+            fg_color=COLOR_CARD, border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.btc_rpc_wallet_entry.insert(0, config.get("wallet", ""))
+        self.btc_rpc_wallet_entry.grid(row=2, column=0, columnspan=2, sticky="ew", padx=(12, 6), pady=4)
+
+        self.btc_cookie_entry = ctk.CTkEntry(
+            panel, placeholder_text="Bitcoin Core .cookie file (recommended)", height=30,
+            fg_color=COLOR_CARD, border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.btc_cookie_entry.insert(0, config.get("cookie_file", ""))
+        self.btc_cookie_entry.grid(row=2, column=2, sticky="ew", padx=6, pady=4)
+        ctk.CTkButton(
+            panel, text="Browse", width=70, height=30, command=self._browse_btc_cookie,
+            fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+            text_color=COLOR_CYAN, font=("Segoe UI", 9),
+        ).grid(row=2, column=3, sticky="ew", padx=(6, 12), pady=4)
+
+        self.btc_rpc_user_entry = ctk.CTkEntry(
+            panel, placeholder_text="RPC username (alternative to cookie)", height=30,
+            fg_color=COLOR_CARD, border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.btc_rpc_user_entry.insert(0, config.get("rpc_user", ""))
+        self.btc_rpc_user_entry.grid(row=3, column=0, columnspan=2, sticky="ew", padx=(12, 6), pady=4)
+        self.btc_rpc_password_entry = ctk.CTkEntry(
+            panel, placeholder_text="RPC password (kept in memory only)", show="*", height=30,
+            fg_color=COLOR_CARD, border_color=COLOR_CYAN_DARK, text_color=COLOR_TEXT,
+        )
+        self.btc_rpc_password_entry.grid(row=3, column=2, columnspan=2, sticky="ew", padx=(6, 12), pady=4)
+
+        self.btc_rpc_status_label = ctk.CTkLabel(
+            panel, text="Not connected", font=("Segoe UI", 9), text_color=COLOR_TEXT_DIM,
+        )
+        self.btc_rpc_status_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=12, pady=(4, 9))
+        ctk.CTkButton(
+            panel, text="Save & Test Node", width=145, height=30,
+            command=self._save_and_test_btc_node,
+            fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+            text_color=COLOR_BG, font=("Segoe UI", 9, "bold"),
+        ).grid(row=4, column=3, sticky="e", padx=12, pady=(4, 9))
+        for column in range(4):
+            panel.grid_columnconfigure(column, weight=1 if column < 3 else 0)
+
+    def _browse_btc_cookie(self):
+        path = filedialog.askopenfilename(
+            title="Select Bitcoin Core RPC cookie",
+            filetypes=[("Cookie files", ".cookie"), ("All files", "*.*")],
+        )
+        if path:
+            self.btc_cookie_entry.delete(0, "end")
+            self.btc_cookie_entry.insert(0, path)
+
+    def _save_and_test_btc_node(self):
+        config = {
+            "rpc_url": self.btc_rpc_url_entry.get(),
+            "network": self.btc_network_menu.get(),
+            "wallet": self.btc_rpc_wallet_entry.get(),
+            "cookie_file": self.btc_cookie_entry.get(),
+            "rpc_user": self.btc_rpc_user_entry.get(),
+            "rpc_password": self.btc_rpc_password_entry.get(),
+        }
+        try:
+            self.backend.save_btc_rpc_config(config)
+            height = self.backend.get_bitcoin_tip_height()
+            self.btc_rpc_status_label.configure(
+                text=f"Connected to verified {config['network']} node at height {height:,}",
+                text_color=COLOR_SUCCESS,
+            )
+        except Exception as exc:
+            self.btc_rpc_status_label.configure(
+                text=f"Node check failed: {exc}", text_color=COLOR_ERROR,
+            )
+            messagebox.showerror("Bitcoin Core Node", str(exc), parent=self)
+
     def _create_stat_badge(self, parent, label: str, value: str, color: str):
         badge = ctk.CTkFrame(parent, fg_color=COLOR_CARD_LIGHT, corner_radius=8, width=130, height=50)
         badge.pack(side="left", padx=5, expand=True, fill="x")
@@ -3984,11 +4487,19 @@ class AtomicSwapTab(ctk.CTkFrame):
         excal_str = self.excal_amt_entry.get().strip()
         btc_str = self.btc_amt_entry.get().strip()
         btc_recipient = self.counterparty_btc_entry.get().strip()
+        btc_pubkey = self.counterparty_btc_pubkey_entry.get().strip() or None
+        btc_tip_text = self.btc_tip_height_entry.get().strip()
         excal_recipient = self.counterparty_excal_entry.get().strip()
         secret_hex = self.secret_entry.get().strip() or None
 
         if not excal_str or not btc_str:
             self.create_result_label.configure(text="Please enter both EXCAL and BTC amounts.", text_color=COLOR_ERROR)
+            return
+        if not btc_recipient or not excal_recipient:
+            self.create_result_label.configure(
+                text="Both counterparty addresses are required for a cross-chain swap.",
+                text_color=COLOR_ERROR,
+            )
             return
 
         try:
@@ -3996,8 +4507,9 @@ class AtomicSwapTab(ctk.CTkFrame):
             btc_val = float(btc_str)
             excal_swords = int(round(excal_val * 1e8))
             btc_sats = int(round(btc_val * 1e8))
+            btc_tip_height = int(btc_tip_text) if btc_tip_text else None
         except ValueError:
-            self.create_result_label.configure(text="Amounts must be valid numeric values.", text_color=COLOR_ERROR)
+            self.create_result_label.configure(text="Amounts and Bitcoin block height must be valid numbers.", text_color=COLOR_ERROR)
             return
 
         if excal_swords < MIN_EXCAL_SWAP:
@@ -4027,17 +4539,26 @@ class AtomicSwapTab(ctk.CTkFrame):
                 initiator_btc_address=initiator_btc,
                 participant_btc_address=btc_recipient,
                 secret_hex=secret_hex,
+                participant_btc_pubkey=btc_pubkey,
+                btc_tip_height=btc_tip_height,
             )
 
             swap_id = offer.get("swap_id", "")
             btc_htlc = offer.get("btc_htlc_address", "")
+            btc_lock_message = (
+                f"BTC HTLC: {btc_htlc}"
+                if btc_htlc
+                else "BTC lock not built: add the counterparty public key and current block height."
+            )
             self.create_result_label.configure(
-                text=f"✓ Swap Created! ID: {swap_id[:16]}... | BTC HTLC Lock: {btc_htlc}",
+                text=f"Swap offer created. ID: {swap_id} | {btc_lock_message}",
                 text_color=COLOR_SUCCESS,
             )
             self.excal_amt_entry.delete(0, "end")
             self.btc_amt_entry.delete(0, "end")
             self.counterparty_btc_entry.delete(0, "end")
+            self.counterparty_btc_pubkey_entry.delete(0, "end")
+            self.btc_tip_height_entry.delete(0, "end")
             self.counterparty_excal_entry.delete(0, "end")
             self.secret_entry.delete(0, "end")
             self.refresh()
@@ -4050,40 +4571,212 @@ class AtomicSwapTab(ctk.CTkFrame):
         if txid and txid.strip():
             try:
                 self.backend.lock_atomic_swap_excal(swap_id, txid.strip())
-                messagebox.showinfo("Locked", "EXCAL lock recorded successfully.", parent=self)
+                messagebox.showinfo(
+                    "Lock Recorded",
+                    "EXCAL transaction ID recorded; the wallet does not verify its confirmation.",
+                    parent=self,
+                )
                 self.refresh()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to lock EXCAL: {e}", parent=self)
 
     def _lock_btc_dialog(self, swap_id: str):
-        dialog = ctk.CTkInputDialog(text="Enter the Bitcoin transaction ID (txid) funding the HTLC:", title="Lock BTC")
-        btc_txid = dialog.get_input()
-        if btc_txid and btc_txid.strip():
+        try:
+            swap = self.backend.get_atomic_swap(swap_id)
+            pending_txid = swap.get("pending_btc_funding_tx") if swap else None
+            if pending_txid:
+                self.backend.confirm_pending_atomic_swap_btc_funding(swap_id)
+                messagebox.showinfo(
+                    "BTC Funding Confirmed",
+                    "Bitcoin Core confirmed the exact HTLC output and amount.",
+                    parent=self,
+                )
+                self.refresh()
+                return
+
+            funding = self.backend.prepare_atomic_swap_btc_funding(swap_id)
+            amount = funding["amount_sats"] / 100_000_000
+            fee = funding["fee_sats"] / 100_000_000
+            if not messagebox.askyesno(
+                "Confirm BTC HTLC Funding",
+                (
+                    f"Bitcoin Core will sign and broadcast a transaction funding "
+                    f"{amount:.8f} BTC to:\n{funding['address']}\n\n"
+                    f"Estimated network fee: {fee:.8f} BTC "
+                    f"({funding['fee_sats']:,} sat).\n\n"
+                    "This sends real BTC and cannot be reversed. Continue?"
+                ),
+                parent=self,
+            ):
+                return
+            result = self.backend.broadcast_atomic_swap_btc_funding(
+                swap_id, funding["psbt"]
+            )
+            messagebox.showinfo(
+                "BTC Funding Broadcast",
+                (
+                    f"Bitcoin Core broadcast the HTLC funding transaction:\n{result['txid']}\n\n"
+                    "Wait for confirmation, then press the BTC funding button again "
+                    "to verify it in the swap."
+                ),
+                parent=self,
+            )
+            self.refresh()
+        except Exception as e:
+            messagebox.showerror("BTC Funding", f"Could not fund the BTC HTLC: {e}", parent=self)
+
+    def _fetch_btc_tip(self):
+        try:
+            height = self.backend.get_bitcoin_tip_height()
+            self.btc_tip_height_entry.delete(0, "end")
+            self.btc_tip_height_entry.insert(0, str(height))
+        except Exception as e:
+            messagebox.showerror("Bitcoin Core", f"Could not fetch the Bitcoin block height: {e}", parent=self)
+
+    def _claim_dialog(self, swap_id: str, chain: str, known_secret: Optional[str] = None):
+        if chain == "btc":
             try:
-                self.backend.lock_atomic_swap_btc(swap_id, btc_txid.strip())
-                messagebox.showinfo("Locked", "BTC lock recorded successfully.", parent=self)
+                swap = self.backend.get_atomic_swap(swap_id)
+                pending_txid = swap.get("pending_btc_claim_tx") if swap else None
+                if pending_txid:
+                    self.backend.confirm_pending_atomic_swap_btc_spend(swap_id, "claim")
+                    messagebox.showinfo(
+                        "BTC Claim Confirmed",
+                        "Bitcoin Core confirmed the claim and verified its HTLC preimage.",
+                        parent=self,
+                    )
+                    self.refresh()
+                    return
+                quote = self.backend.quote_atomic_swap_btc_spend(swap_id, "claim")
+                amount = quote["amount_sats"] / 100_000_000
+                fee = quote["fee_sats"] / 100_000_000
+                if not messagebox.askyesno(
+                    "Confirm BTC Claim",
+                    (
+                        f"Sign and broadcast the BTC HTLC claim to:\n{quote['address']}\n\n"
+                        f"Amount: {amount:.8f} BTC\n"
+                        f"Estimated fee: {fee:.8f} BTC ({quote['fee_sats']:,} sat)\n\n"
+                        "This reveals the swap preimage on Bitcoin and cannot be reversed. Continue?"
+                    ),
+                    parent=self,
+                ):
+                    return
+                result = self.backend.broadcast_atomic_swap_btc_spend(
+                    swap_id, "claim", quote["fee_sats"]
+                )
+                messagebox.showinfo(
+                    "BTC Claim Broadcast",
+                    (
+                        f"Bitcoin Core broadcast the claim:\n{result['txid']}\n\n"
+                        "Wait for confirmation, then press the BTC claim button again "
+                        "to verify it in the swap."
+                    ),
+                    parent=self,
+                )
                 self.refresh()
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to lock BTC: {e}", parent=self)
+                messagebox.showerror("BTC Claim", f"Could not claim BTC: {e}", parent=self)
+            return
 
-    def _claim_dialog(self, swap_id: str, known_secret: Optional[str] = None):
         secret = known_secret
         if not secret:
             dialog = ctk.CTkInputDialog(text="Enter the 32-byte secret preimage hex to claim funds:", title="Claim Swap")
             secret = dialog.get_input()
         if secret and secret.strip():
+            dialog = ctk.CTkInputDialog(
+                text=f"Enter the already-broadcast {chain.upper()} claim transaction ID:",
+                title=f"Record {chain.upper()} Claim",
+            )
+            txid = dialog.get_input()
+            if not txid or not txid.strip():
+                return
             try:
-                self.backend.claim_atomic_swap(swap_id, secret.strip())
-                messagebox.showinfo("Claimed", "Swap claimed successfully! Funds released.", parent=self)
+                self.backend.claim_atomic_swap(
+                    swap_id, secret.strip(), chain=chain, claim_txid=txid.strip()
+                )
+                messagebox.showinfo(
+                    "Claim Recorded",
+                    (
+                        "Bitcoin Core verified the confirmed BTC claim and preimage."
+                        if chain == "btc"
+                        else "EXCAL claim transaction ID recorded; the wallet does not verify its confirmation."
+                    ),
+                    parent=self,
+                )
                 self.refresh()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to claim swap: {e}", parent=self)
 
-    def _refund_dialog(self, swap_id: str):
-        if messagebox.askyesno("Confirm Refund", "Are you sure you want to refund this expired swap?", parent=self):
+    def _refund_dialog(self, swap_id: str, chain: str):
+        if chain == "btc":
             try:
-                self.backend.refund_atomic_swap(swap_id)
-                messagebox.showinfo("Refunded", "Swap refunded successfully.", parent=self)
+                swap = self.backend.get_atomic_swap(swap_id)
+                pending_txid = swap.get("pending_btc_refund_tx") if swap else None
+                if pending_txid:
+                    self.backend.confirm_pending_atomic_swap_btc_spend(swap_id, "refund")
+                    messagebox.showinfo(
+                        "BTC Refund Confirmed",
+                        "Bitcoin Core confirmed the refund and verified its HTLC timeout.",
+                        parent=self,
+                    )
+                    self.refresh()
+                    return
+                quote = self.backend.quote_atomic_swap_btc_spend(swap_id, "refund")
+                amount = quote["amount_sats"] / 100_000_000
+                fee = quote["fee_sats"] / 100_000_000
+                if not messagebox.askyesno(
+                    "Confirm BTC Refund",
+                    (
+                        f"Sign and broadcast the BTC HTLC refund to:\n{quote['address']}\n\n"
+                        f"Amount: {amount:.8f} BTC\n"
+                        f"Estimated fee: {fee:.8f} BTC ({quote['fee_sats']:,} sat)\n\n"
+                        "This sends real BTC and cannot be reversed. Continue?"
+                    ),
+                    parent=self,
+                ):
+                    return
+                result = self.backend.broadcast_atomic_swap_btc_spend(
+                    swap_id, "refund", quote["fee_sats"]
+                )
+                messagebox.showinfo(
+                    "BTC Refund Broadcast",
+                    (
+                        f"Bitcoin Core broadcast the refund:\n{result['txid']}\n\n"
+                        "Wait for confirmation, then press the BTC refund button again "
+                        "to verify it in the swap."
+                    ),
+                    parent=self,
+                )
+                self.refresh()
+            except Exception as e:
+                messagebox.showerror("BTC Refund", f"Could not refund BTC: {e}", parent=self)
+            return
+
+        if messagebox.askyesno(
+            "Confirm Refund",
+            "Record an already-broadcast EXCAL refund? The wallet cannot verify its timelock or broadcast it.",
+            parent=self,
+        ):
+            dialog = ctk.CTkInputDialog(
+                text=f"Enter the {chain.upper()} refund transaction ID:",
+                title=f"Record {chain.upper()} Refund",
+            )
+            txid = dialog.get_input()
+            if not txid or not txid.strip():
+                return
+            try:
+                self.backend.refund_atomic_swap(
+                    swap_id, chain=chain, refund_txid=txid.strip()
+                )
+                messagebox.showinfo(
+                    "Refund Recorded",
+                    (
+                        "Bitcoin Core verified the confirmed BTC refund and timelock."
+                        if chain == "btc"
+                        else "EXCAL refund transaction ID recorded; the wallet does not verify its confirmation."
+                    ),
+                    parent=self,
+                )
                 self.refresh()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to refund swap: {e}", parent=self)
@@ -4102,9 +4795,17 @@ class AtomicSwapTab(ctk.CTkFrame):
             swaps = []
 
         total = len(swaps)
-        active = sum(1 for s in swaps if s.get("status") in ("init", "excal_locked", "btc_locked"))
+        active = sum(
+            1 for s in swaps
+            if s.get("status") in (
+                "init", "excal_locked", "btc_locked", "excal_claimed", "btc_claimed"
+            )
+        )
         completed = sum(1 for s in swaps if s.get("status") in ("claimed", "completed"))
-        refunded = sum(1 for s in swaps if s.get("status") in ("refunded", "expired"))
+        refunded = sum(
+            1 for s in swaps
+            if s.get("status") in ("refunded", "expired", "refund_excal", "refund_btc")
+        )
 
         self.stat_total.configure(text=str(total))
         self.stat_active.configure(text=str(active))
@@ -4128,11 +4829,15 @@ class AtomicSwapTab(ctk.CTkFrame):
         filtered = []
         for s in swaps:
             status = s.get("status", "")
-            if self._filter_status == "Active" and status not in ("init", "excal_locked", "btc_locked"):
+            if self._filter_status == "Active" and status not in (
+                "init", "excal_locked", "btc_locked", "excal_claimed", "btc_claimed"
+            ):
                 continue
             if self._filter_status == "Completed" and status not in ("claimed", "completed"):
                 continue
-            if self._filter_status == "Refunded" and status not in ("refunded", "expired"):
+            if self._filter_status == "Refunded" and status not in (
+                "refunded", "expired", "refund_excal", "refund_btc"
+            ):
                 continue
             filtered.append(s)
 
@@ -4160,8 +4865,15 @@ class AtomicSwapTab(ctk.CTkFrame):
         secret_hash = swap.get("secret_hash", "")
         preimage = swap.get("secret", "")
         btc_htlc_addr = swap.get("btc_htlc_address", "")
+        btc_witness_script = swap.get("btc_witness_script_hex", "")
+        btc_script_pubkey = swap.get("btc_script_pubkey_hex", "")
+        btc_timeout = swap.get("btc_timeout", 0)
         excal_lock_tx = swap.get("excal_lock_tx", "")
         btc_lock_tx = swap.get("btc_lock_tx", "")
+        pending_btc_funding_tx = swap.get("pending_btc_funding_tx", "")
+        pending_btc_claim_tx = swap.get("pending_btc_claim_tx", "")
+        pending_btc_refund_tx = swap.get("pending_btc_refund_tx", "")
+        both_chains_locked = bool(excal_lock_tx and btc_lock_tx)
 
         # Top row: Direction & Status
         top_row = ctk.CTkFrame(card, fg_color="transparent")
@@ -4242,6 +4954,29 @@ class AtomicSwapTab(ctk.CTkFrame):
                 fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER, text_color=COLOR_CYAN, font=("Segoe UI", 8), corner_radius=4,
             ).pack(side="right")
 
+            for label, value, color in (
+                ("Witness script:", btc_witness_script, COLOR_CYAN),
+                ("ScriptPubKey:", btc_script_pubkey, COLOR_CYAN),
+                ("BTC refund height:", str(btc_timeout), COLOR_TEXT),
+            ):
+                if value:
+                    row = ctk.CTkFrame(detail_frame, fg_color="transparent")
+                    row.pack(fill="x", padx=10, pady=(2, 4))
+                    ctk.CTkLabel(
+                        row, text=label, font=("Segoe UI", 9, "bold"),
+                        text_color=COLOR_TEXT_DIM, width=100, anchor="w",
+                    ).pack(side="left")
+                    ctk.CTkLabel(
+                        row, text=format_address(value), font=("Consolas", 9),
+                        text_color=color,
+                    ).pack(side="left", fill="x", expand=True)
+                    ctk.CTkButton(
+                        row, text="Copy", width=45, height=20,
+                        command=lambda v=value, l=label: self._copy_text(v, l.rstrip(":")),
+                        fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+                        text_color=color, font=("Segoe UI", 8), corner_radius=4,
+                    ).pack(side="right")
+
         # Preimage if revealed
         if preimage:
             r_pre = ctk.CTkFrame(detail_frame, fg_color="transparent")
@@ -4260,59 +4995,83 @@ class AtomicSwapTab(ctk.CTkFrame):
 
         # Show appropriate buttons based on status
         if status == "init":
-            ctk.CTkButton(
-                action_row, text="🔒 Lock EXCAL", height=28,
-                command=lambda sid=swap_id: self._lock_excal_dialog(sid),
-                fg_color=COLOR_GOLD_DARK, hover_color=COLOR_GOLD,
-                text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
-            ).pack(side="left", padx=(0, 5))
-
-            ctk.CTkButton(
-                action_row, text="🔒 Lock BTC", height=28,
-                command=lambda sid=swap_id: self._lock_btc_dialog(sid),
-                fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
-                text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
-            ).pack(side="left", padx=5)
-
-        elif status in ("excal_locked", "btc_locked"):
-            # Can claim if other side is locked or secret is known
-            ctk.CTkButton(
-                action_row, text="🔑 Claim with Preimage", height=28,
-                command=lambda sid=swap_id, sec=preimage: self._claim_dialog(sid, sec),
-                fg_color=COLOR_PURPLE, hover_color=COLOR_PURPLE_LIGHT,
-                text_color=COLOR_TEXT, font=("Segoe UI", 9, "bold"), corner_radius=6,
-            ).pack(side="left", padx=(0, 5))
-
-            if not btc_lock_tx:
+            if "btc_to_excal" in direction:
                 ctk.CTkButton(
-                    action_row, text="🔒 Lock BTC", height=28,
+                    action_row,
+                    text="Verify BTC Funding" if pending_btc_funding_tx else "Fund & Broadcast BTC",
+                    height=28,
                     command=lambda sid=swap_id: self._lock_btc_dialog(sid),
                     fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
                     text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
-                ).pack(side="left", padx=5)
-
-            if not excal_lock_tx:
+                ).pack(side="left", padx=(0, 5))
+            else:
                 ctk.CTkButton(
-                    action_row, text="🔒 Lock EXCAL", height=28,
+                    action_row, text="Record EXCAL Lock", height=28,
                     command=lambda sid=swap_id: self._lock_excal_dialog(sid),
                     fg_color=COLOR_GOLD_DARK, hover_color=COLOR_GOLD,
                     text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
+                ).pack(side="left", padx=(0, 5))
+
+        elif status in ("excal_locked", "btc_locked", "excal_claimed", "btc_claimed"):
+            if not btc_lock_tx and status in ("excal_locked", "btc_locked"):
+                ctk.CTkButton(
+                    action_row,
+                    text="Verify BTC Funding" if pending_btc_funding_tx else "Fund & Broadcast BTC",
+                    height=28,
+                    command=lambda sid=swap_id: self._lock_btc_dialog(sid),
+                    fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+                    text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
+                ).pack(side="left", padx=(0, 5))
+            if not excal_lock_tx and status == "btc_locked":
+                ctk.CTkButton(
+                    action_row, text="Record EXCAL Lock", height=28,
+                    command=lambda sid=swap_id: self._lock_excal_dialog(sid),
+                    fg_color=COLOR_GOLD_DARK, hover_color=COLOR_GOLD,
+                    text_color=COLOR_BG, font=("Segoe UI", 9, "bold"), corner_radius=6,
+                ).pack(side="left", padx=(0, 5))
+
+            if (
+                "excal_to_btc" in direction
+                and both_chains_locked
+                and status in ("btc_locked", "excal_claimed")
+            ):
+                ctk.CTkButton(
+                    action_row,
+                    text="Verify BTC Claim" if pending_btc_claim_tx else "Claim & Broadcast BTC",
+                    height=28,
+                    command=lambda sid=swap_id, sec=preimage: self._claim_dialog(sid, "btc", sec),
+                    fg_color=COLOR_PURPLE, hover_color=COLOR_PURPLE_LIGHT,
+                    text_color=COLOR_TEXT, font=("Segoe UI", 9, "bold"), corner_radius=6,
+                ).pack(side="left", padx=(0, 5))
+
+            if both_chains_locked and status in ("btc_locked", "btc_claimed"):
+                ctk.CTkButton(
+                    action_row, text="Record EXCAL Claim", height=28,
+                    command=lambda sid=swap_id, sec=preimage: self._claim_dialog(sid, "excal", sec),
+                    fg_color=COLOR_PURPLE, hover_color=COLOR_PURPLE_LIGHT,
+                    text_color=COLOR_TEXT, font=("Segoe UI", 9, "bold"), corner_radius=6,
                 ).pack(side="left", padx=5)
 
-            ctk.CTkButton(
-                action_row, text="↩ Refund", height=28,
-                command=lambda sid=swap_id: self._refund_dialog(sid),
-                fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
-                text_color=COLOR_ERROR, font=("Segoe UI", 9), corner_radius=6,
-            ).pack(side="right")
-
-        elif status in ("expired", "init"):
-            ctk.CTkButton(
-                action_row, text="↩ Refund", height=28,
-                command=lambda sid=swap_id: self._refund_dialog(sid),
-                fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
-                text_color=COLOR_ERROR, font=("Segoe UI", 9), corner_radius=6,
-            ).pack(side="right")
+            if excal_lock_tx and status in ("excal_locked", "btc_locked"):
+                ctk.CTkButton(
+                    action_row, text="Record EXCAL Refund", height=28,
+                    command=lambda sid=swap_id: self._refund_dialog(sid, "excal"),
+                    fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+                    text_color=COLOR_ERROR, font=("Segoe UI", 9), corner_radius=6,
+                ).pack(side="right")
+            if (
+                "btc_to_excal" in direction
+                and btc_lock_tx
+                and status in ("btc_locked", "excal_claimed")
+            ):
+                ctk.CTkButton(
+                    action_row,
+                    text="Verify BTC Refund" if pending_btc_refund_tx else "Refund & Broadcast BTC",
+                    height=28,
+                    command=lambda sid=swap_id: self._refund_dialog(sid, "btc"),
+                    fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+                    text_color=COLOR_ERROR, font=("Segoe UI", 9), corner_radius=6,
+                ).pack(side="right", padx=(0, 5))
 
     def _copy_text(self, text: str, label: str):
         if text:
