@@ -258,6 +258,34 @@ from .wormhole_live_connector import (
     scan_btc_burns,
     create_wormhole_proof,
 )
+from .atomic_swap import (
+    AtomicSwapProtocol,
+    AtomicSwap,
+    AtomicSwapError,
+    SwapDirection,
+    SwapStatus,
+    HtlcParameters,
+)
+from .btc_bridge import (
+    BtcBridge,
+    BridgeOffer,
+    btc_htlc_lock,
+    build_btc_htlc_script,
+    private_key_to_btc_address,
+    private_key_to_wif,
+    wif_to_private_key,
+    bech32_to_wif,
+)
+from .quantum_atomic_swap import (
+    QuantumAtomicSwap,
+    SwapPreimage,
+)
+from .quantum_atomic_bridge import (
+    QuantumAtomicBridge,
+    QuantumSwap,
+    BridgePhase,
+    BridgeState as QuantumBridgeState,
+)
 import sys as _sys
 _retrocausal_path = _sys.modules.get('retrocausal_entropy_well')
 _rew = None
@@ -778,4 +806,25 @@ __all__ = [
     "map_pictographic_seed",
     "find_canonical_seed",
     "get_pictograph_indices",
+    # BTC-EXCAL Atomic Swap & Bridge
+    "AtomicSwapProtocol",
+    "AtomicSwap",
+    "AtomicSwapError",
+    "SwapDirection",
+    "SwapStatus",
+    "HtlcParameters",
+    "BtcBridge",
+    "BridgeOffer",
+    "btc_htlc_lock",
+    "build_btc_htlc_script",
+    "private_key_to_btc_address",
+    "private_key_to_wif",
+    "wif_to_private_key",
+    "bech32_to_wif",
+    "QuantumAtomicSwap",
+    "SwapPreimage",
+    "QuantumAtomicBridge",
+    "QuantumSwap",
+    "BridgePhase",
+    "QuantumBridgeState",
 ]

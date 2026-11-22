@@ -368,7 +368,9 @@ class TestPersistence(unittest.TestCase):
             btc_refund_address="0" * 40,
         )
         swap_id = swap.swap_id
-        
+        protocol1.lock_excal(swap_id, "excal-funding", 2, b"excal-script")
+        protocol1.lock_btc(swap_id, "btc-funding", 3, b"btc-script")
+
         # Reload
         protocol2 = AtomicSwapProtocol(data_dir=self.tmpdir)
         loaded = protocol2.get_swap(swap_id)
@@ -376,6 +378,9 @@ class TestPersistence(unittest.TestCase):
         self.assertEqual(loaded.swap_id, swap_id)
         self.assertEqual(loaded.excal_amount, MIN_EXCAL_SWAP)
         self.assertEqual(loaded.btc_amount, MIN_BTC_SWAP)
+        self.assertEqual(loaded.excal_htlc.funding_txid, "excal-funding")
+        self.assertEqual(loaded.btc_htlc.funding_txid, "btc-funding")
+        self.assertEqual(loaded.btc_htlc.lock_script, b"btc-script")
 
 
 class TestHtlcParameters(unittest.TestCase):
