@@ -1943,6 +1943,9 @@ May the Omniscient Sphinx witness my commitment."""
 class WalletBackend:
     """Backend logic for the EXCAL wallet."""
 
+    # Transaction cache TTL in seconds
+    TX_CACHE_TTL = 30
+
     def __init__(self, profile: str = "default"):
         self.profile = profile
         self.keystore: Optional[KeyStore] = None
@@ -1955,6 +1958,12 @@ class WalletBackend:
         self.btc_rpc_config_path = WALLET_DIR / "bitcoin-node.json"
         self.btc_rpc_config = self._load_btc_rpc_config()
         self.btc_rpc_config["rpc_password"] = ""
+        # Transaction history cache
+        self._tx_cache: Optional[List[Dict[str, Any]]] = None
+        self._tx_cache_time: float = 0
+        # Balance cache
+        self._balance_cache: Optional[Decimal] = None
+        self._balance_cache_time: float = 0
 
         # Determine keystore path
         if profile == "default":
@@ -2133,10 +2142,22 @@ class WalletBackend:
                 ) from exc
         return utxos
 
-    def get_balance(self) -> Decimal:
-        """Return the confirmed on-chain balance for all wallet keys."""
+    def get_balance(self, force_refresh: bool = False) -> Decimal:
+        """Return the confirmed on-chain balance for all wallet keys.
+        
+        Args:
+            force_refresh: If True, bypass cache and fetch fresh data.
+        """
+        # Return cached balance if still valid
+        if not force_refresh and self._balance_cache is not None:
+            age = time.time() - self._balance_cache_time
+            if age < self.TX_CACHE_TTL:
+                return self._balance_cache
+        # Fetch fresh balance
         swords = sum(item["value"] for item in self._wallet_utxos())
-        return Decimal(swords) / Decimal(SWORD)
+        self._balance_cache = Decimal(swords) / Decimal(SWORD)
+        self._balance_cache_time = time.time()
+        return self._balance_cache
 
     def get_keys(self) -> List[Dict[str, str]]:
         """Get all key entries."""
@@ -2208,6 +2229,8 @@ class WalletBackend:
         }
         self.keystore.add_transaction(tx_data)
         self.keystore.save(str(self.keystore_path))
+        # Invalidate cache after sending a transaction
+        self.invalidate_cache()
         return tx_data
 
     @staticmethod
@@ -2254,11 +2277,30 @@ class WalletBackend:
         finally:
             connection.close()
 
-    def get_transactions(self) -> List[Dict[str, Any]]:
-        """Get transaction history."""
+    def get_transactions(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
+        """Get transaction history with caching.
+
+        Args:
+            force_refresh: If True, bypass cache and fetch fresh data.
+        """
         if not self.keystore:
             return []
-        return self.keystore.get_transactions()
+        # Return cached data if still valid
+        if not force_refresh and self._tx_cache is not None:
+            age = time.time() - self._tx_cache_time
+            if age < self.TX_CACHE_TTL:
+                return self._tx_cache
+        # Fetch fresh data
+        self._tx_cache = self.keystore.get_transactions()
+        self._tx_cache_time = time.time()
+        return self._tx_cache
+
+    def invalidate_cache(self):
+        """Invalidate all cached data. Call after sending a transaction."""
+        self._tx_cache = None
+        self._tx_cache_time = 0
+        self._balance_cache = None
+        self._balance_cache_time = 0
 
     def initialize_p2p(self, num_peers: int = 6):
         """Networking is provided by the real connected node, not fake peers."""
