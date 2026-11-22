@@ -26,8 +26,9 @@ import os
 import socket
 import struct
 import threading
+import time
 
-from txscript import txid_internal, validate_tx, _view_copy
+from txscript import validate_tx, _view_copy
 from genesis_fork import ser_header, sha256d
 
 
@@ -199,6 +200,16 @@ def _recv_loop(sock):
         yield msg
 
 
+# Peer scoring constants
+PEER_SCORE_INITIAL = 0          # starting score for a new peer
+PEER_SCORE_BLOCK = 10           # +10 for each valid block received
+PEER_SCORE_TX = 1               # +1 for each valid tx received
+PEER_SCORE_INVALID_BLOCK = -50  # -50 for each invalid block sent
+PEER_SCORE_INVALID_TX = -10     # -10 for each invalid tx sent
+PEER_SCORE_BAN_THRESHOLD = -100 # score below which a peer is banned
+PEER_BAN_DURATION = 3600        # ban duration in seconds (1 hour)
+
+
 class PeerManager:
     def __init__(self, cs, mempool, lock, port=0, log=print,
                  host="127.0.0.1"):
@@ -225,6 +236,12 @@ class PeerManager:
         # then replays forward to the tip. Bounded (2000); oldest evicted.
         self._orphans = {}
         self._orphan_kids = {}
+        # Peer scoring: addr string -> score (int)
+        self._peer_scores = {}
+        # Ban list: addr string -> ban_expiry timestamp
+        self._banned = {}
+        # Socket -> addr mapping for scoring
+        self._sock_addrs = {}
 
     # ------------------------------------------------------------------
     def start(self):
@@ -269,10 +286,14 @@ class PeerManager:
             self._add_peer(conn, addr)
 
     def connect(self, host, port):
+        # Check ban list before connecting
+        addr_key = _fmt_addr(host, port)
+        if self._is_banned((host, port)):
+            raise OSError(f"peer {addr_key} is banned")
         # Remember the address up front: a failed bootstrap must not erase
         # the address, or the redial thread (which keys on self.known)
         # will never retry it.
-        self.known.add(_fmt_addr(host, port))
+        self.known.add(addr_key)
         if _is_tailnet_host(host):
             # Tailnet peers are reachable only via the tunnel proxy
             # (plain sockets cannot reach 100.64.0.0/10 from this VM).
@@ -321,8 +342,52 @@ class PeerManager:
             except OSError:
                 continue
 
+    def _addr_key(self, addr):
+        """Convert addr tuple to a string key for scoring/banning."""
+        return _fmt_addr(addr[0], addr[1])
+
+    def _is_banned(self, addr):
+        """Check if an address is currently banned."""
+        key = self._addr_key(addr)
+        expiry = self._banned.get(key)
+        if expiry is None:
+            return False
+        if time.time() < expiry:
+            return True
+        # Ban expired; remove it
+        del self._banned[key]
+        return False
+
+    def _ban_peer(self, addr, duration=None):
+        """Ban a peer address for the given duration (seconds)."""
+        key = self._addr_key(addr)
+        self._banned[key] = time.time() + (duration or PEER_BAN_DURATION)
+        self.log(f"p2p: banned {key} for {duration or PEER_BAN_DURATION}s")
+
+    def _score_peer(self, addr, delta):
+        """Adjust a peer's score. Bans the peer if score drops below threshold."""
+        key = self._addr_key(addr)
+        score = self._peer_scores.get(key, PEER_SCORE_INITIAL) + delta
+        self._peer_scores[key] = score
+        if score <= PEER_SCORE_BAN_THRESHOLD:
+            self._ban_peer(addr)
+            self.log(f"p2p: {key} score {score} -> banned")
+
     def _add_peer(self, sock, addr):
+        # Check ban list before accepting
+        if self._is_banned(addr):
+            try:
+                sock.close()
+            except OSError:
+                pass
+            self.log(f"p2p: rejected banned peer {self._addr_key(addr)}")
+            return
         self.peers.append((sock, addr))
+        self._sock_addrs[sock] = addr
+        # Initialize peer score
+        addr_key = self._addr_key(addr)
+        if addr_key not in self._peer_scores:
+            self._peer_scores[addr_key] = PEER_SCORE_INITIAL
         t = threading.Thread(target=self._peer_loop, args=(sock, addr),
                              daemon=True)
         t.start()
@@ -337,6 +402,7 @@ class PeerManager:
 
     def _drop(self, sock):
         self.peers = [(s, a) for s, a in self.peers if s is not sock]
+        self._sock_addrs.pop(sock, None)
         try:
             sock.close()
         except OSError:
@@ -424,6 +490,11 @@ class PeerManager:
                                  "hash": blk["prev"].hex()})
             if sub["accepted"]:
                 self._post_accept(blk, blk_hash, fee_info, exclude=sock)
+                # Score: valid block from this peer
+                self._score_peer(addr, PEER_SCORE_BLOCK)
+            elif sub.get("reason", "") and not sub["reason"].startswith("orphan"):
+                # Invalid block (not duplicate, not orphan)
+                self._score_peer(addr, PEER_SCORE_INVALID_BLOCK)
             # duplicate/invalid: nothing to do (walk-back only chases
             # unknown parents)
         elif t == "tx":
@@ -436,6 +507,11 @@ class PeerManager:
                     raw, self.cs.utxo, self.cs.tip()["height"] + 1)
             if ok:
                 self._relay_tx(raw, exclude=sock)
+                # Score: valid tx from this peer
+                self._score_peer(addr, PEER_SCORE_TX)
+            else:
+                # Invalid tx
+                self._score_peer(addr, PEER_SCORE_INVALID_TX)
 
     def _measure_fees(self, blk):
         """Per-tx (vsize, fee) for a block about to be submitted. Must be
@@ -581,6 +657,21 @@ class PeerManager:
 
     def peer_count(self):
         return len(self.peers)
+
+    def get_peer_stats(self):
+        """Return peer statistics: count, scores, and ban list."""
+        # Clean expired bans
+        now = time.time()
+        expired = [k for k, v in self._banned.items() if now >= v]
+        for k in expired:
+            del self._banned[k]
+        return {
+            "peer_count": len(self.peers),
+            "known_addresses": len(self.known),
+            "banned_count": len(self._banned),
+            "scores": dict(self._peer_scores),
+            "banned": {k: int(v - now) for k, v in self._banned.items()},
+        }
 
     def bootstrap(self, addrs):
         """Dial each seed address once; failures stay in self.known so

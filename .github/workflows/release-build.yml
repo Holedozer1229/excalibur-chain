@@ -3,6 +3,7 @@ name: AetherionEXCAL Release Builds
 on:
   push:
     branches: [master]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +11,7 @@ permissions:
 
 jobs:
   windows:
-    name: Windows x64 binaries and installer
+    name: Windows x64 installers and portable app
     runs-on: windows-latest
     steps:
       - name: Check out source
@@ -26,8 +27,9 @@ jobs:
       - name: Install Python dependencies
         run: python -m pip install -r requirements.txt
 
-      - name: Install Inno Setup
-        run: choco install innosetup --yes --no-progress
+      - name: Install Inno Setup and NSIS
+        run: |
+          choco install innosetup nsis --yes --no-progress
 
       - name: Build Windows executables
         shell: pwsh
@@ -51,56 +53,66 @@ jobs:
         shell: pwsh
         run: ./prepare-kubo.ps1
 
-      - name: Build Inno Setup package
+      - name: Build Windows installers and portable executable
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $compiler = @(
+          $version = "3.0.0"
+          New-Item -ItemType Directory -Force -Path "installer" | Out-Null
+          $iscc = @(
             (Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"),
             (Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Inno Setup 7\ISCC.exe"),
             (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"),
             (Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Inno Setup 6\ISCC.exe")
           ) | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $compiler) {
+          if (-not $iscc) {
             throw "Inno Setup compiler was not found."
           }
-          & $compiler "AetherionEXCAL-installer.iss"
+          & $iscc "AetherionEXCAL-installer.iss"
           if ($LASTEXITCODE -ne 0) {
             throw "Inno Setup compilation failed."
           }
 
-      - name: Verify Windows release files
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
+          $makensis = (Get-Command makensis.exe -ErrorAction Stop).Source
+          & $makensis "/DAPP_VERSION=$version" "AetherionEXCAL-NSIS.nsi"
+          if ($LASTEXITCODE -ne 0) {
+            throw "NSIS compilation failed."
+          }
+
+          Copy-Item "dist\AetherionEXCAL.exe" "installer\AetherionEXCAL-$version-x64.exe"
+
           $files = @(
-            "dist/AetherionEXCAL.exe",
-            "dist/AetherionEXCAL-Beacon.exe",
-            "dist/AetherionEXCAL-StratumMiner.exe",
-            "dist/AetherionEXCAL-P2P.exe",
-            "installer/AetherionEXCAL-Setup-3.0.0.exe"
+            "installer\AetherionEXCAL-Setup-$version.exe",
+            "installer\AetherionEXCAL-InnoSetup-$version.exe",
+            "installer\AetherionEXCAL-$version-x64.exe"
           )
           foreach ($file in $files) {
             if (-not (Test-Path $file) -or (Get-Item $file).Length -eq 0) {
-              throw "Missing or empty release artifact: $file"
+              throw "Missing or empty Windows release asset: $file"
             }
           }
 
-      - name: Upload Windows release files
+      - name: Upload Windows release assets
         uses: actions/upload-artifact@v4
         with:
           name: AetherionEXCAL-windows-x64
           if-no-files-found: error
           path: |
-            dist/AetherionEXCAL.exe
-            dist/AetherionEXCAL-Beacon.exe
-            dist/AetherionEXCAL-StratumMiner.exe
-            dist/AetherionEXCAL-P2P.exe
             installer/AetherionEXCAL-Setup-3.0.0.exe
+            installer/AetherionEXCAL-InnoSetup-3.0.0.exe
+            installer/AetherionEXCAL-3.0.0-x64.exe
 
   macos:
-    name: macOS Apple Silicon application
-    runs-on: macos-14
+    name: macOS ${{ matrix.arch }} application
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -115,17 +127,114 @@ jobs:
       - name: Install Python dependencies
         run: python -m pip install -r requirements.txt
 
-      - name: Build macOS application
+      - name: Build macOS executable
         run: python -m PyInstaller --clean --noconfirm AetherionEXCAL.spec
 
-      - name: Package macOS application
+      - name: Package and verify macOS executable
+        env:
+          ARCH: ${{ matrix.arch }}
         run: |
+          set -euo pipefail
           test -s dist/AetherionEXCAL
-          tar -czf AetherionEXCAL-macos-arm64.tar.gz -C dist AetherionEXCAL
+          actual_arch="$(lipo -archs dist/AetherionEXCAL)"
+          case "$ARCH:$actual_arch" in
+            arm64:*arm64*) ;;
+            x64:*x86_64*) ;;
+            *) echo "Unexpected architecture: expected $ARCH, got $actual_arch" >&2; exit 1 ;;
+          esac
+          ditto -c -k --sequesterRsrc --keepParent dist/AetherionEXCAL \
+            "AetherionEXCAL-3.0.0-mac-$ARCH.zip"
 
-      - name: Upload macOS release package
+      - name: Upload macOS release asset
         uses: actions/upload-artifact@v4
         with:
-          name: AetherionEXCAL-macos-arm64
+          name: AetherionEXCAL-macos-${{ matrix.arch }}
           if-no-files-found: error
-          path: AetherionEXCAL-macos-arm64.tar.gz
+          path: AetherionEXCAL-3.0.0-mac-${{ matrix.arch }}.zip
+
+  android:
+    name: Android wallet source package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Package Android project
+        run: |
+          set -euo pipefail
+          zip -r AetherionEXCAL-3.0.0-android.zip \
+            buildozer.spec main.py kivy_wallet \
+            -x '*/__pycache__/*' '*.pyc'
+          test -s AetherionEXCAL-3.0.0-android.zip
+
+      - name: Upload Android release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherionEXCAL-android
+          if-no-files-found: error
+          path: AetherionEXCAL-3.0.0-android.zip
+
+  ios:
+    name: iOS wallet Xcode project package
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install iOS project build dependencies
+        run: |
+          brew install autoconf automake libtool pkg-config
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install Cython==3.0.11 kivy-ios
+
+      - name: Generate the Xcode project
+        run: |
+          set -euo pipefail
+          toolchain build kivy
+          toolchain create AetherionEXCAL "$PWD/kivy_wallet"
+          test -d AetherionEXCAL-ios/AetherionEXCAL.xcodeproj
+
+      - name: Package iOS Xcode project
+        run: |
+          set -euo pipefail
+          zip -r AetherionEXCAL-3.0.0-ios.zip \
+            AetherionEXCAL-ios \
+            -x '*/__pycache__/*' '*.pyc'
+          test -s AetherionEXCAL-3.0.0-ios.zip
+
+      - name: Upload iOS release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherionEXCAL-ios
+          if-no-files-found: error
+          path: AetherionEXCAL-3.0.0-ios.zip
+
+  publish:
+    name: Publish GitHub release assets
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos, android, ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all platform assets
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate SHA-256 manifest
+        working-directory: release-assets
+        run: sha256sum AetherionEXCAL-* > SHA256SUMS.txt
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/AetherionEXCAL-*
+            release-assets/SHA256SUMS.txt

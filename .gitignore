@@ -9,6 +9,23 @@
 *.swp
 *.swo
 
+# PyCharm inspection profiles (leaked to root)
+*.Inspection.xml
+*Inspection.xml
+*Inspections.xml
+DuplicatedCode*.xml
+DependenciesInspection.xml
+Eslint.xml
+GrazieInspection.xml
+GrazieStyle.xml
+ShellCheck.xml
+SpellCheckingInspection.xml
+LossyEncoding.xml
+HttpUrlsUsage.xml
+MarkdownUnresolved*.xml
+NpmUsedModulesInstalled.xml
+.descriptions.xml
+
 # ============================================================
 # Python
 # ============================================================
@@ -95,3 +112,40 @@ sphinx_os/nexus/__pycache__/
 
 # Windows reserved names
 NUL
+
+# ============================================================
+# Temporary analysis scripts (session artifacts)
+# ============================================================
+debug_bech32.py
+derive_keypairs.py
+encode_bech32.py
+verify_bech32.py
+keypair_full_analysis.py
+package_all_wallet_formats.py
+generate_treasury_wallet_dat.py
+
+# ============================================================
+# Wallet dumps and treasury files (may contain secrets)
+# ============================================================
+wallet.dat
+excal_treasury_wallet.dat
+excal_treasury_wallet_keys.json
+excal_treasury_wallet_keys.txt
+bitcoin_core_wallet_dump.dat
+bitcoin_core_wallet_dump.txt
+bitcoin_core_descriptors.json
+electrum_excal_treasury.json
+HOW_TO_IMPORT_TREASURY_WALLET.txt
+
+# ============================================================
+# Build artifacts
+# ============================================================
+.build/
+
+# ============================================================
+# Runtime state files
+# ============================================================
+trifold_state/
+dr-time-overflow-countersignature.json
+dr-time-bip341.json
+dr-time-proof-of-control.json

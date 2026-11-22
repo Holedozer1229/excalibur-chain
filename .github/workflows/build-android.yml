@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   android:
@@ -76,11 +76,4 @@ jobs:
         with:
           name: AetherionEXCAL-Android-APK
           path: bin/*.apk
-          if-no-files-found: warn
-
-      - name: Publish APK to GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/master'
-        with:
-          tag_name: windows-installer-3.0.0
-          files: bin/*.apk
+          if-no-files-found: error

@@ -2,7 +2,7 @@
 ; Inno Setup script — creates desktop icon, start menu shortcut, and installs all components
 
 #define AppName "AetherionEXCAL"
-#define AppVersion "3.0.0"
+#define AppVersion "3.1.0"
 #define AppPublisher "Aetherion Oracle"
 #define AppURL "https://www.aetherion-oracle.com"
 #define AppExeName "AetherionEXCAL.exe"
@@ -17,7 +17,7 @@ AppUpdatesURL={#AppURL}
 DefaultDirName={autopf}\AetherionEXCAL
 DefaultGroupName={#AppName}
 OutputDir=installer
-OutputBaseFilename=AetherionEXCAL-Setup-{#AppVersion}
+OutputBaseFilename=AetherionEXCAL-InnoSetup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
