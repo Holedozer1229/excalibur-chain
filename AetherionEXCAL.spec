@@ -60,12 +60,16 @@ a = Analysis(
         'stratum_miner',
         'stratum_fork',
         # Cryptography — AES-256-GCM + scrypt KDF
+        # Must include _rust extension to avoid "DLL load failed" on Windows
         'cryptography',
         'cryptography.hazmat.primitives.ciphers.aead',
         'cryptography.hazmat.primitives.kdf.scrypt',
         'cryptography.hazmat.backends.openssl.backend',
         'cryptography.hazmat.primitives.ciphers',
         'cryptography.hazmat.primitives.ciphers.algorithms',
+        'cryptography.hazmat.bindings._rust',
+        'cryptography.hazmat.bindings._rust_openssl',
+        'cryptography.hazmat.bindings._rust_x509',
         # CustomTkinter GUI framework
         'customtkinter',
         'darkdetect',
@@ -271,6 +275,17 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 # ---------------------------------------------------------------------------
 # Platform-specific executable
 # ---------------------------------------------------------------------------
+# Cryptography's Rust extensions break under UPX compression — always exclude them
+_cryptography_upx_exclude = [
+    'cryptography',
+    'cryptography.hazmat.bindings._rust',
+    'cryptography.hazmat.bindings._rust_openssl',
+    'cryptography.hazmat.bindings._rust_x509',
+    '_rust.pyd',
+    '_rust_openssl.pyd',
+    '_rust_x509.pyd',
+]
+
 if sys.platform == 'win32':
     exe = EXE(
         pyz,
@@ -284,7 +299,7 @@ if sys.platform == 'win32':
         bootloader_ignore_signals=False,
         strip=False,
         upx=True,
-        upx_exclude=[],
+        upx_exclude=_cryptography_upx_exclude,
         runtime_tmpdir=None,
         console=True,  # Console for debugging
         disable_windowed_traceback=False,
