@@ -1993,6 +1993,674 @@ def test_atomic_swap_regtest():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_atomic_swap_qhtlc():
+    """QHTLC-leg atomic swap: derive_legs reproduces the funded lots,
+    QHTLC record + builders end to end, watcher signal on the BTC leg,
+    external claim/refund seeds, and the CLI taker flow for a lot.
+    Deterministic throwaway keys; nothing broadcast, nothing mainnet."""
+    from txscript import lock_pkh_for_pubkey
+    from trifold_lockbox import TrifoldKey
+    from spent_leaf_registry import SpentLeafRegistry
+    import shutil
+    maker_priv, taker_priv, dest_priv = 0x3333, 0x2222, 0x4444
+    maker_pub = keys.priv_to_pub_compressed(maker_priv)
+    taker_pub = keys.priv_to_pub_compressed(taker_priv)
+    dest_pub = keys.priv_to_pub_compressed(dest_priv)
+    secret = bytes([5]) * 32
+    secret_hash = hashlib.sha256(secret).digest()
+    fork_h, btc_h = 50000, 977000
+    excal_timeout, btc_timeout = 52880, 977144
+    excal_amt, btc_amt = 50_000_000, 49_999_000
+    tmp = tempfile.mkdtemp(prefix="excal-swap-qhtlc-")
+    try:
+        reg = SpentLeafRegistry(os.path.join(tmp, "spent_registry.json"))
+        claim_seed = os.urandom(32)
+        refund_seed = os.urandom(32)
+        claim_key = TrifoldKey(claim_seed, height=6, state_dir=tmp)
+        refund_key = TrifoldKey(refund_seed, height=6, state_dir=tmp)
+
+        def _raises_swap(fn):
+            try:
+                fn()
+                return False
+            except SwapError:
+                return True
+
+        # --- leg derivation --------------------------------------
+        legs = swap.derive_qhtlc_legs(
+            secret_hash, claim_key.root, refund_key.root, maker_pub,
+            taker_pub, excal_timeout, btc_timeout)
+        check("qhtlc legs: lock is 0x04 + hash160(descriptor)",
+              bytes.fromhex(legs["excal"]["lock"])[0] == 0x04)
+        from txscript import parse_qhtlc_descriptor
+        d = parse_qhtlc_descriptor(
+            bytes.fromhex(legs["excal"]["descriptor"]))
+        check("qhtlc legs: descriptor carries hash + both roots + "
+              "timeout",
+              d["secret_hash"] == secret_hash
+              and d["claim_root"] == claim_key.root
+              and d["refund_root"] == refund_key.root
+              and d["timeout"] == excal_timeout)
+        check("qhtlc legs refuse equal claim/refund roots",
+              _raises_swap(lambda: swap.derive_qhtlc_legs(
+                  secret_hash, claim_key.root, claim_key.root,
+                  maker_pub, taker_pub, excal_timeout, btc_timeout)))
+        check("qhtlc legs refuse a 31-byte root",
+              _raises_swap(lambda: swap.derive_qhtlc_legs(
+                  secret_hash, claim_key.root[:31], refund_key.root,
+                  maker_pub, taker_pub, excal_timeout, btc_timeout)))
+        check("trifold_key_for_root finds the key by seed + root",
+              swap.trifold_key_for_root(
+                  claim_seed, claim_key.root,
+                  state_dir=tmp).root == claim_key.root)
+        check("trifold_key_for_root refuses a wrong seed",
+              _raises_swap(lambda: swap.trifold_key_for_root(
+                  os.urandom(32), claim_key.root, state_dir=tmp,
+                  max_height=4)))  # max_height=4: the refusal logic
+        # is the same; the full 1..10 scan of a wrong seed would
+        # build a 59,049-leaf tree and take minutes in pure Python.
+
+        # --- record ----------------------------------------------
+        rec = swap.new_swap(
+            "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h, secret=secret,
+            excal_leg_kind="qhtlc", claim_root=claim_key.root,
+            refund_root=refund_key.root)
+        taker_rec = swap.new_swap(
+            "taker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h,
+            secret_hash=secret_hash, excal_leg_kind="qhtlc",
+            claim_root=claim_key.root, refund_root=refund_key.root)
+        check("qhtlc record: maker and taker derive the same legs",
+              taker_rec["excal"] == rec["excal"]
+              and taker_rec["btc"] == rec["btc"]
+              and taker_rec["swap_id"] == rec["swap_id"]
+              and rec["excal_leg_kind"] == "qhtlc")
+        check("qhtlc record stores the hash only — the secret value "
+              "is nowhere in the record",
+              secret.hex() not in json.dumps(rec)
+              and claim_seed.hex() not in json.dumps(rec)
+              and refund_seed.hex() not in json.dumps(rec))
+        check("qhtlc record refuses HTLC legs with roots",
+              _raises_swap(lambda: swap.new_swap(
+                  "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+                  excal_timeout, btc_timeout, fork_h, btc_h,
+                  secret=secret, claim_root=claim_key.root,
+                  refund_root=refund_key.root)))
+        check("qhtlc record refuses a missing refund root",
+              _raises_swap(lambda: swap.new_swap(
+                  "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+                  excal_timeout, btc_timeout, fork_h, btc_h,
+                  secret=secret, excal_leg_kind="qhtlc",
+                  claim_root=claim_key.root)))
+        check("qhtlc record still enforces the timeout ordering",
+              _raises_swap(lambda: swap.new_swap(
+                  "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+                  50100, btc_timeout, fork_h, btc_h, secret=secret,
+                  excal_leg_kind="qhtlc", claim_root=claim_key.root,
+                  refund_root=refund_key.root)))
+
+        # --- full happy path with real builders ------------------
+        maker_pkh = lock_pkh_for_pubkey(maker_pub)
+        fund_utxos = [_fake_utxo(_funding_txid("swap-qhtlc-excal"), 0,
+                                 60_000_000, maker_pkh)]
+        ex_fund = swap.build_excal_funding(
+            rec, fund_utxos, {maker_pkh.hex(): maker_priv}, maker_pkh,
+            fee_rate=1, height=fork_h + 1)
+        check("qhtlc EXCAL funding validates locally",
+              ex_fund["validated"] is True)
+        check("qhtlc EXCAL funding pays the QHTLC lock",
+              ex_fund["outputs"][0]["lock"] == rec["excal"]["lock"]
+              and ex_fund["outputs"][0]["value"] == excal_amt)
+        found = swap.verify_excal_funding_raw(rec, ex_fund["raw_hex"])
+        check("qhtlc funding verifies against the QHTLC record",
+              found["txid"] == ex_fund["txid"] and found["vout"] == 0)
+        # An HTLC-leg funding tx must NOT verify against a QHTLC record.
+        htlc_rec = swap.new_swap(
+            "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h, secret=secret)
+        htlc_fund = swap.build_excal_funding(
+            htlc_rec, fund_utxos, {maker_pkh.hex(): maker_priv},
+            maker_pkh, fee_rate=1, height=fork_h + 1)
+        check("qhtlc record refuses an HTLC-leg funding tx",
+              _raises_swap(lambda: swap.verify_excal_funding_raw(
+                  rec, htlc_fund["raw_hex"])))
+        # BTC funding with the watcher signal.
+        delivery_pub = keys.priv_to_pub_compressed(0x7777)
+        btc_utxo = {"txid": _funding_txid("swap-qhtlc-btc"), "vout": 0,
+                    "value": 60_000_000,
+                    "script_pubkey": btc.p2wpkh_script_pubkey(
+                        taker_pub).hex()}
+        signal = {"tag": b"EXCAL1K", "delivery_pubkey": delivery_pub}
+        btc_fund = swap.build_btc_funding(
+            taker_rec, btc_utxo, {taker_pub: taker_priv}, taker_pub,
+            fee_rate=5, signal=signal)
+        check("qhtlc BTC funding with signal validates locally",
+              btc_fund["validated"] is True)
+        bseg = btc.parse_segwit_tx(bytes.fromhex(btc_fund["raw_hex"]))
+        found_sig = btc.find_watcher_signal(
+            bseg, b"EXCAL1K",
+            signal_address=btc.DEFAULT_SIGNAL_ADDRESS,
+            signal_sats=1000)
+        check("qhtlc BTC funding carries the watcher signal "
+              "(OP_RETURN tag + delivery pubkey + 1,000 sats)",
+              found_sig is not None
+              and found_sig["delivery_pubkey"] == delivery_pub
+              and found_sig["signal_vout"] is not None
+              and bseg["vout"][found_sig["signal_vout"]]["value"] == 1000)
+        check("qhtlc BTC funding still verifies against the swap",
+              swap.verify_btc_funding_raw(
+                  taker_rec, btc_fund["raw_hex"])["txid"]
+              == btc_fund["txid"])
+        btc_plain = swap.build_btc_funding(
+            taker_rec, btc_utxo, {taker_pub: taker_priv}, taker_pub,
+            fee_rate=5)
+        check("BTC funding without a signal carries none",
+              btc.find_watcher_signal(
+                  btc.parse_segwit_tx(
+                      bytes.fromhex(btc_plain["raw_hex"])),
+                  b"EXCAL1K") is None)
+        try:
+            btc.build_watcher_signal(b"X" * 43, delivery_pub)
+            sig_bad = False
+        except BtcHtlcError:
+            sig_bad = True
+        check("watcher signal refuses a 43-byte tag (payload > 75)",
+              sig_bad)
+        # BTC claim (maker) reveals the secret; EXCAL claim (taker)
+        # spends the QHTLC lock with the claim seed's key.
+        taker_funded = swap.transition(taker_rec, "excal-funded")
+        taker_funded["excal"]["funding_txid"] = ex_fund["txid"]
+        taker_funded["excal"]["funding_vout"] = 0
+        taker_funded = swap.transition(taker_funded, "btc-funded")
+        taker_funded["btc"]["funding_txid"] = btc_fund["txid"]
+        taker_funded["btc"]["funding_vout"] = 0
+        maker_funded = swap.transition(
+            swap.transition(rec, "excal-funded"), "btc-funded")
+        maker_funded["excal"]["funding_txid"] = ex_fund["txid"]
+        maker_funded["excal"]["funding_vout"] = 0
+        maker_funded["btc"]["funding_txid"] = btc_fund["txid"]
+        maker_funded["btc"]["funding_vout"] = 0
+        dest_spk = btc.p2wpkh_script_pubkey(dest_pub)
+        claim = swap.build_btc_claim(maker_funded, secret, dest_spk,
+                                     {maker_pub: maker_priv}, fee_rate=5)
+        check("qhtlc swap BTC claim validates locally",
+              claim["validated"] is True)
+        entry = {"txid": ex_fund["txid"], "vout": 0, "value": excal_amt,
+                 "lock": rec["excal"]["lock"], "coinbase": False,
+                 "cb_h": 0, "mature": True}
+        dest_lock = lock_pkh_for_pubkey(dest_pub)
+        ex_claim = swap.build_excal_claim(
+            taker_funded, entry, dest_lock, 1000, secret, None,
+            fork_h + 1, trifold_key=claim_key, registry=reg)
+        check("qhtlc EXCAL claim validates locally (seed key)",
+              ex_claim["validated"] is True)
+        check("qhtlc EXCAL claim burned exactly one claim leaf",
+              claim_key.next_index == 1)
+        check("qhtlc EXCAL claim refuses a wrong secret",
+              _raises_swap(lambda: swap.build_excal_claim(
+                  taker_funded, entry, dest_lock, 1000, bytes(32),
+                  None, fork_h + 1, trifold_key=claim_key,
+                  registry=reg)))
+        wrong_key = TrifoldKey(os.urandom(32), height=6,
+                               state_dir=tmp)
+        check("qhtlc EXCAL claim refuses a seed whose root is not "
+              "the claim root (no leaf burned)",
+              _raises_swap(lambda: swap.build_excal_claim(
+                  taker_funded, entry, dest_lock, 1000, secret, None,
+                  fork_h + 1, trifold_key=wrong_key, registry=reg))
+              and wrong_key.next_index == 0)
+        check("qhtlc EXCAL claim refuses an ECDSA key in place of "
+              "the Trifold key",
+              _raises_swap(lambda: swap.build_excal_claim(
+                  taker_funded, entry, dest_lock, 1000, secret,
+                  taker_priv, fork_h + 1, registry=reg)))
+        # Refund paths.
+        r_ex = swap.transition(rec, "excal-funded")
+        r_ex["excal"]["funding_txid"] = ex_fund["txid"]
+        r_ex["excal"]["funding_vout"] = 0
+        check("qhtlc EXCAL refund refuses before the fork timeout",
+              _raises_swap(lambda: swap.build_excal_refund(
+                  r_ex, entry, dest_lock, 1000, None,
+                  excal_timeout - 1, trifold_key=refund_key,
+                  registry=reg)))
+        ex_ref = swap.build_excal_refund(
+            r_ex, entry, dest_lock, 1000, None, excal_timeout,
+            trifold_key=refund_key, registry=reg)
+        check("qhtlc EXCAL refund validates at the fork timeout",
+              ex_ref["validated"] is True)
+        check("qhtlc EXCAL refund refuses a wrong refund seed",
+              _raises_swap(lambda: swap.build_excal_refund(
+                  r_ex, entry, dest_lock, 1000, None, excal_timeout,
+                  trifold_key=wrong_key, registry=reg)))
+        # The atomicity rule holds for QHTLC legs too.
+        r2 = swap.transition(swap.transition(rec, "excal-funded"),
+                             "btc-funded")
+        r2f = dict(r2)
+        r2f["btc"] = dict(r2["btc"], funding_txid="ab" * 32)
+        check("qhtlc swap refuses EXCAL refund while the BTC leg is "
+              "still live",
+              _raises_swap(lambda: swap.transition(
+                  r2f, "excal-refunded", role="maker",
+                  fork_height=excal_timeout, btc_height=btc_timeout - 1)))
+
+        # --- the three funded lots verify under the new code -------
+        repo = os.path.dirname(os.path.abspath(__file__))
+        fixture_path = os.path.join(repo, "test_fixtures",
+                                    "lot_funding_raw.json")
+        lots_dir = os.path.join(repo, "self-serve", "lots")
+        lux_pub = bytes.fromhex(
+            "02e8311342cb7accd4edef31462fcda1ef56bfbf7d4f03d3c8872dbec9a1bba1b3")
+        if not (os.path.isfile(fixture_path)
+                and os.path.isdir(lots_dir)):
+            skip("qhtlc lot verification",
+                 "lot fixture or self-serve/lots not present")
+        else:
+            with open(fixture_path) as f:
+                fixture = json.load(f)
+            for lot_name in ("1k", "1excal", "pilot001"):
+                with open(os.path.join(lots_dir,
+                                       lot_name + ".json")) as f:
+                    lot = json.load(f)
+                btc_amt_lot = lot.get("ask_sats") or 100_000_000
+                lot_rec = swap.new_swap(
+                    "taker", lux_pub, taker_pub,
+                    lot["locked_swords"], btc_amt_lot,
+                    lot["timeout"], 977144, 49999, 977000,
+                    secret_hash=bytes.fromhex(lot["secret_hash"]),
+                    excal_leg_kind="qhtlc",
+                    claim_root=bytes.fromhex(lot["claim_root"]),
+                    refund_root=bytes.fromhex(lot["refund_root"]))
+                check(f"qhtlc lot {lot_name}: record reproduces the "
+                      f"lot lock + descriptor",
+                      lot_rec["excal"]["lock"] == lot["lock"]
+                      and lot_rec["excal"]["descriptor"]
+                      == lot["descriptor"])
+                raw = fixture[lot_name]["raw_hex"]
+                found_lot = swap.verify_excal_funding_raw(lot_rec, raw)
+                check(f"qhtlc lot {lot_name}: funding tx verifies "
+                      f"(block {lot['funding_block']}, vout 0)",
+                      found_lot["txid"] == lot["funding_txid"]
+                      and found_lot["vout"] == 0)
+
+        # --- CLI: taker flow for a synthetic QHTLC lot ------------
+        pwfile = os.path.join(tmp, "pw.txt")
+        with open(pwfile, "w") as f:
+            f.write("swap-qhtlc-test-passphrase\n")
+        os.chmod(pwfile, 0o600)
+        cli = [sys.executable, "-m", "excalibur_wallet"]
+
+        def run_cli(datadir, *args):
+            return subprocess.run(
+                cli + ["--datadir", datadir, "--passphrase-file",
+                       pwfile] + list(args), capture_output=True,
+                text=True, timeout=300,
+                cwd=os.path.dirname(os.path.abspath(__file__)))
+
+        def import_legacy(datadir, priv):
+            node_file = os.path.join(tmp, f"node-q-{priv:x}.json")
+            pub = keys.priv_to_pub_compressed(priv)
+            with open(node_file, "w") as f:
+                json.dump({"priv": f"{priv:064x}", "pub": pub.hex()}, f)
+            r = run_cli(datadir, "wallet", "import-node", "--wallet",
+                        node_file)
+            return r.returncode == 0
+
+        maker_dir = os.path.join(tmp, "maker")
+        taker_dir = os.path.join(tmp, "taker")
+        check("cli qhtlc swap: maker wallet imports the maker key",
+              import_legacy(maker_dir, maker_priv))
+        check("cli qhtlc swap: taker wallet imports the taker key",
+              import_legacy(taker_dir, taker_priv))
+        create_args = ["--counterparty-pubkey", taker_pub.hex(),
+                       "--excal-amount", str(excal_amt),
+                       "--btc-amount", str(btc_amt),
+                       "--excal-timeout", str(excal_timeout),
+                       "--btc-timeout", str(btc_timeout),
+                       "--fork-height", str(fork_h),
+                       "--btc-height", str(btc_h),
+                       "--excal-leg", "qhtlc",
+                       "--claim-root", claim_key.root.hex(),
+                       "--refund-root", refund_key.root.hex()]
+        r = run_cli(maker_dir, "wallet", "swap", "create", "--role",
+                    "maker", "--secret", secret.hex(), *create_args)
+        check("cli qhtlc swap create (maker) records a QHTLC leg",
+              r.returncode == 0 and rec["swap_id"] in r.stdout
+              and "QHTLC" in r.stdout)
+        r = run_cli(taker_dir, "wallet", "swap", "create", "--role",
+                    "taker", "--counterparty-pubkey", maker_pub.hex(),
+                    "--secret-hash", secret_hash.hex(),
+                    *create_args[2:])
+        check("cli qhtlc swap create (taker) derives the same swap id",
+              r.returncode == 0 and rec["swap_id"] in r.stdout)
+        r = run_cli(maker_dir, "wallet", "swap", "create", "--role",
+                    "maker", "--secret", secret.hex(),
+                    *create_args[:-4])
+        check("cli qhtlc swap create refuses a QHTLC leg without roots",
+              r.returncode != 0
+              and "claim-root" in (r.stdout + r.stderr))
+        r = run_cli(taker_dir, "wallet", "swap", "note-excal-funded",
+                    "--swap-id", rec["swap_id"], "--raw-hex",
+                    ex_fund["raw_hex"])
+        check("cli qhtlc swap note-excal-funded verifies + records",
+              r.returncode == 0 and "excal-funded" in r.stdout)
+        sig_file = os.path.join(tmp, "btc-fund-q.json")
+        r = run_cli(taker_dir, "wallet", "swap", "fund-btc",
+                    "--swap-id", rec["swap_id"], "--utxo",
+                    f"{_funding_txid('swap-qhtlc-btc')}:0",
+                    "--utxo-value", "60000000", "--utxo-scriptpubkey",
+                    btc.p2wpkh_script_pubkey(taker_pub).hex(),
+                    "--signal-tag", "EXCAL1K",
+                    "--delivery-pubkey", delivery_pub.hex(),
+                    "--save", sig_file)
+        check("cli qhtlc swap fund-btc builds + signals the watcher",
+              r.returncode == 0 and "watcher signal" in r.stdout
+              and btc_fund["txid"] in r.stdout)
+        with open(sig_file) as f:
+            saved = json.load(f)
+        saved_sig = btc.find_watcher_signal(
+            btc.parse_segwit_tx(bytes.fromhex(saved["raw_hex"])),
+            b"EXCAL1K", signal_address=btc.DEFAULT_SIGNAL_ADDRESS,
+            signal_sats=1000)
+        check("cli qhtlc swap fund-btc saved tx carries the signal",
+              saved_sig is not None
+              and saved_sig["delivery_pubkey"] == delivery_pub)
+        r = run_cli(maker_dir, "wallet", "swap", "note-excal-funded",
+                    "--swap-id", rec["swap_id"], "--raw-hex",
+                    ex_fund["raw_hex"])
+        check("cli qhtlc swap note-excal-funded (maker copy) "
+              "verifies + records",
+              r.returncode == 0 and "excal-funded" in r.stdout)
+        r = run_cli(maker_dir, "wallet", "swap", "note-btc-funded",
+                    "--swap-id", rec["swap_id"], "--raw-hex",
+                    btc_fund["raw_hex"])
+        check("cli qhtlc swap note-btc-funded verifies + records",
+              r.returncode == 0 and "btc-funded" in r.stdout)
+        r = run_cli(maker_dir, "wallet", "swap", "claim-btc",
+                    "--swap-id", rec["swap_id"], "--secret",
+                    secret.hex(), "--dest-address",
+                    btc.p2wpkh_address(dest_pub))
+        check("cli qhtlc swap claim-btc builds + signs",
+              r.returncode == 0 and claim["txid"] in r.stdout)
+        r = run_cli(taker_dir, "wallet", "swap", "note-btc-claimed",
+                    "--swap-id", rec["swap_id"], "--raw-hex",
+                    claim["raw_hex"])
+        check("cli qhtlc swap note-btc-claimed reveals the secret",
+              r.returncode == 0 and secret.hex() in r.stdout)
+        r = run_cli(taker_dir, "wallet", "swap", "claim-excal",
+                    "--swap-id", rec["swap_id"], "--secret",
+                    secret.hex(), "--dest", dest_lock.hex(), "--utxo",
+                    f"{ex_fund['txid']}:0", "--fork-height",
+                    str(fork_h))
+        check("cli qhtlc swap claim-excal refuses without --claim-seed",
+              r.returncode != 0 and "claim-seed" in (r.stdout + r.stderr))
+        r = run_cli(taker_dir, "wallet", "swap", "claim-excal",
+                    "--swap-id", rec["swap_id"], "--secret",
+                    secret.hex(), "--dest", dest_lock.hex(), "--utxo",
+                    f"{ex_fund['txid']}:0", "--fork-height",
+                    str(fork_h), "--claim-seed", claim_seed.hex())
+        check("cli qhtlc swap claim-excal builds + signs with the "
+              "seed (swap complete)",
+              r.returncode == 0 and "swap complete" in r.stdout
+              and ex_claim["txid"] in r.stdout)
+        r = run_cli(taker_dir, "wallet", "swap", "show", "--swap-id",
+                    rec["swap_id"])
+        check("cli qhtlc swap show reports state complete",
+              r.returncode == 0 and "complete" in r.stdout)
+        # New/changed flags exist on --help.
+        for argv, flag in (
+                (["wallet", "swap", "create", "--help"], "--excal-leg"),
+                (["wallet", "swap", "fund-btc", "--help"],
+                 "--signal-tag"),
+                (["wallet", "swap", "claim-excal", "--help"],
+                 "--claim-seed"),
+                (["wallet", "swap", "refund-excal", "--help"],
+                 "--refund-seed"),
+                (["wallet", "btc-htlc", "lock", "--help"],
+                 "--signal-tag"),
+                (["wallet", "qhtlc", "claim", "--help"], "--claim-seed"),
+                (["wallet", "qhtlc", "refund", "--help"],
+                 "--refund-seed")):
+            r = run_cli(taker_dir, *argv)
+            check(f"cli --help shows {flag} on {' '.join(argv[1:])}",
+                  r.returncode == 0 and flag in r.stdout)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_atomic_swap_qhtlc_regtest():
+    """QHTLC-leg swap end-to-end against a real bitcoind (regtest):
+    the BTC leg funds (with the watcher signal), confirms, and is
+    claimed on the node; the EXCAL leg funds and claims with the
+    claim seed's Trifold key against the fork validator locally. A
+    second swap's BTC leg is refunded on the node after its timeout.
+    Skips when bitcoind is unavailable."""
+    import shutil
+    import time
+    bitcoind = os.path.expanduser(
+        "~/workspace/bitcoin/bitcoin-28.0/bin/bitcoind")
+    bitcoin_cli = os.path.expanduser(
+        "~/workspace/bitcoin/bitcoin-28.0/bin/bitcoin-cli")
+    if not (os.path.isfile(bitcoind) and os.path.isfile(bitcoin_cli)):
+        skip("regtest QHTLC swap end-to-end", "bitcoind not present")
+        return
+    from txscript import lock_pkh_for_pubkey
+    from trifold_lockbox import TrifoldKey
+    from spent_leaf_registry import SpentLeafRegistry
+    maker_priv, taker_priv, dest_priv = 0x3333, 0x2222, 0x4444
+    maker_pub = keys.priv_to_pub_compressed(maker_priv)
+    taker_pub = keys.priv_to_pub_compressed(taker_priv)
+    dest_pub = keys.priv_to_pub_compressed(dest_priv)
+    secret = bytes([5]) * 32
+    secret_hash = hashlib.sha256(secret).digest()
+    fork_h = 50000
+    tmp = tempfile.mkdtemp(prefix="excal-swap-qhtlc-regtest-")
+    datadir = os.path.join(tmp, "regtest")
+    os.makedirs(datadir, exist_ok=True)
+    proc = None
+    try:
+        reg = SpentLeafRegistry(os.path.join(tmp, "spent_registry.json"))
+        claim_seed = os.urandom(32)
+        refund_seed = os.urandom(32)
+        claim_key = TrifoldKey(claim_seed, height=6, state_dir=tmp)
+        refund_key = TrifoldKey(refund_seed, height=6, state_dir=tmp)
+        proc = subprocess.Popen(
+            [bitcoind, "-regtest", f"-datadir={datadir}", "-daemon=0",
+             "-printtoconsole=0", "-fallbackfee=0.00001"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        tip = None
+        for _ in range(60):
+            r = subprocess.run(
+                [bitcoin_cli, "-regtest", f"-datadir={datadir}",
+                 "getblockcount"], capture_output=True, text=True,
+                timeout=30)
+            if r.returncode == 0 and r.stdout.strip().isdigit():
+                tip = int(r.stdout.strip())
+                break
+            time.sleep(1)
+        if tip is None:
+            skip("regtest QHTLC swap end-to-end",
+                 "bitcoind did not start")
+            return
+
+        def cli(*a):
+            return subprocess.run(
+                [bitcoin_cli, "-regtest", f"-datadir={datadir}"]
+                + list(a), capture_output=True, text=True, timeout=120)
+
+        taker_addr = btc.p2wpkh_address(taker_pub, "regtest")
+        dest_addr = btc.p2wpkh_address(dest_pub, "regtest")
+        cli("generatetoaddress", "101", taker_addr)
+        btc_h = int(cli("getblockcount").stdout.strip())
+        btc_timeout = btc_h + 144
+        excal_timeout = fork_h + 2880
+        excal_amt, btc_amt = 50_000_000, 49_999_000
+        maker_rec = swap.new_swap(
+            "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h, secret=secret,
+            network="regtest", excal_leg_kind="qhtlc",
+            claim_root=claim_key.root, refund_root=refund_key.root)
+        taker_rec = swap.new_swap(
+            "taker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h,
+            secret_hash=secret_hash, network="regtest",
+            excal_leg_kind="qhtlc", claim_root=claim_key.root,
+            refund_root=refund_key.root)
+        # EXCAL leg (local fork validation): fund + record.
+        maker_pkh = lock_pkh_for_pubkey(maker_pub)
+        ex_fund = swap.build_excal_funding(
+            maker_rec,
+            [_fake_utxo(_funding_txid("swap-qreg-excal"), 0, 60_000_000,
+                        maker_pkh)],
+            {maker_pkh.hex(): maker_priv}, maker_pkh, fee_rate=1,
+            height=fork_h + 1)
+        check("regtest QHTLC swap EXCAL funding validates locally",
+              ex_fund["validated"] is True)
+        # BTC leg (real node): taker funds from a mature coinbase,
+        # with the watcher signal.
+        unsp = json.loads(cli(
+            "scantxoutset", "start",
+            json.dumps([{"desc": f"addr({taker_addr})"}])).stdout)[
+                "unspents"]
+        unsp = [x for x in unsp if x["height"] <= btc_h - 100]
+        if not unsp:
+            skip("regtest QHTLC swap end-to-end",
+                 "no mature funding UTXO after 101 blocks")
+            return
+        u = min(unsp, key=lambda x: x["height"])
+        delivery_pub = keys.priv_to_pub_compressed(0x7777)
+        btc_fund = swap.build_btc_funding(
+            taker_rec,
+            {"txid": u["txid"], "vout": u["vout"],
+             "value": int(u["amount"] * 100_000_000),
+             "script_pubkey": u["scriptPubKey"]},
+            {taker_pub: taker_priv}, taker_pub, fee_rate=5,
+            network="regtest",
+            signal={"tag": b"EXCAL1K", "delivery_pubkey": delivery_pub})
+        sig = btc.find_watcher_signal(
+            btc.parse_segwit_tx(bytes.fromhex(btc_fund["raw_hex"])),
+            b"EXCAL1K", signal_address=btc.DEFAULT_SIGNAL_ADDRESS,
+            signal_sats=1000)
+        check("regtest QHTLC swap BTC funding carries the signal",
+              sig is not None
+              and sig["delivery_pubkey"] == delivery_pub)
+        r = cli("sendrawtransaction", btc_fund["raw_hex"])
+        check("regtest QHTLC swap BTC funding broadcasts to the node",
+              r.returncode == 0
+              and r.stdout.strip() == btc_fund["txid"])
+        cli("generatetoaddress", "1", dest_addr)
+        btc_vout = next(
+            i for i, o in enumerate(btc_fund["outputs"])
+            if o["script_pubkey"] == taker_rec["btc"]["script_pubkey"])
+        got = json.loads(cli("gettxout", btc_fund["txid"],
+                             str(btc_vout)).stdout)
+        check("regtest QHTLC swap HTLC UTXO is unspent at the P2WSH "
+              "lock",
+              got.get("value") == btc_amt / 100_000_000)
+        # Maker claims the BTC leg on the node (reveals the secret).
+        maker_rec["btc"]["funding_txid"] = btc_fund["txid"]
+        maker_rec["btc"]["funding_vout"] = btc_vout
+        claim = swap.build_btc_claim(
+            maker_rec, secret, btc.p2wpkh_script_pubkey(dest_pub),
+            {maker_pub: maker_priv}, fee_rate=5)
+        r = cli("testmempoolaccept",
+                json.dumps([claim["raw_hex"]]))
+        check("regtest QHTLC swap node accepts the BTC claim",
+              json.loads(r.stdout)[0].get("allowed") is True)
+        r = cli("sendrawtransaction", claim["raw_hex"])
+        check("regtest QHTLC swap BTC claim broadcasts to the node",
+              r.returncode == 0
+              and r.stdout.strip() == claim["txid"])
+        cli("generatetoaddress", "1", dest_addr)
+        got = json.loads(cli("gettxout", claim["txid"], "0").stdout)
+        check("regtest QHTLC swap BTC claim pays the destination "
+              "P2WPKH",
+              got.get("value") is not None)
+        # Taker claims the EXCAL leg with the revealed secret + the
+        # claim seed's key (the watcher-delivered seed path).
+        entry = {"txid": ex_fund["txid"], "vout": 0,
+                 "value": excal_amt,
+                 "lock": maker_rec["excal"]["lock"], "coinbase": False,
+                 "cb_h": 0, "mature": True}
+        seed_key = swap.trifold_key_for_root(
+            claim_seed, claim_key.root, state_dir=tmp)
+        ex_claim = swap.build_excal_claim(
+            taker_rec, entry, lock_pkh_for_pubkey(dest_pub), 1000,
+            secret, None, fork_h + 1, trifold_key=seed_key,
+            registry=reg)
+        check("regtest QHTLC swap EXCAL claim validates locally",
+              ex_claim["validated"] is True)
+        # Second swap: BTC leg refunded on the node after timeout.
+        secret2 = bytes([9]) * 32
+        hash2 = hashlib.sha256(secret2).digest()
+        taker2 = swap.new_swap(
+            "taker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h,
+            secret_hash=hash2, network="regtest",
+            excal_leg_kind="qhtlc", claim_root=claim_key.root,
+            refund_root=refund_key.root)
+        height_now = int(cli("getblockcount").stdout.strip())
+        unsp2 = json.loads(cli(
+            "scantxoutset", "start",
+            json.dumps([{"desc": f"addr({taker_addr})"}])).stdout)[
+                "unspents"]
+        unsp2 = [x for x in unsp2 if x["height"] <= height_now - 100]
+        u2 = min(unsp2, key=lambda x: x["height"])
+        fund2 = swap.build_btc_funding(
+            taker2,
+            {"txid": u2["txid"], "vout": u2["vout"],
+             "value": int(u2["amount"] * 100_000_000),
+             "script_pubkey": u2["scriptPubKey"]},
+            {taker_pub: taker_priv}, taker_pub, fee_rate=5,
+            network="regtest")
+        r = cli("sendrawtransaction", fund2["raw_hex"])
+        check("regtest QHTLC swap second BTC funding broadcasts",
+              r.returncode == 0
+              and r.stdout.strip() == fund2["txid"])
+        cli("generatetoaddress", "1", dest_addr)
+        height_now = int(cli("getblockcount").stdout.strip())
+        if height_now < btc_timeout:
+            cli("generatetoaddress", str(btc_timeout - height_now),
+                dest_addr)
+        taker2["btc"]["funding_txid"] = fund2["txid"]
+        taker2["btc"]["funding_vout"] = 0
+        height_now = int(cli("getblockcount").stdout.strip())
+        refund = swap.build_btc_refund(
+            taker2, btc.p2wpkh_script_pubkey(dest_pub),
+            {taker_pub: taker_priv}, 5, height_now)
+        r = cli("testmempoolaccept", json.dumps([refund["raw_hex"]]))
+        check("regtest QHTLC swap node accepts the BTC refund",
+              json.loads(r.stdout)[0].get("allowed") is True)
+        r = cli("sendrawtransaction", refund["raw_hex"])
+        check("regtest QHTLC swap BTC refund broadcasts to the node",
+              r.returncode == 0
+              and r.stdout.strip() == refund["txid"])
+        # EXCAL refund of the QHTLC leg validates at its timeout.
+        r_ex = swap.transition(maker_rec, "excal-funded")
+        r_ex["excal"]["funding_txid"] = ex_fund["txid"]
+        r_ex["excal"]["funding_vout"] = 0
+        ex_ref = swap.build_excal_refund(
+            r_ex, entry, lock_pkh_for_pubkey(dest_pub), 1000, None,
+            excal_timeout, trifold_key=refund_key, registry=reg)
+        check("regtest QHTLC swap EXCAL refund validates at the "
+              "fork timeout",
+              ex_ref["validated"] is True)
+    finally:
+        if proc is not None:
+            try:
+                subprocess.run(
+                    [bitcoin_cli, "-regtest", f"-datadir={datadir}",
+                     "stop"], capture_output=True, text=True,
+                    timeout=30)
+            except Exception:
+                pass
+            try:
+                proc.wait(timeout=30)
+            except Exception:
+                proc.kill()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     test_bip39()
     test_keys()
@@ -2014,6 +2682,8 @@ def main():
     test_btc_htlc_regtest()
     test_atomic_swap()
     test_atomic_swap_regtest()
+    test_atomic_swap_qhtlc()
+    test_atomic_swap_qhtlc_regtest()
     test_infancy()
     test_cli_broadcast()
     test_cli_smoke()

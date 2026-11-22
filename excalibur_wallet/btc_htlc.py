@@ -574,7 +574,94 @@ def parse_segwit_tx(raw: bytes) -> dict:
             "locktime": locktime, "segwit": segwit}
 
 
-# ---------------------------------------------------------------- BIP143 sighash
+# ---------------------------------------------------------------- watcher signal
+# The offer swap watcher (self-serve/deliver_seed.py) finds a taker's
+# BTC funding tx by a payment to the signal address, then reads the
+# OP_RETURN tag + delivery pubkey from the same tx and publishes the
+# QHTLC claim seed encrypted to that pubkey. A wallet-built funding
+# tx carries no signal unless the caller opts in — without it the
+# watcher never sees the funding and no claim seed is delivered.
+# Signal outputs, in order after the HTLC output:
+#   OP_RETURN (0 sats): push(tag || delivery_pubkey) — tag is the lot
+#     tag (e.g. b"EXCAL1K"); the payload must fit one push byte, so
+#     len(tag) + 33 <= 75 (deliver_seed matches the tag exactly).
+#   1,000 sats to the signal address (P2WPKH; above the dust limit).
+DEFAULT_SIGNAL_ADDRESS = "bc1qj37xg5qmyedwfe70cz0f385cxmf6642kcznjdg"
+WATCHER_SIGNAL_SATS = 1000
+
+
+def build_watcher_signal(tag: bytes, delivery_pubkey: bytes,
+                         signal_address: str = DEFAULT_SIGNAL_ADDRESS,
+                         signal_sats: int = WATCHER_SIGNAL_SATS) -> list:
+    """The two watcher-signal outputs for a BTC funding tx.
+
+    Returns [{"value", "script_pubkey"}, ...] (OP_RETURN, then the
+    signal payment). Raises BtcHtlcError on a bad tag, pubkey,
+    address, or amount. The caller adds these after the HTLC output;
+    the fee is measured over the whole tx by the builder."""
+    if not isinstance(tag, (bytes, bytearray)) or not 1 <= len(tag) <= 42:
+        raise BtcHtlcError(
+            "signal tag must be 1..42 bytes — tag + delivery pubkey "
+            "must fit one OP_RETURN push (<= 75 bytes)")
+    validate_pubkey(bytes(delivery_pubkey), "delivery")
+    if not isinstance(signal_sats, int) or signal_sats < DUST_SATS:
+        raise BtcHtlcError(
+            f"signal payment must be >= {DUST_SATS} sats "
+            f"(got {signal_sats!r})")
+    try:
+        signal_spk = script_pubkey_from_address(signal_address)
+    except BtcHtlcError as e:
+        raise BtcHtlcError(f"bad signal address: {e}")
+    if not (len(signal_spk) == 22 and signal_spk[0] == 0x00
+            and signal_spk[1] == 0x14):
+        raise BtcHtlcError(
+            "signal address must be a P2WPKH address (the watcher "
+            "polls a P2WPKH signal address)")
+    payload = bytes(tag) + bytes(delivery_pubkey)
+    op_return = b"\x6a" + push(payload)
+    return [{"value": 0, "script_pubkey": op_return},
+            {"value": signal_sats, "script_pubkey": signal_spk}]
+
+
+def find_watcher_signal(tx: dict, tag: bytes,
+                        signal_address: str = None,
+                        signal_sats: int = None) -> dict | None:
+    """Find the watcher signal in a parsed tx (parse_segwit_tx shape).
+
+    Returns {"delivery_pubkey", "op_return_vout", "signal_vout"} or
+    None when the tx carries no OP_RETURN output whose payload is
+    exactly tag + a 33-byte pubkey. When signal_address/signal_sats
+    are given, signal_vout is the output paying that many sats to
+    that address (None otherwise); the OP_RETURN match alone is
+    what the watcher keys on."""
+    want_spk = None
+    if signal_address is not None:
+        try:
+            want_spk = script_pubkey_from_address(signal_address)
+        except BtcHtlcError:
+            return None
+    found = None
+    for i, o in enumerate(tx.get("vout", [])):
+        spk = o["script_pubkey"]
+        if len(spk) < 2 or spk[0] != 0x6A:
+            continue
+        data = spk[1:]
+        if not data or data[0] != len(data) - 1:
+            continue
+        payload = data[1:]
+        if len(payload) == len(tag) + 33 and payload[:len(tag)] == tag:
+            found = {"delivery_pubkey": payload[len(tag):],
+                     "op_return_vout": i, "signal_vout": None}
+            break
+    if found is None:
+        return None
+    if want_spk is not None:
+        for i, o in enumerate(tx.get("vout", [])):
+            if o["script_pubkey"] == want_spk and (
+                    signal_sats is None or o["value"] == signal_sats):
+                found["signal_vout"] = i
+                break
+    return found
 def bip143_sighash(tx: dict, input_index: int, script_code: bytes,
                    spent_value: int) -> bytes:
     """BIP143 sighash (SIGHASH_ALL only) for one segwit input.
@@ -960,7 +1047,8 @@ def build_btc_htlc_lock(utxos, pub_to_priv, amount_sats: int,
                         claim_pub: bytes, refund_pub: bytes,
                         secret_hash: bytes, timeout: int,
                         change_pub: bytes, fee_rate: int = 5,
-                        network: str = "mainnet") -> dict:
+                        network: str = "mainnet",
+                        signal: dict = None) -> dict:
     """Build + sign + verify a BTC HTLC funding tx (P2WPKH inputs ->
     P2WSH HTLC output + P2WPKH change).
 
@@ -969,8 +1057,13 @@ def build_btc_htlc_lock(utxos, pub_to_priv, amount_sats: int,
     pub_to_priv: {compressed_pubkey_bytes: priv_int} for the wallet
     keys that may fund. amount_sats is the HTLC output value.
     change_pub: the wallet key taking the change (P2WPKH).
-    Returns the txbuild-style result dict plus the lock, the PSBT
-    (base64, signed + finalized) and the witness script. Raises
+    signal (optional): {"tag", "delivery_pubkey",
+    "signal_address", "signal_sats"} — adds the watcher-signal
+    outputs (OP_RETURN tag + delivery pubkey, then the signal
+    payment) after the HTLC output; the fee is measured over the
+    whole tx, signal outputs included. Returns the txbuild-style
+    result dict plus the lock, the PSBT (base64, signed +
+    finalized), the witness script, and "signal" when given. Raises
     BtcHtlcError on any failure. NEVER broadcasts."""
     _check_fee_rate(fee_rate)
     if amount_sats < DUST_SATS:
@@ -980,6 +1073,19 @@ def build_btc_htlc_lock(utxos, pub_to_priv, amount_sats: int,
                       network)
     htlc_spk = bytes.fromhex(lock["script_pubkey_hex"])
     change_spk = p2wpkh_script_pubkey(change_pub)
+    signal_outputs = []
+    signal_value = 0
+    if signal is not None:
+        try:
+            signal_outputs = build_watcher_signal(
+                signal["tag"], signal["delivery_pubkey"],
+                signal.get("signal_address") or DEFAULT_SIGNAL_ADDRESS,
+                signal.get("signal_sats") or WATCHER_SIGNAL_SATS)
+        except KeyError as e:
+            raise BtcHtlcError(
+                f"watcher signal needs 'tag' and 'delivery_pubkey' "
+                f"(missing {e})")
+        signal_value = sum(o["value"] for o in signal_outputs)
     # Validate + select funding inputs (largest first, like txbuild).
     cands = []
     for u in utxos:
@@ -1008,8 +1114,9 @@ def build_btc_htlc_lock(utxos, pub_to_priv, amount_sats: int,
     # short of fee_rate * vsize.
     def build_tx(fee, with_change):
         vout = [{"value": amount_sats, "script_pubkey": htlc_spk}]
+        vout.extend(signal_outputs)
         if with_change:
-            change = total_in - amount_sats - fee
+            change = total_in - amount_sats - signal_value - fee
             vout.append({"value": change, "script_pubkey": change_spk})
         return {"version": 2,
                 "vin": [{"prev_txid": bytes.fromhex(c["txid"])[::-1],
@@ -1022,16 +1129,16 @@ def build_btc_htlc_lock(utxos, pub_to_priv, amount_sats: int,
 
     t = build_tx(0, True)
     fee = _fee_for(t, fee_rate)
-    change = total_in - amount_sats - fee
+    change = total_in - amount_sats - signal_value - fee
     if change < 0:
         raise BtcHtlcError(
-            f"insufficient funds: need {amount_sats + fee} sats "
-            f"(amount + fee), have {total_in}")
+            f"insufficient funds: need {amount_sats + signal_value + fee} "
+            f"sats (amount + signal + fee), have {total_in}")
     if change >= DUST_SATS:
         t = build_tx(fee, True)
     else:
         # Dust change folds into the fee (txbuild's rule).
-        fee = total_in - amount_sats
+        fee = total_in - amount_sats - signal_value
         t = build_tx(fee, False)
     fee = total_in - sum(o["value"] for o in t["vout"])
     # PSBT flow: unsigned PSBT -> sign EVERY input -> finalize.
@@ -1064,7 +1171,15 @@ def build_btc_htlc_lock(utxos, pub_to_priv, amount_sats: int,
             "network": network, "lock": lock,
             "witness_script_hex": lock["witness_script_hex"],
             "address": lock["address"],
-            "psbt": signed}
+            "psbt": signed,
+            "signal": ({"tag": bytes(signal["tag"]).hex(),
+                        "delivery_pubkey":
+                            bytes(signal["delivery_pubkey"]).hex(),
+                        "signal_address": signal.get(
+                            "signal_address") or DEFAULT_SIGNAL_ADDRESS,
+                        "signal_sats": signal.get(
+                            "signal_sats") or WATCHER_SIGNAL_SATS}
+                       if signal is not None else None)}
 
 
 def _htlc_spend_tx(lock_txid: str, lock_vout: int, lock_value: int,

@@ -37,19 +37,32 @@ separate, explicit, per-tx decision (`wallet broadcast --yes`).
   --network bitcoin` does the unspent + testmempoolaccept checks
   before submit and accepts version-2 / locktime txs (a refund needs
   both). Nothing in this wallet broadcasts without `--yes`.
-- **Atomic swap (EXCAL HTLC + BTC HTLC):** `wallet swap` coordinates
-  the two legs with one shared secret hash and staggered timeouts
-  (BTC leg expires first, EXCAL leg at least 24h later in wall-clock
-  terms — the maker claims BTC, revealing the secret, and the taker
-  then claims EXCAL with it). Swap creation, both fundings, both
-  claims, both refunds, and state tracking in the wallet's "swaps"
-  book (hashes only — the secret is never stored). The EXCAL refund
-  is refused while the BTC leg is still live, so the maker cannot
-  take both legs. Parameters follow the Strange template
-  (0.5 EXCAL <-> 0.5 BTC, BTC tip+144, fork tip+2880) as defaults,
-  not hard-coded amounts. No watcher, no counterparty coordination
-  beyond exchanging raw funding txs (each side verifies the other's
-  funding tx against the swap before recording it).
+- **Atomic swap (EXCAL HTLC/QHTLC + BTC HTLC):** `wallet swap`
+  coordinates the two legs with one shared secret hash and staggered
+  timeouts (BTC leg expires first, EXCAL leg at least 24h later in
+  wall-clock terms — the maker claims BTC, revealing the secret, and
+  the taker then claims EXCAL with it). Swap creation, both fundings,
+  both claims, both refunds, and state tracking in the wallet's
+  "swaps" book (hashes only — the secret is never stored). The EXCAL
+  refund is refused while the BTC leg is still live, so the maker
+  cannot take both legs. The EXCAL leg is HTLC (0x03, ECDSA
+  claim/refund keys) by default, or QHTLC (0x04, Trifold
+  claim/refund roots — `--excal-leg qhtlc` with `--claim-root` /
+  `--refund-root`): a QHTLC record is how the flow takes over the
+  pre-funded QHTLC offer lots, whose claim roots come from the
+  maker's claim seed, delivered encrypted to the taker by the
+  watcher — the taker claims with `--claim-seed` (the wallet never
+  holds the maker's seed). The BTC funding may carry the watcher
+  signal (`--signal-tag TAG --delivery-pubkey HEX` on `wallet swap
+  fund-btc` or `wallet btc-htlc lock`): an OP_RETURN tag + delivery
+  pubkey plus a 1,000-sat payment to the signal address, so the
+  watcher sees the funding and delivers the encrypted claim seed;
+  without it a wallet-built funding tx is invisible to the watcher.
+  Parameters follow the Strange template (0.5 EXCAL <-> 0.5 BTC,
+  BTC tip+144, fork tip+2880) as defaults, not hard-coded amounts.
+  No counterparty coordination beyond exchanging raw funding txs
+  (each side verifies the other's funding tx against the swap
+  before recording it).
 - **Send:** build + sign + verify locally under the full
   spend-and-sign protocol. **Broadcast** is a separate, explicit step
   (`wallet broadcast --file F --network fork|bitcoin --yes`): it
@@ -104,24 +117,24 @@ wallet htlc claim --utxo TXID:VOUT --dest LOCK --secret HEX [--fee N]
 wallet htlc refund --utxo TXID:VOUT --dest LOCK [--fee N]
 wallet btc-htlc show --claim-pubkey HEX --refund-pubkey HEX --secret-hash HEX --timeout H [--network N]
 wallet btc-htlc create --secret HEX --claim-pubkey HEX --refund-pubkey HEX --timeout H [--network N]
-wallet btc-htlc lock --utxo TXID:VOUT --utxo-value S --utxo-scriptpubkey HEX --amount S --claim-pubkey HEX --refund-pubkey HEX --secret-hash HEX --timeout H [--fee-rate N] [--save FILE]
+wallet btc-htlc lock --utxo TXID:VOUT --utxo-value S --utxo-scriptpubkey HEX --amount S --claim-pubkey HEX --refund-pubkey HEX --secret-hash HEX --timeout H [--fee-rate N] [--save FILE] [--signal-tag TAG --delivery-pubkey HEX [--signal-address ADDR] [--signal-sats N]]
 wallet btc-htlc claim --utxo TXID:VOUT --utxo-value S --secret HEX --dest-address bc1q... [--witness-script HEX|--address ADDR] [--fee-rate N] [--save FILE]
 wallet btc-htlc refund --utxo TXID:VOUT --utxo-value S --dest-address bc1q... --btc-height H [--witness-script HEX|--address ADDR] [--fee-rate N] [--save FILE]
-wallet swap create --role maker|taker --counterparty-pubkey HEX --excal-amount SWORDS --btc-amount SATS --excal-timeout F --btc-timeout B --fork-height H --btc-height H [--secret HEX | --secret-hash HEX] [--network N]
+wallet swap create --role maker|taker --counterparty-pubkey HEX --excal-amount SWORDS --btc-amount SATS --excal-timeout F --btc-timeout B --fork-height H --btc-height H [--secret HEX | --secret-hash HEX] [--excal-leg htlc|qhtlc --claim-root HEX --refund-root HEX] [--network N]
 wallet swap show --swap-id ID
 wallet swap list
 wallet swap fund-excal --swap-id ID [--fee-rate N] [--save FILE]
 wallet swap note-excal-funded --swap-id ID --raw-hex HEX
-wallet swap fund-btc --swap-id ID --utxo TXID:VOUT --utxo-value S --utxo-scriptpubkey HEX [--fee-rate N] [--save FILE]
+wallet swap fund-btc --swap-id ID --utxo TXID:VOUT --utxo-value S --utxo-scriptpubkey HEX [--fee-rate N] [--save FILE] [--signal-tag TAG --delivery-pubkey HEX [--signal-address ADDR] [--signal-sats N]]
 wallet swap note-btc-funded --swap-id ID --raw-hex HEX
 wallet swap claim-btc --swap-id ID --secret HEX --dest-address bc1q... [--fee-rate N] [--save FILE]
 wallet swap note-btc-claimed --swap-id ID --raw-hex HEX
-wallet swap claim-excal --swap-id ID --secret HEX --dest LOCKHEX --utxo TXID:VOUT --fork-height H [--fee N]
+wallet swap claim-excal --swap-id ID --secret HEX --dest LOCKHEX --utxo TXID:VOUT --fork-height H [--fee N] [--claim-seed HEX]
 wallet swap note-excal-claimed --swap-id ID --txid TXID
-wallet swap refund-excal --swap-id ID --dest LOCKHEX --utxo TXID:VOUT --fork-height H --btc-height H [--fee N]
+wallet swap refund-excal --swap-id ID --dest LOCKHEX --utxo TXID:VOUT --fork-height H --btc-height H [--fee N] [--refund-seed HEX]
 wallet swap refund-btc --swap-id ID --dest-address bc1q... --btc-height H [--fee-rate N] [--save FILE]
 wallet qhtlc create --secret HEX --claim-root HEX --refund-root HEX --timeout H
-wallet qhtlc claim|refund --utxo TXID:VOUT --dest LOCK [--fee N]
+wallet qhtlc claim|refund --utxo TXID:VOUT --dest LOCK [--fee N] [--claim-seed HEX | --refund-seed HEX]
 wallet pqh address                   Trifold-root PQH address
 wallet pqh spend --utxo TXID:VOUT --dest LOCK [--fee N] --yes
 wallet knot lock|spend ...           TEST-CHAIN ONLY (KNOT staged, not activated)

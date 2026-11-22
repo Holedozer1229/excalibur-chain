@@ -842,10 +842,12 @@ def cmd_wallet_btc_htlc_lock(args):
         change_pub = priv_to_pub_compressed(w.change_priv(idx))
         utxo = {"txid": txid, "vout": vout, "value": args.utxo_value,
                 "script_pubkey": args.utxo_scriptpubkey}
+        signal = _btc_signal_args(args)
         res = btc_htlc_mod.build_btc_htlc_lock(
             [utxo], _btc_pub_to_priv(w), args.amount, claim_pub,
             refund_pub, secret_hash, args.timeout, change_pub,
-            fee_rate=args.fee_rate, network=args.network)
+            fee_rate=args.fee_rate, network=args.network,
+            signal=signal)
     except BtcHtlcError as e:
         raise SystemExit(f"btc-htlc lock refused: {e}")
     w.next_change(pw)  # advance the change counter on success only
@@ -865,6 +867,7 @@ def cmd_wallet_btc_htlc_lock(args):
               f"--yes`")
     print(f"BTC HTLC funded: {res['address']} ({args.network})")
     print(f"timeout (refund at BTC height >=): {args.timeout}")
+    _print_btc_signal(res)
     _print_btc_tx_result(res)
 
 
@@ -1028,7 +1031,11 @@ def _swap_print(rec):
     print(f"taker: {rec['taker_pubkey']}")
     print(f"timeouts: EXCAL fork {rec['excal_timeout']} / "
           f"BTC {rec['btc_timeout']}")
-    print(f"EXCAL leg: lock {rec['excal']['lock']}")
+    leg_kind = rec.get("excal_leg_kind", "htlc")
+    print(f"EXCAL leg ({leg_kind.upper()}): lock {rec['excal']['lock']}")
+    if leg_kind == "qhtlc":
+        print(f"  claim root: {rec['excal']['claim_root']}")
+        print(f"  refund root: {rec['excal']['refund_root']}")
     print(f"  funding: {rec['excal']['funding_txid']}:"
           f"{rec['excal']['funding_vout']}  "
           f"claim: {rec['excal']['claim_txid']}  "
@@ -1042,14 +1049,67 @@ def _swap_print(rec):
 
 def _swap_record_htlc_lock(w, pw, rec):
     """Also record the EXCAL leg in the locks book (if absent) so
-    `wallet htlc` can see the same lock the swap tracks."""
+    `wallet htlc` / `wallet qhtlc` can see the same lock the swap
+    tracks. The recorded kind follows the leg kind."""
     if w.find_lock(rec["excal"]["lock"]) is None:
-        w.record_lock(
-            {"kind": "htlc", "lock": rec["excal"]["lock"],
-             "descriptor": rec["excal"]["descriptor"],
-             "timeout": rec["excal_timeout"],
-             "claim_pubkey": rec["taker_pubkey"],
-             "refund_pubkey": rec["maker_pubkey"]}, pw)
+        if rec.get("excal_leg_kind", "htlc") == "qhtlc":
+            w.record_lock(
+                {"kind": "qhtlc", "lock": rec["excal"]["lock"],
+                 "descriptor": rec["excal"]["descriptor"],
+                 "timeout": rec["excal_timeout"],
+                 "claim_root": rec["excal"]["claim_root"],
+                 "refund_root": rec["excal"]["refund_root"]}, pw)
+        else:
+            w.record_lock(
+                {"kind": "htlc", "lock": rec["excal"]["lock"],
+                 "descriptor": rec["excal"]["descriptor"],
+                 "timeout": rec["excal_timeout"],
+                 "claim_pubkey": rec["taker_pubkey"],
+                 "refund_pubkey": rec["maker_pubkey"]}, pw)
+
+
+def _btc_signal_args(args):
+    """The watcher-signal dict for a BTC funding build, or None.
+
+    Opt-in: --signal-tag is what turns it on (with --delivery-pubkey
+    required). The OP_RETURN carries tag + delivery pubkey and a
+    1,000-sat payment goes to the signal address, so the swap
+    watcher sees the funding and delivers the encrypted claim seed.
+    Without it, a wallet-built funding tx is invisible to the
+    watcher — fine for a fresh HTLC swap, fatal for a QHTLC lot."""
+    if not getattr(args, "signal_tag", None):
+        return None
+    if not getattr(args, "delivery_pubkey", None):
+        raise SystemExit("watcher signal needs --delivery-pubkey HEX "
+                         "(the taker's fresh delivery pubkey) with "
+                         "--signal-tag")
+    try:
+        delivery_pub = bytes.fromhex(args.delivery_pubkey)
+    except ValueError:
+        raise SystemExit("watcher signal: --delivery-pubkey must be hex")
+    if len(delivery_pub) != 33:
+        raise SystemExit("watcher signal: --delivery-pubkey must be "
+                         "33 bytes (compressed pubkey)")
+    return {"tag": args.signal_tag.encode(),
+            "delivery_pubkey": delivery_pub,
+            "signal_address": getattr(
+                args, "signal_address", None)
+            or btc_htlc_mod.DEFAULT_SIGNAL_ADDRESS,
+            "signal_sats": getattr(args, "signal_sats", 1000) or 1000}
+
+
+def _print_btc_signal(res):
+    """Print the watcher signal a funding tx carries (if any)."""
+    sig = res.get("signal") if isinstance(res, dict) else None
+    if not sig:
+        return
+    print(f"watcher signal: OP_RETURN tag "
+          f"{bytes.fromhex(sig['tag']).decode(errors='replace')} + "
+          f"delivery pubkey {sig['delivery_pubkey']}; "
+          f"{sig['signal_sats']} sats to {sig['signal_address']}")
+    print("Post the witness script for this funding on the lot's "
+          "GitHub issue — the watcher verifies it, then publishes "
+          "the encrypted claim seed.")
 
 
 def _swap_network(args, rec):
@@ -1096,11 +1156,22 @@ def cmd_wallet_swap_create(args):
                 raise SystemExit("swap create (taker): --secret-hash "
                                  "is required")
             secret_hash = _swap_hex(args.secret_hash, "secret-hash", 32)
+        leg_kind = getattr(args, "excal_leg", "htlc")
+        claim_root = refund_root = None
+        if leg_kind == "qhtlc":
+            if not args.claim_root or not args.refund_root:
+                raise SystemExit("swap create (QHTLC leg): --claim-root "
+                                 "and --refund-root are required (32-byte "
+                                 "Trifold roots, hex)")
+            claim_root = _swap_hex(args.claim_root, "claim-root", 32)
+            refund_root = _swap_hex(args.refund_root, "refund-root", 32)
         rec = swap_mod.new_swap(
             args.role, maker_pub, taker_pub, args.excal_amount,
             args.btc_amount, args.excal_timeout, args.btc_timeout,
             args.fork_height, args.btc_height, secret=secret,
-            secret_hash=secret_hash, network=args.network)
+            secret_hash=secret_hash, network=args.network,
+            excal_leg_kind=leg_kind, claim_root=claim_root,
+            refund_root=refund_root)
     except SwapError as e:
         raise SystemExit(f"swap create refused: {e}")
     if w.find_swap(rec["swap_id"]) is not None:
@@ -1218,9 +1289,11 @@ def cmd_wallet_swap_fund_btc(args):
         change_pub = priv_to_pub_compressed(w.change_priv(idx))
         utxo = {"txid": txid, "vout": vout, "value": args.utxo_value,
                 "script_pubkey": args.utxo_scriptpubkey}
+        signal = _btc_signal_args(args)
         res = swap_mod.build_btc_funding(
             rec, utxo, _btc_pub_to_priv(w), change_pub,
-            fee_rate=args.fee_rate, network=rec["network"])
+            fee_rate=args.fee_rate, network=rec["network"],
+            signal=signal)
     except SwapError as e:
         raise SystemExit(f"swap fund-btc refused: {e}")
     w.next_change(pw)  # advance the change counter on success only
@@ -1244,6 +1317,7 @@ def cmd_wallet_swap_fund_btc(args):
               f"--yes`")
     print(f"BTC leg funded: {res['txid']}:{vout2} "
           f"({rec['btc_amount']:,} sats to {rec['btc']['address']})")
+    _print_btc_signal(res)
     _print_btc_tx_result(res)
 
 
@@ -1321,17 +1395,43 @@ def cmd_wallet_swap_claim_excal(args):
                 f"swap claim-excal: --utxo {txid}:{vout} is not the "
                 f"recorded EXCAL funding "
                 f"{entry['txid']}:{entry['vout']}")
+        kind = rec.get("excal_leg_kind", "htlc")
+        trifold_key = None
         claim_priv = None
-        for pub, priv in _btc_pub_to_priv(w).items():
-            if pub == bytes.fromhex(rec["taker_pubkey"]):
-                claim_priv = priv
-                break
-        if claim_priv is None:
-            raise SystemExit("swap claim-excal: claim key (taker) is "
-                             "not a wallet key")
+        if kind == "qhtlc":
+            # The claim root belongs to the maker's seed, delivered
+            # encrypted by the watcher — NOT to this wallet. The
+            # seed is supplied per claim and never stored.
+            if getattr(args, "claim_seed", None):
+                try:
+                    seed = bytes.fromhex(args.claim_seed)
+                except ValueError:
+                    raise SystemExit("swap claim-excal: --claim-seed "
+                                     "must be hex")
+                trifold_key = swap_mod.trifold_key_for_root(
+                    seed, bytes.fromhex(rec["excal"]["claim_root"]),
+                    state_dir=w.datadir)
+            else:
+                raise SystemExit(
+                    "swap claim-excal (QHTLC leg): --claim-seed is "
+                    "required — the decrypted claim seed from the "
+                    "watcher (the wallet does not hold the maker's "
+                    "seed)")
+        else:
+            if getattr(args, "claim_seed", None):
+                raise SystemExit("swap claim-excal: --claim-seed "
+                                 "applies to QHTLC legs only (this "
+                                 "swap's EXCAL leg is HTLC)")
+            for pub, priv in _btc_pub_to_priv(w).items():
+                if pub == bytes.fromhex(rec["taker_pubkey"]):
+                    claim_priv = priv
+                    break
+            if claim_priv is None:
+                raise SystemExit("swap claim-excal: claim key (taker) is "
+                                 "not a wallet key")
         res = swap_mod.build_excal_claim(
             rec, entry, dest_lock, args.fee, secret, claim_priv,
-            args.fork_height + 1)
+            args.fork_height + 1, trifold_key=trifold_key)
     except SwapError as e:
         raise SystemExit(f"swap claim-excal refused: {e}")
     _swap_commit(w, pw, rec, "complete", role="taker", leg="excal",
@@ -1365,17 +1465,39 @@ def cmd_wallet_swap_refund_excal(args):
                 f"swap refund-excal: --utxo {txid}:{vout} is not the "
                 f"recorded EXCAL funding "
                 f"{entry['txid']}:{entry['vout']}")
+        kind = rec.get("excal_leg_kind", "htlc")
+        trifold_key = None
         refund_priv = None
-        for pub, priv in _btc_pub_to_priv(w).items():
-            if pub == bytes.fromhex(rec["maker_pubkey"]):
-                refund_priv = priv
-                break
-        if refund_priv is None:
-            raise SystemExit("swap refund-excal: refund key (maker) "
-                             "is not a wallet key")
+        if kind == "qhtlc":
+            if getattr(args, "refund_seed", None):
+                try:
+                    seed = bytes.fromhex(args.refund_seed)
+                except ValueError:
+                    raise SystemExit("swap refund-excal: --refund-seed "
+                                     "must be hex")
+                trifold_key = swap_mod.trifold_key_for_root(
+                    seed, bytes.fromhex(rec["excal"]["refund_root"]),
+                    state_dir=w.datadir)
+            else:
+                raise SystemExit(
+                    "swap refund-excal (QHTLC leg): --refund-seed is "
+                    "required — the maker's refund seed (the wallet "
+                    "does not hold it)")
+        else:
+            if getattr(args, "refund_seed", None):
+                raise SystemExit("swap refund-excal: --refund-seed "
+                                 "applies to QHTLC legs only (this "
+                                 "swap's EXCAL leg is HTLC)")
+            for pub, priv in _btc_pub_to_priv(w).items():
+                if pub == bytes.fromhex(rec["maker_pubkey"]):
+                    refund_priv = priv
+                    break
+            if refund_priv is None:
+                raise SystemExit("swap refund-excal: refund key (maker) "
+                                 "is not a wallet key")
         res = swap_mod.build_excal_refund(
             rec, entry, dest_lock, args.fee, refund_priv,
-            args.fork_height + 1)
+            args.fork_height + 1, trifold_key=trifold_key)
     except SwapError as e:
         raise SystemExit(f"swap refund-excal refused: {e}")
     _swap_commit(w, pw, rec, "excal-refunded", role="maker",
@@ -1446,7 +1568,26 @@ def _qhtlc_spend(args, mode):
         dest_lock = parse_lock_hex(args.dest)
         desc = bytes.fromhex(rec["descriptor"])
         height = entry["tip_height"] + 1
-        key = w.trifold_key()
+        # The signing key: the wallet's own Trifold key by default,
+        # or a Trifold key from an externally supplied seed (a
+        # claim/refund seed delivered by the swap watcher for a lot
+        # whose roots are not this wallet's — the seed is used for
+        # this one spend and never stored).
+        seed_arg = (args.claim_seed if mode == "claim"
+                    else args.refund_seed)
+        if seed_arg:
+            try:
+                seed = bytes.fromhex(seed_arg)
+            except ValueError:
+                raise SystemExit(f"qhtlc {mode}: --{mode}-seed must "
+                                 f"be hex")
+            from txscript import parse_qhtlc_descriptor
+            want_root = parse_qhtlc_descriptor(desc)[
+                "claim_root" if mode == "claim" else "refund_root"]
+            key = swap_mod.trifold_key_for_root(
+                seed, want_root, state_dir=w.datadir)
+        else:
+            key = w.trifold_key()
         if mode == "claim":
             secret = bytes.fromhex(args.secret)
             res = build_qhtlc_claim(entry, dest_lock, args.fee, secret,
@@ -1454,7 +1595,7 @@ def _qhtlc_spend(args, mode):
         else:
             res = build_qhtlc_refund(entry, dest_lock, args.fee, desc,
                                      key, height)
-    except (ValueError, TxBuildError, RuntimeError) as e:
+    except (ValueError, TxBuildError, RuntimeError, SwapError) as e:
         raise SystemExit(f"qhtlc {mode} refused: {e}")
     _print_tx_result(res)
 
@@ -1821,6 +1962,24 @@ def build_parser():
         p.set_defaults(fn=fn)
         return p
 
+    def add_signal_args(p):
+        """Watcher-signal options for a BTC funding build (--signal-tag
+        turns the signal on; the OP_RETURN carries tag + delivery
+        pubkey and 1,000 sats go to the signal address, so the swap
+        watcher sees the funding)."""
+        p.add_argument("--signal-tag",
+                       help="lot tag for the watcher signal (e.g. "
+                       "EXCAL1K) — opts the funding tx into the "
+                       "watcher signal; needs --delivery-pubkey")
+        p.add_argument("--delivery-pubkey",
+                       help="taker's fresh delivery pubkey hex "
+                       "(33 bytes, compressed) for the watcher signal")
+        p.add_argument("--signal-address", default=None,
+                       help="watcher signal address (default: the "
+                       "offer watcher's signal address)")
+        p.add_argument("--signal-sats", type=int, default=1000,
+                       help="signal payment in sats (default 1000)")
+
     # wallet
     w = add("wallet", None, "wallet commands")
     ws = w.add_subparsers(dest="wcmd", required=True)
@@ -1969,6 +2128,7 @@ def build_parser():
                    choices=["mainnet", "testnet", "regtest", "signet"])
     p.add_argument("--save", help="write the signed tx JSON (0600) for "
                    "`wallet broadcast --file`")
+    add_signal_args(p)
     p = badd("claim", cmd_wallet_btc_htlc_claim,
              "claim a BTC HTLC (secret + claim key, NO broadcast)")
     p.add_argument("--utxo", required=True, help="HTLC TXID:VOUT")
@@ -2010,7 +2170,7 @@ def build_parser():
     p.add_argument("--save", help="write the signed tx JSON (0600)")
 
     p = wadd("swap", None,
-             "Cross-chain atomic swap (EXCAL HTLC + BTC HTLC)")
+             "Cross-chain atomic swap (EXCAL HTLC/QHTLC + BTC HTLC)")
     ss = p.add_subparsers(dest="scmd", required=True)
 
     def sadd(name, fn, help_):
@@ -2042,6 +2202,16 @@ def build_parser():
                    "generated if omitted — shown once, never stored)")
     p.add_argument("--secret-hash", help="32-byte secret hash hex "
                    "(taker only — the maker's published hash)")
+    p.add_argument("--excal-leg", default="htlc",
+                   choices=["htlc", "qhtlc"],
+                   help="EXCAL leg kind: HTLC (ECDSA claim/refund "
+                   "keys, default) or QHTLC (Trifold claim/refund "
+                   "roots — needs --claim-root/--refund-root; "
+                   "how the flow takes over the funded QHTLC lots)")
+    p.add_argument("--claim-root", help="32-byte Trifold claim root "
+                   "hex (QHTLC leg only)")
+    p.add_argument("--refund-root", help="32-byte Trifold refund root "
+                   "hex (QHTLC leg only)")
     p.add_argument("--network", default="mainnet",
                    choices=["mainnet", "testnet", "regtest", "signet"])
     p = sadd("show", cmd_wallet_swap_show,
@@ -2078,6 +2248,7 @@ def build_parser():
     p.add_argument("--fee-rate", type=int, default=5,
                    help="sats per vbyte (default 5)")
     p.add_argument("--save", help="write the signed tx JSON (0600)")
+    add_signal_args(p)
     p = sadd("note-btc-funded", cmd_wallet_swap_note_btc_funded,
              "record + verify a BTC funding tx (taker's own, or the "
              "counterparty's for the maker)")
@@ -2120,6 +2291,10 @@ def build_parser():
     p.add_argument("--fork-height", type=int, required=True,
                    help="current fork tip height (validation height is "
                    "tip+1)")
+    p.add_argument("--claim-seed",
+                   help="32-byte claim seed hex (QHTLC leg only — "
+                   "the decrypted claim seed from the watcher; "
+                   "never stored)")
     p = sadd("note-excal-claimed", cmd_wallet_swap_note_excal_claimed,
              "maker: record the taker's EXCAL claim (swap complete)")
     p.add_argument("--swap-id", required=True)
@@ -2141,6 +2316,9 @@ def build_parser():
     p.add_argument("--btc-height", type=int, required=True,
                    help="current Bitcoin tip height (must be >= the BTC "
                    "timeout when the BTC leg was funded)")
+    p.add_argument("--refund-seed",
+                   help="32-byte refund seed hex (QHTLC leg only — "
+                   "the maker's refund seed; never stored)")
     p = sadd("refund-btc", cmd_wallet_swap_refund_btc,
              "taker: refund the BTC leg after its timeout "
              "(NO broadcast)")
@@ -2174,11 +2352,19 @@ def build_parser():
     p.add_argument("--dest", required=True)
     p.add_argument("--secret", required=True)
     p.add_argument("--fee", type=int, default=1000)
+    p.add_argument("--claim-seed",
+                   help="32-byte claim seed hex — the Trifold key is "
+                   "derived from this seed instead of the wallet's "
+                   "own key (externally-rooted lots)")
     p = qadd("refund", lambda a: _qhtlc_spend(a, "refund"),
              "refund a QHTLC (Trifold, timeout)")
     p.add_argument("--utxo", required=True, help="TXID:VOUT")
     p.add_argument("--dest", required=True)
     p.add_argument("--fee", type=int, default=1000)
+    p.add_argument("--refund-seed",
+                   help="32-byte refund seed hex — the Trifold key is "
+                   "derived from this seed instead of the wallet's "
+                   "own key (externally-rooted lots)")
 
     p = wadd("pqh", None, "PQH (Trifold) wallet key")
     ps = p.add_subparsers(dest="pcmd", required=True)
