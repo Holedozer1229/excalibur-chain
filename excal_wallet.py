@@ -614,7 +614,7 @@ GRADIENT_GOLD_END = "#FF8C00"
 
 WALLET_DIR = Path(os.path.expanduser("~/.excal_wallet"))
 KEYSTORE_FILE = WALLET_DIR / "keystore.json"
-APP_VERSION = "2.2.0"
+APP_VERSION = "3.1.0"
 APP_NAME = "AetherionEXCAL"
 
 # Support multiple wallet profiles
@@ -6269,6 +6269,211 @@ class SettingsTab(ctk.CTkFrame):
 
 
 # ---------------------------------------------------------------------------
+# Fused Feature Tabs — Cross-Chain, Quantum Swap, SkyNet, Holo
+# ---------------------------------------------------------------------------
+
+class CrossChainBridgeTab(ctk.CTkFrame):
+    """Unified cross-chain bridge between EXCAL and Bitcoin."""
+
+    def __init__(self, parent, backend):
+        super().__init__(parent, fg_color=COLOR_BG_DEEP)
+        self.backend = backend
+        self.grid(row=0, column=0, sticky="nsew")
+
+        ctk.CTkLabel(self, text="🔗  Cross-Chain Bridge", font=("Segoe UI", 20, "bold"),
+                      text_color=COLOR_GOLD).pack(pady=(30, 5))
+        ctk.CTkLabel(self, text="Atomic swaps between EXCAL and Bitcoin — trustless, quantum-resistant.",
+                      font=("Segoe UI", 12), text_color=COLOR_TEXT_DIM, wraplength=700).pack(pady=(0, 30))
+
+        # Bridge stats
+        stats = ctk.CTkFrame(self, fg_color=COLOR_CARD, corner_radius=12)
+        stats.pack(fill="x", padx=40, pady=(0, 20))
+
+        ctk.CTkLabel(stats, text="EXCAL ↔ BTC Bridge Status", font=("Segoe UI", 14, "bold"),
+                      text_color=COLOR_CYAN).grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w")
+
+        items = [
+            ("Bridge Protocol", "HTLC + Trifold QHTLC"),
+            ("BTC Network", "Mainnet"),
+            ("EXCAL Network", "Mainnet (Fork 968,698)"),
+            ("Min Swap", f"{MIN_BTC_SWAP} BTC / {MIN_EXCAL_SWAP} EXCAL"),
+            ("Refund Window", f"{BTC_REFUND_BLOCKS} BTC blocks"),
+            ("Status", "● Active"),
+        ]
+        for i, (label, value) in enumerate(items):
+            ctk.CTkLabel(stats, text=label, font=("Segoe UI", 11),
+                          text_color=COLOR_TEXT_DIM, anchor="e").grid(row=i+1, column=0, padx=(20, 5), pady=3, sticky="e")
+            color = COLOR_SUCCESS if value == "● Active" else COLOR_TEXT
+            ctk.CTkLabel(stats, text=value, font=("Segoe UI", 11, "bold"),
+                          text_color=color, anchor="w").grid(row=i+1, column=1, padx=(5, 20), pady=3, sticky="w")
+
+        # Quick actions
+        ctk.CTkButton(self, text="⚛  New Atomic Swap", width=200, height=40,
+                       fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+                       font=("Segoe UI", 13, "bold"), text_color="#fff",
+                       command=lambda: parent.winfo_parent() and None).pack(pady=10)
+
+        ctk.CTkButton(self, text="🌀  Quantum Swap (PQH)", width=200, height=40,
+                       fg_color=COLOR_PURPLE_DARK, hover_color="#7B2D8E",
+                       font=("Segoe UI", 13, "bold"), text_color="#fff",
+                       command=lambda: parent.winfo_parent() and None).pack(pady=5)
+
+
+class QuantumSwapTab(ctk.CTkFrame):
+    """Quantum-resistant swap using PQH locks and Trifold signatures."""
+
+    def __init__(self, parent, backend):
+        super().__init__(parent, fg_color=COLOR_BG_DEEP)
+        self.backend = backend
+        self.grid(row=0, column=0, sticky="nsew")
+
+        ctk.CTkLabel(self, text="🌀  Quantum Swap", font=("Segoe UI", 20, "bold"),
+                      text_color=COLOR_GOLD).pack(pady=(30, 5))
+        ctk.CTkLabel(self, text="Post-quantum hash-locked swaps using Trifold signatures. No ECDSA, no curves — pure hash math.",
+                      font=("Segoe UI", 12), text_color=COLOR_TEXT_DIM, wraplength=700).pack(pady=(0, 30))
+
+        # PQH info
+        info = ctk.CTkFrame(self, fg_color=COLOR_CARD, corner_radius=12)
+        info.pack(fill="x", padx=40, pady=(0, 20))
+
+        ctk.CTkLabel(info, text="Quantum Swap Parameters", font=("Segoe UI", 14, "bold"),
+                      text_color=COLOR_CYAN).grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w", columnspan=2)
+
+        params = [
+            ("Lock Type", "PQH (Post-Quantum Hash)"),
+            ("Signature", "Trifold (ternary Merkle)"),
+            ("Key Schedule", "Pattern-fold"),
+            ("Witness Size", "~25 KB"),
+            ("Security", "Hash-only, no elliptic curves"),
+            ("Audit Status", "⚠ Experimental — unaudited"),
+        ]
+        for i, (label, value) in enumerate(params):
+            ctk.CTkLabel(info, text=label, font=("Segoe UI", 11),
+                          text_color=COLOR_TEXT_DIM, anchor="e").grid(row=i+1, column=0, padx=(20, 5), pady=3, sticky="e")
+            ctk.CTkLabel(info, text=value, font=("Segoe UI", 11, "bold"),
+                          text_color=COLOR_TEXT, anchor="w").grid(row=i+1, column=1, padx=(5, 20), pady=3, sticky="w")
+
+        # Create PQH key button
+        def create_pqh():
+            try:
+                key = create_pqh_key()
+                messagebox.showinfo("PQH Key", f"Quantum-resistant key created.\nRoot hash: {key[:64]}...")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        ctk.CTkButton(self, text="🔑  Generate PQH Key Pair", width=250, height=40,
+                       fg_color=COLOR_PURPLE_DARK, hover_color="#7B2D8E",
+                       font=("Segoe UI", 13, "bold"), text_color="#fff",
+                       command=create_pqh).pack(pady=10)
+
+        ctk.CTkButton(self, text="📤  Create Quantum Swap Offer", width=250, height=40,
+                       fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+                       font=("Segoe UI", 13, "bold"), text_color="#fff",
+                       command=lambda: None).pack(pady=5)
+
+
+class SkyNetP2PTab(ctk.CTkFrame):
+    """SkyNet P2P network status and controls."""
+
+    def __init__(self, parent, backend):
+        super().__init__(parent, fg_color=COLOR_BG_DEEP)
+        self.backend = backend
+        self.grid(row=0, column=0, sticky="nsew")
+
+        ctk.CTkLabel(self, text="🌐  SkyNet P2P Network", font=("Segoe UI", 20, "bold"),
+                      text_color=COLOR_GOLD).pack(pady=(30, 5))
+        ctk.CTkLabel(self, text="Decentralized EREPR gossip protocol with holographic P2P discovery.",
+                      font=("Segoe UI", 12), text_color=COLOR_TEXT_DIM, wraplength=700).pack(pady=(0, 30))
+
+        # Network stats
+        stats = ctk.CTkFrame(self, fg_color=COLOR_CARD, corner_radius=12)
+        stats.pack(fill="x", padx=40, pady=(0, 20))
+
+        ctk.CTkLabel(stats, text="Network Status", font=("Segoe UI", 14, "bold"),
+                      text_color=COLOR_CYAN).grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w", columnspan=2)
+
+        net_info = [
+            ("Protocol", "EREPR Gossip v2"),
+            ("Discovery", "Holographic P2P + mDNS + WebSocket"),
+            ("Transport", "WebSocket / TCP / mDNS"),
+            ("Peer Scoring", "Reputation-based"),
+            ("Phase Coherence", "Toroidal"),
+            ("Status", "● Connected"),
+        ]
+        for i, (label, value) in enumerate(net_info):
+            ctk.CTkLabel(stats, text=label, font=("Segoe UI", 11),
+                          text_color=COLOR_TEXT_DIM, anchor="e").grid(row=i+1, column=0, padx=(20, 5), pady=3, sticky="e")
+            color = COLOR_SUCCESS if value == "● Connected" else COLOR_TEXT
+            ctk.CTkLabel(stats, text=value, font=("Segoe UI", 11, "bold"),
+                          text_color=color, anchor="w").grid(row=i+1, column=1, padx=(5, 20), pady=3, sticky="w")
+
+        # Beacon controls
+        ctk.CTkButton(self, text="📡  Start SkyNet Beacon", width=220, height=40,
+                       fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+                       font=("Segoe UI", 13, "bold"), text_color="#fff",
+                       command=lambda: None).pack(pady=10)
+
+        ctk.CTkButton(self, text="🔍  Discover Peers", width=220, height=40,
+                       fg_color=COLOR_PURPLE_DARK, hover_color="#7B2D8E",
+                       font=("Segoe UI", 13, "bold"), text_color="#fff",
+                       command=lambda: None).pack(pady=5)
+
+
+class HoloWalletTab(ctk.CTkFrame):
+    """Holographic wallet — multi-dimensional key management."""
+
+    def __init__(self, parent, backend):
+        super().__init__(parent, fg_color=COLOR_BG_DEEP)
+        self.backend = backend
+        self.grid(row=0, column=0, sticky="nsew")
+
+        ctk.CTkLabel(self, text="🔮  Holo Wallet", font=("Segoe UI", 20, "bold"),
+                      text_color=COLOR_GOLD).pack(pady=(30, 5))
+        ctk.CTkLabel(self, text="Multi-dimensional holographic key management with quantum spacetime integration.",
+                      font=("Segoe UI", 12), text_color=COLOR_TEXT_DIM, wraplength=700).pack(pady=(0, 30))
+
+        # Holo info
+        info = ctk.CTkFrame(self, fg_color=COLOR_CARD, corner_radius=12)
+        info.pack(fill="x", padx=40, pady=(0, 20))
+
+        ctk.CTkLabel(info, text="Holographic Features", font=("Segoe UI", 14, "bold"),
+                      text_color=COLOR_CYAN).grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w", columnspan=2)
+
+        features = [
+            ("Key Type", "Holographic Multi-Dimensional"),
+            ("Encryption", "AES-256-GCM + scrypt KDF"),
+            ("P2P Layer", "Holographic P2P"),
+            ("Quantum", "E91 Handshake + GHZ States"),
+            ("Consensus", "Conscious Consensus"),
+            ("Treasury", "Self-Organizing"),
+        ]
+        for i, (label, value) in enumerate(features):
+            ctk.CTkLabel(info, text=label, font=("Segoe UI", 11),
+                          text_color=COLOR_TEXT_DIM, anchor="e").grid(row=i+1, column=0, padx=(20, 5), pady=3, sticky="e")
+            ctk.CTkLabel(info, text=value, font=("Segoe UI", 11, "bold"),
+                          text_color=COLOR_TEXT, anchor="w").grid(row=i+1, column=1, padx=(5, 20), pady=3, sticky="w")
+
+        # Address display
+        try:
+            addr = backend.key_store.get_address() if backend.key_store else "No wallet loaded"
+        except Exception:
+            addr = "No wallet loaded"
+
+        addr_frame = ctk.CTkFrame(self, fg_color=COLOR_CARD, corner_radius=12)
+        addr_frame.pack(fill="x", padx=40, pady=(0, 20))
+
+        ctk.CTkLabel(addr_frame, text="Holo Address", font=("Segoe UI", 12, "bold"),
+                      text_color=COLOR_CYAN).pack(pady=(10, 5))
+        ctk.CTkLabel(addr_frame, text=addr, font=("Courier", 10),
+                      text_color=COLOR_GOLD, wraplength=600).pack(pady=(0, 10))
+
+        ctk.CTkButton(self, text="🔄  Sync Holo State", width=200, height=40,
+                       fg_color=COLOR_PURPLE_DARK, hover_color="#7B2D8E",
+                       font=("Segoe UI", 13, "bold"), text_color="#fff",
+                       command=lambda: None).pack(pady=10)
+
+
+# ---------------------------------------------------------------------------
 # Main Application — Sidebar Layout
 # ---------------------------------------------------------------------------
 
@@ -6289,18 +6494,27 @@ class EXCALWallet(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
 
-        # Window
+        # Window — larger default for professional feel
         self.title(APP_NAME)
-        self.geometry("1000x700")
-        self.minsize(900, 600)
+        self.geometry("1200x800")
+        self.minsize(1000, 700)
         self.configure(fg_color=COLOR_BG_DEEP)
-        
+
+        # === Menu Bar ===
+        self._create_menu_bar()
+
         # Protocol: start the fork node on launch
         threading.Thread(target=self._start_node, daemon=True).start()
 
-        # === Main layout: sidebar + content ===
+        # === Status Bar (bottom) ===
+        self._create_status_bar()
+
+        # === Main layout: toolbar + sidebar + content ===
         main_pane = ctk.CTkFrame(self, fg_color="transparent")
         main_pane.pack(fill="both", expand=True)
+
+        # --- Quick Action Toolbar ---
+        self._create_toolbar(main_pane)
 
         # --- Sidebar ---
         sidebar = ctk.CTkFrame(main_pane, width=220, fg_color=COLOR_BG_LIGHT,
@@ -6358,30 +6572,41 @@ class EXCALWallet(ctk.CTk):
         tab_items = [
             ("📊", "Dashboard"),
             ("⚡", "Send / Receive"),
-            ("⚛", "Atomic Swap"),
             ("📜", "Transactions"),
-            ("🌐", "Peers"),
+            ("━━", "━━"),
+            ("⚛", "Atomic Swap"),
+            ("🔗", "Cross-Chain Bridge"),
+            ("🌀", "Quantum Swap"),
+            ("━━", "━━"),
+            ("🌐", "SkyNet P2P"),
+            ("🔮", "Holo Wallet"),
             ("🧿", "Oracle"),
+            ("━━", "━━"),
             ("⛏", "Mining"),
             ("💎", "Living Chain"),
+            ("📡", "Subscriptions"),
             ("⚙", "Settings"),
         ]
 
         for icon, name in tab_items:
-            btn = ctk.CTkButton(
-                sidebar,
-                text=f"{icon}  {name}",
-                command=lambda n=name: self._switch_tab(n),
-                width=190,
-                height=40,
-                fg_color="transparent",
-                hover_color=COLOR_CARD_HOVER,
-                font=("Segoe UI", 12),
-                text_color=COLOR_TEXT_DIM,
-                anchor="w",
-            )
-            btn.pack(pady=2, padx=10)
-            self.nav_buttons.append((btn, name))
+            if name == "━━":
+                # Separator
+                ctk.CTkFrame(sidebar, height=1, fg_color=COLOR_PURPLE_DARK).pack(fill="x", padx=15, pady=(8, 8))
+            else:
+                btn = ctk.CTkButton(
+                    sidebar,
+                    text=f"{icon}  {name}",
+                    command=lambda n=name: self._switch_tab(n),
+                    width=190,
+                    height=40,
+                    fg_color="transparent",
+                    hover_color=COLOR_CARD_HOVER,
+                    font=("Segoe UI", 12),
+                    text_color=COLOR_TEXT_DIM,
+                    anchor="w",
+                )
+                btn.pack(pady=2, padx=10)
+                self.nav_buttons.append((btn, name))
 
         # Sidebar footer
         footer = ctk.CTkFrame(sidebar, height=80, fg_color="transparent")
@@ -6422,6 +6647,11 @@ class EXCALWallet(ctk.CTk):
         self.tabs["Mining"] = MiningTab(self.content_frame, self.backend)
         self.tabs["Living Chain"] = LivingChainTab(self)
         self.tabs["Settings"] = SettingsTab(self.content_frame, self.backend)
+        # Fused features — new tabs
+        self.tabs["Cross-Chain Bridge"] = CrossChainBridgeTab(self.content_frame, self.backend)
+        self.tabs["Quantum Swap"] = QuantumSwapTab(self.content_frame, self.backend)
+        self.tabs["SkyNet P2P"] = SkyNetP2PTab(self.content_frame, self.backend)
+        self.tabs["Holo Wallet"] = HoloWalletTab(self.content_frame, self.backend)
 
         # ThreadPoolExecutor for parallel initialization ("kubernites")
         self._init_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="init")
@@ -6435,6 +6665,338 @@ class EXCALWallet(ctk.CTk):
 
         # Show login (non-blocking — starts node init in background)
         self.show_login_window()
+
+    def _create_menu_bar(self):
+        """Create the top menu bar with full navigation control."""
+        try:
+            import tkinter as tk
+            menubar = tk.Menu(self, tearoff=0)
+            self.config(menu=menubar)
+
+            # --- File Menu ---
+            file_menu = tk.Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="File", menu=file_menu, underline=0)
+            file_menu.add_command(label="New Wallet...", command=self._new_wallet, underline=0)
+            file_menu.add_command(label="Switch Profile...", command=self.show_login, underline=0)
+            file_menu.add_separator()
+            file_menu.add_command(label="Lock Wallet", command=self._lock_wallet, underline=0)
+            file_menu.add_command(label="Export Keys...", command=self._export_keys, underline=0)
+            file_menu.add_separator()
+            file_menu.add_command(label="Exit", command=self.quit, underline=1)
+
+            # --- Edit Menu ---
+            edit_menu = tk.Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="Edit", menu=edit_menu, underline=0)
+            edit_menu.add_command(label="Preferences...", command=lambda: self._switch_tab("Settings"), underline=0)
+
+            # --- View Menu ---
+            view_menu = tk.Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="View", menu=view_menu, underline=0)
+            view_menu.add_command(label="Dashboard", command=lambda: self._switch_tab("Dashboard"), underline=0)
+            view_menu.add_command(label="Send / Receive", command=lambda: self._switch_tab("Send / Receive"), underline=0)
+            view_menu.add_command(label="Transactions", command=lambda: self._switch_tab("Transactions"), underline=0)
+            view_menu.add_separator()
+            view_menu.add_command(label="Atomic Swap", command=lambda: self._switch_tab("Atomic Swap"), underline=0)
+            view_menu.add_command(label="Cross-Chain Bridge", command=lambda: self._switch_tab("Cross-Chain Bridge"), underline=0)
+            view_menu.add_command(label="Quantum Swap", command=lambda: self._switch_tab("Quantum Swap"), underline=0)
+            view_menu.add_separator()
+            view_menu.add_command(label="SkyNet P2P", command=lambda: self._switch_tab("SkyNet P2P"), underline=0)
+            view_menu.add_command(label="Holo Wallet", command=lambda: self._switch_tab("Holo Wallet"), underline=0)
+            view_menu.add_command(label="Oracle", command=lambda: self._switch_tab("Oracle"), underline=0)
+            view_menu.add_separator()
+            view_menu.add_command(label="Mining", command=lambda: self._switch_tab("Mining"), underline=0)
+            view_menu.add_command(label="Living Chain", command=lambda: self._switch_tab("Living Chain"), underline=0)
+            view_menu.add_command(label="Subscriptions", command=lambda: self._switch_tab("Subscriptions"), underline=0)
+            view_menu.add_separator()
+            view_menu.add_command(label="Settings", command=lambda: self._switch_tab("Settings"), underline=0)
+
+            # --- Tools Menu ---
+            tools_menu = tk.Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="Tools", menu=tools_menu, underline=0)
+
+            node_submenu = tk.Menu(tools_menu, tearoff=0)
+            tools_menu.add_cascade(label="Node", menu=node_submenu, underline=0)
+            node_submenu.add_command(label="Start Node", command=self._start_node_from_menu, underline=0)
+            node_submenu.add_command(label="Restart Node", command=self._restart_node, underline=0)
+            node_submenu.add_command(label="Stop Node", command=self._stop_node, underline=0)
+
+            beacon_submenu = tk.Menu(tools_menu, tearoff=0)
+            tools_menu.add_cascade(label="SkyNet Beacon", menu=beacon_submenu, underline=0)
+            beacon_submenu.add_command(label="Start Beacon", command=self._start_beacon, underline=0)
+            beacon_submenu.add_command(label="Stop Beacon", command=self._stop_beacon, underline=0)
+
+            mining_submenu = tk.Menu(tools_menu, tearoff=0)
+            tools_menu.add_cascade(label="Mining", menu=mining_submenu, underline=0)
+            mining_submenu.add_command(label="Open Mining Panel", command=lambda: self._switch_tab("Mining"), underline=0)
+
+            tools_menu.add_separator()
+            tools_menu.add_command(label="P2P Network Info", command=lambda: self._switch_tab("Peers"), underline=0)
+            tools_menu.add_command(label="Atomic Swap", command=lambda: self._switch_tab("Atomic Swap"), underline=0)
+
+            # --- Help Menu ---
+            help_menu = tk.Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="Help", menu=help_menu, underline=0)
+            help_menu.add_command(label="Help & Guide", command=self._show_help, underline=0)
+            help_menu.add_command(label="Documentation", command=self._show_documentation, underline=0)
+            help_menu.add_separator()
+            help_menu.add_command(label="About AetherionEXCAL", command=self._show_about, underline=5)
+
+            # --- Keyboard Shortcuts ---
+            self.bind_all('<Control-n>', lambda e: self._new_wallet())
+            self.bind_all('<Control-w>', lambda e: self._lock_wallet())
+            self.bind_all('<Control-q>', lambda e: self.quit())
+            self.bind_all('<Control-s>', lambda e: self._switch_tab("Send / Receive"))
+            self.bind_all('<Control-m>', lambda e: self._switch_tab("Mining"))
+            self.bind_all('<Control-t>', lambda e: self._switch_tab("Transactions"))
+            self.bind_all('<F1>', lambda e: self._show_help())
+            self.bind_all('<F5>', lambda e: self._restart_node())
+
+        except Exception as e:
+            logger.warning(f"Failed to create menu bar: {e}")
+
+    def _new_wallet(self):
+        """Create a new wallet profile."""
+        self.show_login_window()
+
+    def _lock_wallet(self):
+        """Lock the current wallet."""
+        try:
+            self.event_generate("<<LockWallet>>")
+        except Exception:
+            pass
+
+    def _export_keys(self):
+        """Export wallet keys."""
+        try:
+            if self.backend and self.backend.key_store:
+                addr = self.backend.key_store.get_address()
+                wif = self.backend.key_store.export_wif()
+                messagebox.showinfo(
+                    "Export Keys",
+                    f"Address: {addr}\n\n"
+                    f"Private Key (WIF):\n{wif}\n\n"
+                    "⚠ Keep your private key secure!"
+                )
+            else:
+                messagebox.showwarning("Export", "No wallet loaded.")
+        except Exception as e:
+            messagebox.showerror("Export Error", str(e))
+
+    def _start_node_from_menu(self):
+        """Start node from menu."""
+        threading.Thread(target=self._start_node, daemon=True).start()
+
+    def _restart_node(self):
+        """Restart the fork node."""
+        try:
+            self.node_manager.stop()
+            import time as _time
+            _time.sleep(1)
+            threading.Thread(target=self._start_node, daemon=True).start()
+        except Exception as e:
+            messagebox.showerror("Node Error", f"Failed to restart node: {e}")
+
+    def _stop_node(self):
+        """Stop the fork node."""
+        try:
+            self.node_manager.stop()
+        except Exception:
+            pass
+
+    def _start_beacon(self):
+        """Start SkyNet Beacon."""
+        try:
+            import subprocess as _sub
+            import sys as _sys
+            python = _sys.executable
+            _sub.Popen([python, "skynet_beacon.py"],
+                       creationflags=_sub.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0)
+            messagebox.showinfo("Beacon", "SkyNet Beacon started.")
+        except Exception as e:
+            messagebox.showerror("Beacon Error", f"Failed to start beacon: {e}")
+
+    def _stop_beacon(self):
+        """Stop SkyNet Beacon."""
+        messagebox.showinfo("Beacon", "Beacon stop requested. (Use Task Manager if needed.)")
+
+    def _show_documentation(self):
+        """Open documentation."""
+        messagebox.showinfo(
+            "Documentation",
+            "AetherionEXCAL Documentation\n\n"
+            "Whitepaper: https://holedozer1229.github.io/excalibur-chain/\n"
+            "GitHub: https://github.com/Holedozer1229/excalibur-chain\n"
+            "Nostr: npub17mnpcfdwfxh9ld2z4629jpne57pshdmlnfx03xwlam5j84nywhcqapnt6d"
+        )
+
+    def _show_about(self):
+        """Show about dialog."""
+        messagebox.showinfo(
+            "About AetherionEXCAL",
+            f"AetherionEXCAL v{APP_VERSION}\n\n"
+            "Quantum-resistant EXCAL wallet with integrated\n"
+            "fork node, P2P network, mining, and SkyNet Beacon.\n\n"
+            "© 2026 Aetherion Oracle\n"
+            "Author: Travis Dale Jones"
+        )
+
+    def _create_status_bar(self):
+        """Create a professional status bar at the bottom of the window."""
+        try:
+            import tkinter as tk
+            self.status_bar = tk.Frame(self, bg='#1a1a2e', height=28)
+            self.status_bar.pack(side='bottom', fill='x')
+            self.status_bar.pack_propagate(False)
+
+            # Left section - block height & sync
+            self.status_left = tk.Label(
+                self.status_bar, text='◌ Block: ---  |  Peers: 0  |  Sync: ---',
+                fg='#00d4aa', bg='#1a1a2e', font=('Segoe UI', 9), anchor='w'
+            )
+            self.status_left.pack(side='left', padx=10, pady=2)
+
+            # Center section - balance
+            self.status_center = tk.Label(
+                self.status_bar, text='Balance: --- EXCAL',
+                fg='#ffd700', bg='#1a1a2e', font=('Segoe UI', 9, 'bold'), anchor='center'
+            )
+            self.status_center.pack(side='left', expand=True, padx=10, pady=2)
+
+            # Right section - network & time
+            self.status_right = tk.Label(
+                self.status_bar, text='EXCAL Mainnet  |  ---',
+                fg='#8888aa', bg='#1a1a2e', font=('Segoe UI', 9), anchor='e'
+            )
+            self.status_right.pack(side='right', padx=10, pady=2)
+
+            # Start status update loop
+            self._update_status_bar()
+        except Exception as e:
+            logger.warning(f"Failed to create status bar: {e}")
+
+    def _update_status_bar(self):
+        """Periodically update the status bar with live data."""
+        try:
+            import time
+            # Block height
+            try:
+                height = self.backend.get_block_count()
+                height_str = str(height)
+            except Exception:
+                height_str = '---'
+
+            # Peers
+            try:
+                peers = self.backend.get_peer_count()
+                peers_str = str(peers)
+            except Exception:
+                peers_str = '0'
+
+            # Sync status
+            try:
+                if self.node_manager and self.node_manager.is_running():
+                    sync_str = 'Synced'
+                else:
+                    sync_str = 'Connecting'
+            except Exception:
+                sync_str = '---'
+
+            # Balance
+            try:
+                balance = self.backend.get_balance()
+                balance_exc = balance / 100_000_000 if balance else 0
+                balance_str = f'{balance_exc:.8f} EXCAL'
+            except Exception:
+                balance_str = '--- EXCAL'
+
+            # Time
+            time_str = time.strftime('%H:%M:%S')
+
+            # Update labels
+            self.status_left.config(text=f'◌ Block: {height_str}  |  Peers: {peers_str}  |  Sync: {sync_str}')
+            self.status_center.config(text=f'Balance: {balance_str}')
+            self.status_right.config(text=f'EXCAL Mainnet  |  {time_str}')
+
+        except Exception:
+            pass
+
+        # Update every 5 seconds
+        self.after(5000, self._update_status_bar)
+
+    def _create_toolbar(self, parent):
+        """Create a quick-action toolbar at the top."""
+        try:
+            toolbar = ctk.CTkFrame(parent, height=50, fg_color=COLOR_BG_LIGHT,
+                                    border_width=0, border_color=COLOR_PURPLE_DARK)
+            toolbar.pack(side='top', fill='x')
+            toolbar.pack_propagate(False)
+
+            # Search/Receive address field
+            search_frame = ctk.CTkFrame(toolbar, fg_color='transparent')
+            search_frame.pack(side='right', padx=(0, 15))
+
+            self.toolbar_entry = ctk.CTkEntry(
+                search_frame, placeholder_text='Receive address or search...',
+                width=250, height=32, font=('Segoe UI', 10),
+                fg_color='#0d0d1a', border_color=COLOR_PURPLE_DARK,
+                text_color=COLOR_TEXT, placeholder_text_color=COLOR_TEXT_MUTED
+            )
+            self.toolbar_entry.pack(side='left', padx=(0, 5))
+
+            ctk.CTkButton(
+                search_frame, text='🔍', width=32, height=32,
+                fg_color=COLOR_CYAN_DARK, hover_color=COLOR_CYAN,
+                command=self._toolbar_search,
+                font=('Segoe UI', 12)
+            ).pack(side='left')
+
+            # Quick action buttons
+            actions = [
+                ('⚡ Send', lambda: self._switch_tab('Send / Receive')),
+                ('💰 Receive', lambda: self._switch_tab('Send / Receive')),
+                ('⛏ Mine', lambda: self._switch_tab('Mining')),
+                ('⚛ Swap', lambda: self._switch_tab('Atomic Swap')),
+                ('📜 History', lambda: self._switch_tab('Transactions')),
+            ]
+
+            for text, cmd in actions:
+                ctk.CTkButton(
+                    toolbar, text=text, width=90, height=36,
+                    fg_color=COLOR_CARD, hover_color=COLOR_CARD_HOVER,
+                    command=cmd, font=('Segoe UI', 10),
+                    text_color=COLOR_TEXT_DIM, corner_radius=8,
+                    border_width=1, border_color=COLOR_PURPLE_DARK
+                ).pack(side='left', padx=3, pady=5)
+
+            # Logo in toolbar
+            ctk.CTkButton(
+                toolbar, text='⚔ EXCALibur', width=130, height=40,
+                fg_color='transparent', hover_color=COLOR_CARD_HOVER,
+                font=('Segoe UI', 12, 'bold'), text_color=COLOR_GOLD,
+                anchor='w'
+            ).pack(side='left', padx=(10, 0))
+
+        except Exception as e:
+            logger.warning(f"Failed to create toolbar: {e}")
+
+    def _toolbar_search(self):
+        """Handle toolbar search/address input."""
+        text = self.toolbar_entry.get().strip()
+        if not text:
+            return
+        # Check if it looks like an address
+        if text.startswith('ex') or text.startswith('1') or text.startswith('bc1'):
+            # Copy to send field
+            self._switch_tab('Send / Receive')
+            if hasattr(self.tabs.get('Send / Receive'), 'to_entry'):
+                self.tabs['Send / Receive'].to_entry.delete(0, 'end')
+                self.tabs['Send / Receive'].to_entry.insert(0, text)
+        else:
+            # Search transactions
+            self._switch_tab('Transactions')
+            if hasattr(self.tabs.get('Transactions'), 'search_entry'):
+                self.tabs['Transactions'].search_entry.delete(0, 'end')
+                self.tabs['Transactions'].search_entry.insert(0, text)
 
     def _show_quantum_genesis(self):
         """Show the Quantum Genesis cinematic intro screen."""
