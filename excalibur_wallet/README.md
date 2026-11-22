@@ -26,6 +26,30 @@ separate, explicit, per-tx decision (`wallet broadcast --yes`).
   RFC 9591). Dealerless DKG, threshold signing, Taproot key-path
   spends. Testnet-only. The wallet shells out to the real Rust
   binary — the FROST math is never re-implemented in Python.
+- **Bitcoin HTLC (P2WSH, standalone):** `wallet btc-htlc` builds the
+  Bitcoin-side hash-time-lock the wallet was missing — a real P2WSH
+  HTLC (SHA256 hashlock + CLTV refund), funded from the wallet's own
+  Bitcoin P2WPKH UTXOs, claimed with the secret or refunded after
+  the timeout, all through a real BIP174 PSBT (build -> partial sigs
+  -> finalize) with every signature re-verified locally. Standalone
+  only: no EXCAL leg, no watcher. The funding UTXO is supplied
+  explicitly (the wallet does not scan Bitcoin); `wallet broadcast
+  --network bitcoin` does the unspent + testmempoolaccept checks
+  before submit and accepts version-2 / locktime txs (a refund needs
+  both). Nothing in this wallet broadcasts without `--yes`.
+- **Atomic swap (EXCAL HTLC + BTC HTLC):** `wallet swap` coordinates
+  the two legs with one shared secret hash and staggered timeouts
+  (BTC leg expires first, EXCAL leg at least 24h later in wall-clock
+  terms — the maker claims BTC, revealing the secret, and the taker
+  then claims EXCAL with it). Swap creation, both fundings, both
+  claims, both refunds, and state tracking in the wallet's "swaps"
+  book (hashes only — the secret is never stored). The EXCAL refund
+  is refused while the BTC leg is still live, so the maker cannot
+  take both legs. Parameters follow the Strange template
+  (0.5 EXCAL <-> 0.5 BTC, BTC tip+144, fork tip+2880) as defaults,
+  not hard-coded amounts. No watcher, no counterparty coordination
+  beyond exchanging raw funding txs (each side verifies the other's
+  funding tx against the swap before recording it).
 - **Send:** build + sign + verify locally under the full
   spend-and-sign protocol. **Broadcast** is a separate, explicit step
   (`wallet broadcast --file F --network fork|bitcoin --yes`): it
@@ -78,6 +102,24 @@ wallet import-node --wallet FILE [--keyfile F]
 wallet htlc create --secret HEX --claim-pubkey HEX --refund-pubkey HEX --timeout H
 wallet htlc claim --utxo TXID:VOUT --dest LOCK --secret HEX [--fee N]
 wallet htlc refund --utxo TXID:VOUT --dest LOCK [--fee N]
+wallet btc-htlc show --claim-pubkey HEX --refund-pubkey HEX --secret-hash HEX --timeout H [--network N]
+wallet btc-htlc create --secret HEX --claim-pubkey HEX --refund-pubkey HEX --timeout H [--network N]
+wallet btc-htlc lock --utxo TXID:VOUT --utxo-value S --utxo-scriptpubkey HEX --amount S --claim-pubkey HEX --refund-pubkey HEX --secret-hash HEX --timeout H [--fee-rate N] [--save FILE]
+wallet btc-htlc claim --utxo TXID:VOUT --utxo-value S --secret HEX --dest-address bc1q... [--witness-script HEX|--address ADDR] [--fee-rate N] [--save FILE]
+wallet btc-htlc refund --utxo TXID:VOUT --utxo-value S --dest-address bc1q... --btc-height H [--witness-script HEX|--address ADDR] [--fee-rate N] [--save FILE]
+wallet swap create --role maker|taker --counterparty-pubkey HEX --excal-amount SWORDS --btc-amount SATS --excal-timeout F --btc-timeout B --fork-height H --btc-height H [--secret HEX | --secret-hash HEX] [--network N]
+wallet swap show --swap-id ID
+wallet swap list
+wallet swap fund-excal --swap-id ID [--fee-rate N] [--save FILE]
+wallet swap note-excal-funded --swap-id ID --raw-hex HEX
+wallet swap fund-btc --swap-id ID --utxo TXID:VOUT --utxo-value S --utxo-scriptpubkey HEX [--fee-rate N] [--save FILE]
+wallet swap note-btc-funded --swap-id ID --raw-hex HEX
+wallet swap claim-btc --swap-id ID --secret HEX --dest-address bc1q... [--fee-rate N] [--save FILE]
+wallet swap note-btc-claimed --swap-id ID --raw-hex HEX
+wallet swap claim-excal --swap-id ID --secret HEX --dest LOCKHEX --utxo TXID:VOUT --fork-height H [--fee N]
+wallet swap note-excal-claimed --swap-id ID --txid TXID
+wallet swap refund-excal --swap-id ID --dest LOCKHEX --utxo TXID:VOUT --fork-height H --btc-height H [--fee N]
+wallet swap refund-btc --swap-id ID --dest-address bc1q... --btc-height H [--fee-rate N] [--save FILE]
 wallet qhtlc create --secret HEX --claim-root HEX --refund-root HEX --timeout H
 wallet qhtlc claim|refund --utxo TXID:VOUT --dest LOCK [--fee N]
 wallet pqh address                   Trifold-root PQH address
@@ -116,11 +158,13 @@ QHTLC, `05…` BRIDGE. `06…` KNOT is refused on the live fork.
   submits to a Bitcoin Core RPC (default 127.0.0.1:8332) and needs
   credentials: `EXCAL_BTC_RPC_USER` / `EXCAL_BTC_RPC_PASSWORD`, or
   `--btc-rpc-config <0600 bitcoin.conf>`. The wallet builds fork txs
-  only — a Bitcoin broadcast takes a raw Bitcoin tx (`--tx HEX`),
-  e.g. a BTC HTLC leg built elsewhere, and refuses fork txs on that
-  path (replay protection). Every broadcast needs `--yes`, is logged
-  to `broadcast_log.jsonl` (txid/network/height only), and is
-  verified in the mempool after submit.
+  and Bitcoin HTLC txs (`wallet btc-htlc lock|claim|refund`); a
+  Bitcoin broadcast takes a raw Bitcoin tx (`--tx HEX` or a saved
+  `--file`), refuses fork txs on that path (replay protection), and
+  accepts segwit version-2 / locktime txs. Every broadcast needs
+  `--yes`, is logged to `broadcast_log.jsonl`
+  (txid/network/height only), and is verified in the mempool after
+  submit.
 - **KNOT (0x06) staged, not activated** (proposed height 100,000).
   The wallet refuses KNOT outputs on the live fork; `wallet knot`
   builds test-chain-only txs validated at height 100,000.

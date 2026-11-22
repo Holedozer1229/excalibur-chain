@@ -271,6 +271,29 @@ class Wallet:
                 return e
         return None
 
+    # ------------------------------------------------------------ swaps book
+    def record_swap(self, entry: dict, passphrase: bytes):
+        """Remember an atomic swap (atomic_swap.new_swap record).
+        Hashes only — the record never holds the secret."""
+        self._data.setdefault("swaps", []).append(entry)
+        self._save(passphrase)
+
+    def find_swap(self, swap_id: str):
+        for e in self._data.get("swaps", []):
+            if e.get("swap_id") == swap_id:
+                return e
+        return None
+
+    def update_swap(self, swap_id: str, updates: dict, passphrase: bytes):
+        """Apply updates (state + leg txids) to a recorded swap and
+        persist. Returns the updated record."""
+        for e in self._data.get("swaps", []):
+            if e.get("swap_id") == swap_id:
+                e.update(updates)
+                self._save(passphrase)
+                return e
+        raise WalletError(f"no swap {swap_id} in this wallet")
+
 
 def _now_iso():
     from datetime import datetime, timezone

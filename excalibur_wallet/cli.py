@@ -38,6 +38,10 @@ from .txbuild import (build_send, build_htlc_claim, build_htlc_refund,
                      build_knot_spend_test, parse_amount, TxBuildError)
 from .locks import (parse_lock_hex, lock_status, knot_lock_refuse,
                    htlc_lock, qhtlc_lock, KnotRefused)
+from . import btc_htlc as btc_htlc_mod
+from .btc_htlc import BtcHtlcError
+from . import atomic_swap as swap_mod
+from .atomic_swap import SwapError
 from .checkpoints import verify_chain_attestations, verify_checkpoint_file
 from . import p2p_sync
 from . import uruu
@@ -650,6 +654,761 @@ def cmd_wallet_htlc_refund(args):
     _print_tx_result(res)
 
 
+# ------------------------------------------------------- BTC HTLC (P2WSH)
+# Standalone Bitcoin-side HTLC. This section funds a BTC P2WSH lock
+# from the wallet's own Bitcoin P2WPKH UTXOs, and claims/refunds it
+# with the wallet's keys. The funding UTXO is supplied explicitly
+# (the wallet does not scan Bitcoin); broadcast.py does the unspent +
+# testmempoolaccept checks before any submit. Nothing here broadcasts.
+# The cross-chain flow that coordinates this leg with the EXCAL HTLC
+# leg lives in `wallet swap` (atomic_swap.py) below.
+def _btc_pub_to_priv(wallet):
+    """{compressed_pubkey_bytes: priv} for every wallet key."""
+    from .keys import priv_to_pub_compressed
+    out = {}
+    if wallet.kind == "legacy":
+        priv = int(wallet._data["legacy_priv"], 16)
+        out[priv_to_pub_compressed(priv)] = priv
+        return out
+    for i in range(wallet._data["next_receive"]):
+        priv = wallet.receive_priv(i)
+        out[priv_to_pub_compressed(priv)] = priv
+    for i in range(wallet._data["next_change"]):
+        priv = wallet.change_priv(i)
+        out[priv_to_pub_compressed(priv)] = priv
+    return out
+
+
+def _print_btc_tx_result(res):
+    print(f"txid:      {res['txid']}")
+    print(f"wtxid:     {res['wtxid']}")
+    print(f"fee:       {res['fee']:,} sats "
+          f"({res['vsize']} vB at {res.get('fee_rate')} sats/vB)")
+    print("inputs:")
+    for u in res["inputs"]:
+        print(f"  {u['txid']}:{u['vout']}  {u['value']:,} sats")
+    print("outputs:")
+    for o in res["outputs"]:
+        print(f"  {o['value']:,} sats -> {o['script_pubkey'][:44]}…")
+    print(f"raw hex:   {res['raw_hex']}")
+    print(f"psbt:      {res['psbt']}")
+    print("NOT broadcast. Submit it with `wallet broadcast --tx <rawhex> "
+          "--network bitcoin --yes` — or save it first (`--save FILE`) "
+          "and broadcast the file. Broadcast re-checks the tx (replay, "
+          "unspent inputs, testmempoolaccept) before submitting, and "
+          "verifies mempool acceptance after.")
+
+
+def _btc_lock_record(lock, funding_txid=None):
+    """Wallet lock-book record for a BTC HTLC (hashes only — never the
+    secret). The 'lock' id is the P2WSH scriptPubKey hex."""
+    rec = {"kind": "btc-htlc", "lock": lock["script_pubkey_hex"],
+           "address": lock["address"],
+           "witness_script": lock["witness_script_hex"],
+           "secret_hash": lock["secret_hash"],
+           "timeout": lock["timeout"],
+           "claim_pubkey": lock["claim_pubkey"],
+           "refund_pubkey": lock["refund_pubkey"],
+           "network": lock["network"]}
+    if funding_txid:
+        rec["funding_txid"] = funding_txid
+    return rec
+
+
+def _btc_parse_hex_arg(s, name, want_len):
+    try:
+        b = bytes.fromhex(s)
+    except ValueError:
+        raise SystemExit(f"btc-htlc: --{name} must be hex")
+    if len(b) != want_len:
+        raise SystemExit(f"btc-htlc: --{name} must be {want_len} bytes "
+                         f"(got {len(b)})")
+    return b
+
+
+def _btc_find_record(wallet, args):
+    """Witness script for a claim/refund: explicit --witness-script,
+    or a recorded lock found by --address."""
+    if args.witness_script:
+        try:
+            return bytes.fromhex(args.witness_script)
+        except ValueError:
+            raise SystemExit("btc-htlc: --witness-script must be hex")
+    if args.address:
+        for e in wallet._data.get("locks", []):
+            if e.get("kind") == "btc-htlc" \
+                    and e.get("address") == args.address:
+                return bytes.fromhex(e["witness_script"])
+        raise SystemExit(f"btc-htlc: no recorded BTC HTLC for address "
+                         f"{args.address} (create it with "
+                         f"`wallet btc-htlc create` first)")
+    raise SystemExit("btc-htlc: give --witness-script HEX or --address "
+                     "of a recorded BTC HTLC")
+
+
+def _btc_dest_spk(args):
+    try:
+        spk = btc_htlc_mod.script_pubkey_from_address(args.dest_address)
+    except BtcHtlcError as e:
+        raise SystemExit(f"btc-htlc: bad --dest-address: {e}")
+    try:
+        _hrp, _ver, _prog = btc_htlc_mod.bech32_decode(args.dest_address)
+    except BtcHtlcError as e:
+        raise SystemExit(f"btc-htlc: bad --dest-address: {e}")
+    want = btc_htlc_mod.hrp_for_network(args.network)
+    if _hrp != want:
+        raise SystemExit(
+            f"btc-htlc: --dest-address is on hrp {_hrp!r}, but "
+            f"--network {args.network} wants {want!r}")
+    return spk
+
+
+def cmd_wallet_btc_htlc_show(args):
+    try:
+        claim_pub = _btc_parse_hex_arg(args.claim_pubkey, "claim-pubkey",
+                                       33)
+        refund_pub = _btc_parse_hex_arg(args.refund_pubkey,
+                                        "refund-pubkey", 33)
+        secret_hash = _btc_parse_hex_arg(args.secret_hash, "secret-hash",
+                                         32)
+        lock = btc_htlc_mod.build_lock(claim_pub, refund_pub, secret_hash,
+                                       args.timeout, args.network)
+    except BtcHtlcError as e:
+        raise SystemExit(f"btc-htlc show: {e}")
+    print(f"BTC HTLC P2WSH address ({args.network}): {lock['address']}")
+    print(f"scriptPubKey: {lock['script_pubkey_hex']}")
+    print(f"witness script: {lock['witness_script_hex']}")
+    print(f"secret hash: {lock['secret_hash']}")
+    print(f"timeout (refund at BTC height >=): {lock['timeout']}")
+    print("Fund it with `wallet btc-htlc lock`. The secret stays with")
+    print("the claimer; only its hash is in the lock.")
+
+
+def cmd_wallet_btc_htlc_create(args):
+    w, pw = _load_wallet(args)
+    try:
+        if args.secret:
+            secret = _btc_parse_hex_arg(args.secret, "secret", 32)
+        else:
+            import secrets as _s
+            secret = _s.token_bytes(32)
+            print("generated secret (show once — give it to the claimer "
+                  "out of band):")
+            print(f"  {secret.hex()}")
+        claim_pub = _btc_parse_hex_arg(args.claim_pubkey, "claim-pubkey",
+                                       33)
+        refund_pub = _btc_parse_hex_arg(args.refund_pubkey,
+                                        "refund-pubkey", 33)
+        secret_hash = btc_htlc_mod.secret_hash_of(secret)
+        lock = btc_htlc_mod.build_lock(claim_pub, refund_pub, secret_hash,
+                                       args.timeout, args.network)
+    except BtcHtlcError as e:
+        raise SystemExit(f"btc-htlc create: {e}")
+    w.record_lock(_btc_lock_record(lock), pw)
+    print(f"BTC HTLC P2WSH address ({args.network}): {lock['address']}")
+    print(f"scriptPubKey: {lock['script_pubkey_hex']}")
+    print(f"witness script: {lock['witness_script_hex']}")
+    print(f"secret hash: {lock['secret_hash']}")
+    print(f"timeout (refund at BTC height >=): {lock['timeout']}")
+    print("Recorded in the wallet lock book. Fund it with "
+          "`wallet btc-htlc lock --utxo TXID:VOUT ...`.")
+
+
+def cmd_wallet_btc_htlc_lock(args):
+    w, pw = _load_wallet(args)
+    try:
+        txid, vout = _parse_utxo_ref(args.utxo)
+        if args.utxo_value is None or args.utxo_scriptpubkey is None:
+            raise SystemExit("btc-htlc lock needs --utxo-value SATS and "
+                             "--utxo-scriptpubkey HEX (the wallet does "
+                             "not scan Bitcoin for the funding UTXO)")
+        claim_pub = _btc_parse_hex_arg(args.claim_pubkey, "claim-pubkey",
+                                       33)
+        refund_pub = _btc_parse_hex_arg(args.refund_pubkey,
+                                        "refund-pubkey", 33)
+        if args.secret_hash:
+            secret_hash = _btc_parse_hex_arg(args.secret_hash,
+                                             "secret-hash", 32)
+        elif args.secret:
+            secret = _btc_parse_hex_arg(args.secret, "secret", 32)
+            secret_hash = btc_htlc_mod.secret_hash_of(secret)
+        else:
+            raise SystemExit("btc-htlc lock needs --secret-hash HEX "
+                             "(or --secret HEX to derive it)")
+        from .keys import priv_to_pub_compressed
+        idx = args.change_index
+        if idx is None:
+            idx = w._data["next_change"]
+        change_pub = priv_to_pub_compressed(w.change_priv(idx))
+        utxo = {"txid": txid, "vout": vout, "value": args.utxo_value,
+                "script_pubkey": args.utxo_scriptpubkey}
+        res = btc_htlc_mod.build_btc_htlc_lock(
+            [utxo], _btc_pub_to_priv(w), args.amount, claim_pub,
+            refund_pub, secret_hash, args.timeout, change_pub,
+            fee_rate=args.fee_rate, network=args.network)
+    except BtcHtlcError as e:
+        raise SystemExit(f"btc-htlc lock refused: {e}")
+    w.next_change(pw)  # advance the change counter on success only
+    w.record_lock(_btc_lock_record(res["lock"], res["txid"]), pw)
+    if args.save:
+        doc = {"network": "bitcoin", "raw_hex": res["raw_hex"],
+               "txid": res["txid"], "wtxid": res["wtxid"],
+               "fee": res["fee"], "vsize": res["vsize"],
+               "psbt": res["psbt"], "validated": True,
+               "inputs": res["inputs"], "outputs": res["outputs"],
+               "lock": res["lock"]}
+        with open(args.save, "w") as f:
+            json.dump(doc, f, indent=2)
+        os.chmod(args.save, 0o600)
+        print(f"saved (0600): {args.save} — broadcast it with "
+              f"`wallet broadcast --file {args.save} --network bitcoin "
+              f"--yes`")
+    print(f"BTC HTLC funded: {res['address']} ({args.network})")
+    print(f"timeout (refund at BTC height >=): {args.timeout}")
+    _print_btc_tx_result(res)
+
+
+def _btc_spend_common(args, wallet):
+    """Shared claim/refund setup: (script, signer priv, dest spk)."""
+    txid, vout = _parse_utxo_ref(args.utxo)
+    if args.utxo_value is None:
+        raise SystemExit("btc-htlc claim/refund needs --utxo-value SATS "
+                         "(the wallet does not scan Bitcoin for the "
+                         "HTLC UTXO)")
+    script = _btc_find_record(wallet, args)
+    try:
+        parsed = btc_htlc_mod.parse_witness_script(script)
+    except BtcHtlcError as e:
+        raise SystemExit(f"btc-htlc: bad witness script: {e}")
+    dest_spk = _btc_dest_spk(args)
+    return txid, vout, script, parsed, dest_spk
+
+
+def cmd_wallet_btc_htlc_claim(args):
+    w, _pw = _load_wallet(args)
+    txid, vout, script, parsed, dest_spk = _btc_spend_common(args, w)
+    try:
+        secret = _btc_parse_hex_arg(args.secret, "secret", 32)
+        from .keys import priv_to_pub_compressed
+        claim_priv = None
+        for pub, priv in _btc_pub_to_priv(w).items():
+            if pub == parsed["claim_pubkey"]:
+                claim_priv = priv
+                break
+        if claim_priv is None:
+            raise SystemExit("claim key is not a wallet key")
+        res = btc_htlc_mod.build_btc_htlc_claim(
+            txid, vout, args.utxo_value, dest_spk, secret, script,
+            claim_priv, fee=args.fee, fee_rate=args.fee_rate)
+    except BtcHtlcError as e:
+        raise SystemExit(f"btc-htlc claim refused: {e}")
+    if args.save:
+        _btc_save_spend(args, res)
+    print("BTC HTLC claim (secret + claim key):")
+    _print_btc_tx_result(res)
+
+
+def cmd_wallet_btc_htlc_refund(args):
+    w, _pw = _load_wallet(args)
+    txid, vout, script, parsed, dest_spk = _btc_spend_common(args, w)
+    try:
+        from .keys import priv_to_pub_compressed
+        refund_priv = None
+        for pub, priv in _btc_pub_to_priv(w).items():
+            if pub == parsed["refund_pubkey"]:
+                refund_priv = priv
+                break
+        if refund_priv is None:
+            raise SystemExit("refund key is not a wallet key")
+        res = btc_htlc_mod.build_btc_htlc_refund(
+            txid, vout, args.utxo_value, dest_spk, script,
+            refund_priv, args.btc_height, fee=args.fee,
+            fee_rate=args.fee_rate)
+    except BtcHtlcError as e:
+        raise SystemExit(f"btc-htlc refund refused: {e}")
+    if args.save:
+        _btc_save_spend(args, res)
+    print(f"BTC HTLC refund (refund key, height {args.btc_height} >= "
+          f"timeout {parsed['timeout']}):")
+    _print_btc_tx_result(res)
+
+
+def _btc_save_spend(args, res):
+    doc = {"network": "bitcoin", "raw_hex": res["raw_hex"],
+           "txid": res["txid"], "wtxid": res["wtxid"],
+           "fee": res["fee"], "vsize": res["vsize"],
+           "psbt": res["psbt"], "validated": True,
+           "inputs": res["inputs"], "outputs": res["outputs"],
+           "branch": res["branch"]}
+    with open(args.save, "w") as f:
+        json.dump(doc, f, indent=2)
+    os.chmod(args.save, 0o600)
+    print(f"saved (0600): {args.save} — broadcast it with "
+          f"`wallet broadcast --file {args.save} --network bitcoin "
+          f"--yes`")
+
+
+# ------------------------------------------------------- atomic swap
+# Cross-chain atomic swap: EXCAL HTLC leg + BTC P2WSH HTLC leg, one
+# shared secret hash, staggered timeouts (BTC expires first). The
+# maker locks EXCAL and claims BTC; the taker locks BTC and claims
+# EXCAL. State lives in the wallet's "swaps" book (atomic_swap.py);
+# the secret is NEVER stored — whoever needs it passes --secret.
+# Nothing here broadcasts. EXCAL claim/refund build the spend entry
+# from the swap record + an explicit --utxo (the fork validator
+# checks the spend locally; broadcast.py re-checks the UTXO is
+# unspent on the live node before submitting) — the wallet's watched
+# set only covers receive/change locks, so the live-node UTXO lookup
+# used by `wallet htlc claim` cannot see an HTLC UTXO.
+def _swap_hex(s, name, want_len):
+    try:
+        b = bytes.fromhex(s)
+    except ValueError:
+        raise SystemExit(f"swap: --{name} must be hex")
+    if len(b) != want_len:
+        raise SystemExit(f"swap: --{name} must be {want_len} bytes "
+                         f"(got {len(b)})")
+    return b
+
+
+def _swap_own_pubkey(wallet):
+    """The wallet's identity key for a swap: receive index 0 (the
+    legacy key for a legacy wallet)."""
+    from .keys import priv_to_pub_compressed
+    return priv_to_pub_compressed(wallet.receive_priv(0))
+
+
+def _swap_load(args):
+    w, pw = _load_wallet(args)
+    rec = w.find_swap(args.swap_id)
+    if rec is None:
+        raise SystemExit(f"swap: no swap {args.swap_id} in this wallet "
+                         f"(`wallet swap create` first)")
+    return w, pw, rec
+
+
+def _swap_require_role(rec, role):
+    if rec["role"] != role:
+        raise SystemExit(
+            f"swap: this swap belongs to the {rec['role']} — the "
+            f"{role} command does not apply to it")
+
+
+def _swap_check_move(rec, to_state, role, fork_height=None,
+                     btc_height=None):
+    """Validate a transition without committing it (the build runs
+    between the check and the commit, so a refused move never leaves
+    a built tx behind)."""
+    try:
+        swap_mod.transition(rec, to_state, role=role,
+                            fork_height=fork_height,
+                            btc_height=btc_height)
+    except SwapError as e:
+        raise SystemExit(f"swap: {e}")
+
+
+def _swap_commit(w, pw, rec, to_state, role, fork_height=None,
+                 btc_height=None, leg=None, updates=None):
+    new = swap_mod.transition(rec, to_state, role=role,
+                              fork_height=fork_height,
+                              btc_height=btc_height)
+    if leg and updates:
+        new[leg].update(updates)
+    w.update_swap(rec["swap_id"], new, pw)
+    return new
+
+
+def _swap_print(rec):
+    print(f"swap: {rec['swap_id']}  role: {rec['role']}  "
+          f"state: {rec['state']}")
+    print(f"secret hash: {rec['secret_hash']}")
+    print(f"amounts: {rec['excal_amount']:,} swords EXCAL <-> "
+          f"{rec['btc_amount']:,} sats BTC")
+    print(f"maker: {rec['maker_pubkey']}")
+    print(f"taker: {rec['taker_pubkey']}")
+    print(f"timeouts: EXCAL fork {rec['excal_timeout']} / "
+          f"BTC {rec['btc_timeout']}")
+    print(f"EXCAL leg: lock {rec['excal']['lock']}")
+    print(f"  funding: {rec['excal']['funding_txid']}:"
+          f"{rec['excal']['funding_vout']}  "
+          f"claim: {rec['excal']['claim_txid']}  "
+          f"refund: {rec['excal']['refund_txid']}")
+    print(f"BTC leg: {rec['btc']['address']} ({rec['network']})")
+    print(f"  funding: {rec['btc']['funding_txid']}:"
+          f"{rec['btc']['funding_vout']}  "
+          f"claim: {rec['btc']['claim_txid']}  "
+          f"refund: {rec['btc']['refund_txid']}")
+
+
+def _swap_record_htlc_lock(w, pw, rec):
+    """Also record the EXCAL leg in the locks book (if absent) so
+    `wallet htlc` can see the same lock the swap tracks."""
+    if w.find_lock(rec["excal"]["lock"]) is None:
+        w.record_lock(
+            {"kind": "htlc", "lock": rec["excal"]["lock"],
+             "descriptor": rec["excal"]["descriptor"],
+             "timeout": rec["excal_timeout"],
+             "claim_pubkey": rec["taker_pubkey"],
+             "refund_pubkey": rec["maker_pubkey"]}, pw)
+
+
+def _swap_network(args, rec):
+    if args.network != rec["network"]:
+        raise SystemExit(
+            f"swap: --network {args.network} does not match the swap's "
+            f"network {rec['network']}")
+    return rec["network"]
+
+
+def _swap_fork_entry(rec):
+    """The funded EXCAL HTLC UTXO, from the record (explicit supply —
+    see the section comment)."""
+    return {"txid": rec["excal"]["funding_txid"],
+            "vout": rec["excal"]["funding_vout"],
+            "value": rec["excal_amount"],
+            "lock": rec["excal"]["lock"],
+            "coinbase": False, "cb_h": 0, "mature": True}
+
+
+def cmd_wallet_swap_create(args):
+    w, pw = _load_wallet(args)
+    try:
+        counterparty = _swap_hex(args.counterparty_pubkey,
+                                 "counterparty-pubkey", 33)
+        own = _swap_own_pubkey(w)
+        if args.role == "maker":
+            maker_pub, taker_pub = own, counterparty
+        else:
+            maker_pub, taker_pub = counterparty, own
+        secret = secret_hash = None
+        if args.role == "maker":
+            if args.secret_hash:
+                raise SystemExit("swap create (maker): do not pass "
+                                 "--secret-hash — the maker creates "
+                                 "the secret")
+            secret = (_swap_hex(args.secret, "secret", 32)
+                      if args.secret else swap_mod.new_secret())
+        else:
+            if args.secret:
+                raise SystemExit("swap create (taker): pass "
+                                 "--secret-hash, not --secret")
+            if not args.secret_hash:
+                raise SystemExit("swap create (taker): --secret-hash "
+                                 "is required")
+            secret_hash = _swap_hex(args.secret_hash, "secret-hash", 32)
+        rec = swap_mod.new_swap(
+            args.role, maker_pub, taker_pub, args.excal_amount,
+            args.btc_amount, args.excal_timeout, args.btc_timeout,
+            args.fork_height, args.btc_height, secret=secret,
+            secret_hash=secret_hash, network=args.network)
+    except SwapError as e:
+        raise SystemExit(f"swap create refused: {e}")
+    if w.find_swap(rec["swap_id"]) is not None:
+        raise SystemExit(f"swap create refused: swap {rec['swap_id']} "
+                         f"already exists in this wallet")
+    w.record_swap(rec, pw)
+    _swap_record_htlc_lock(w, pw, rec)
+    if args.role == "maker":
+        print("generated secret (show once — keep it: the taker learns "
+              "it only when you claim the BTC leg):")
+        print(f"  {secret.hex()}")
+    else:
+        print("taker swap: the secret is unknown to you until the maker "
+              "claims the BTC leg and reveals it on chain.")
+    _swap_print(rec)
+    if args.role == "maker":
+        print("next: `wallet swap fund-excal --swap-id "
+              f"{rec['swap_id']}` — then the taker funds the BTC leg.")
+    else:
+        print("next: wait for the maker's EXCAL funding, then "
+              "`wallet swap note-excal-funded --swap-id "
+              f"{rec['swap_id']} --raw-hex <funding tx>`.")
+
+
+def cmd_wallet_swap_show(args):
+    _w, _pw, rec = _swap_load(args)
+    _swap_print(rec)
+
+
+def cmd_wallet_swap_list(args):
+    w, _pw = _load_wallet(args)
+    swaps = w._data.get("swaps", [])
+    if not swaps:
+        print("no swaps in this wallet")
+        return
+    for rec in swaps:
+        print(f"{rec['swap_id']}  {rec['role']:<6} {rec['state']:<15} "
+              f"{rec['excal_amount']:,} swords <-> "
+              f"{rec['btc_amount']:,} sats  "
+              f"EXCAL@{rec['excal_timeout']} BTC@{rec['btc_timeout']}")
+
+
+def cmd_wallet_swap_fund_excal(args):
+    w, pw, rec = _swap_load(args)
+    _swap_require_role(rec, "maker")
+    _swap_check_move(rec, "excal-funded", role="maker")
+    utxos, height, source = _utxos_for_send(args, w)
+    print(f"UTXO source: {source}; validating at height {height}")
+    idx = w._data["next_change"]
+    change_lock = bytes.fromhex(w.change_address(idx))
+    try:
+        res = swap_mod.build_excal_funding(
+            rec, utxos, _lock_to_priv(w), change_lock,
+            fee_rate=args.fee_rate, height=height)
+    except SwapError as e:
+        raise SystemExit(f"swap fund-excal refused: {e}")
+    w.next_change(pw)  # advance the change counter on success only
+    vout = next(i for i, o in enumerate(res["outputs"])
+                if o["lock"] == rec["excal"]["lock"])
+    _swap_commit(w, pw, rec, "excal-funded", role="maker", leg="excal",
+                 updates={"funding_txid": res["txid"],
+                          "funding_vout": vout})
+    if args.save:
+        doc = {"network": "fork", "raw_hex": res["raw_hex"],
+               "txid": res["txid"], "fee": res["fee"],
+               "validated": True,
+               "validated_at_height": res["validated_at_height"],
+               "inputs": res["inputs"], "outputs": res["outputs"]}
+        with open(args.save, "w") as f:
+            json.dump(doc, f, indent=2)
+        os.chmod(args.save, 0o600)
+        print(f"saved (0600): {args.save} — broadcast it with "
+              f"`wallet broadcast --file {args.save} --network fork "
+              f"--yes`")
+    print(f"EXCAL leg funded: {res['txid']}:{vout} "
+          f"({rec['excal_amount']:,} swords to the HTLC lock)")
+    _print_tx_result(res)
+
+
+def cmd_wallet_swap_note_excal_funded(args):
+    w, pw, rec = _swap_load(args)
+    # Either role: the maker records their own funding (built by
+    # fund-excal or by `wallet send --to <lock>`); the taker records
+    # the counterparty's funding after verifying it. The raw tx is
+    # verified against the swap lock + amount either way.
+    _swap_check_move(rec, "excal-funded", role=rec["role"])
+    try:
+        found = swap_mod.verify_excal_funding_raw(rec, args.raw_hex)
+    except SwapError as e:
+        raise SystemExit(f"swap note-excal-funded refused: {e}")
+    _swap_record_htlc_lock(w, pw, rec)
+    new = _swap_commit(w, pw, rec, "excal-funded", role=rec["role"],
+                       leg="excal",
+                       updates={"funding_txid": found["txid"],
+                                "funding_vout": found["vout"]})
+    print(f"EXCAL funding verified: {found['txid']}:{found['vout']} "
+          f"pays {rec['excal_amount']:,} swords to the swap lock")
+    _swap_print(new)
+
+
+def cmd_wallet_swap_fund_btc(args):
+    w, pw, rec = _swap_load(args)
+    _swap_require_role(rec, "taker")
+    _swap_check_move(rec, "btc-funded", role="taker")
+    try:
+        txid, vout = _parse_utxo_ref(args.utxo)
+        if args.utxo_value is None or args.utxo_scriptpubkey is None:
+            raise SystemExit("swap fund-btc needs --utxo-value SATS and "
+                             "--utxo-scriptpubkey HEX (the wallet does "
+                             "not scan Bitcoin for the funding UTXO)")
+        from .keys import priv_to_pub_compressed
+        idx = args.change_index
+        if idx is None:
+            idx = w._data["next_change"]
+        change_pub = priv_to_pub_compressed(w.change_priv(idx))
+        utxo = {"txid": txid, "vout": vout, "value": args.utxo_value,
+                "script_pubkey": args.utxo_scriptpubkey}
+        res = swap_mod.build_btc_funding(
+            rec, utxo, _btc_pub_to_priv(w), change_pub,
+            fee_rate=args.fee_rate, network=rec["network"])
+    except SwapError as e:
+        raise SystemExit(f"swap fund-btc refused: {e}")
+    w.next_change(pw)  # advance the change counter on success only
+    vout2 = next(i for i, o in enumerate(res["outputs"])
+                 if o["script_pubkey"] == rec["btc"]["script_pubkey"])
+    _swap_commit(w, pw, rec, "btc-funded", role="taker", leg="btc",
+                 updates={"funding_txid": res["txid"],
+                          "funding_vout": vout2})
+    if args.save:
+        doc = {"network": "bitcoin", "raw_hex": res["raw_hex"],
+               "txid": res["txid"], "wtxid": res["wtxid"],
+               "fee": res["fee"], "vsize": res["vsize"],
+               "psbt": res["psbt"], "validated": True,
+               "inputs": res["inputs"], "outputs": res["outputs"],
+               "lock": res["lock"]}
+        with open(args.save, "w") as f:
+            json.dump(doc, f, indent=2)
+        os.chmod(args.save, 0o600)
+        print(f"saved (0600): {args.save} — broadcast it with "
+              f"`wallet broadcast --file {args.save} --network bitcoin "
+              f"--yes`")
+    print(f"BTC leg funded: {res['txid']}:{vout2} "
+          f"({rec['btc_amount']:,} sats to {rec['btc']['address']})")
+    _print_btc_tx_result(res)
+
+
+def cmd_wallet_swap_note_btc_funded(args):
+    w, pw, rec = _swap_load(args)
+    # Either role: the maker records the counterparty's funding after
+    # verifying it; the taker records their own (built by fund-btc or
+    # by `wallet btc-htlc lock`). The raw tx is verified against the
+    # swap P2WSH address + amount either way.
+    _swap_check_move(rec, "btc-funded", role=rec["role"])
+    try:
+        found = swap_mod.verify_btc_funding_raw(rec, args.raw_hex)
+    except SwapError as e:
+        raise SystemExit(f"swap note-btc-funded refused: {e}")
+    new = _swap_commit(w, pw, rec, "btc-funded", role=rec["role"],
+                       leg="btc",
+                       updates={"funding_txid": found["txid"],
+                                "funding_vout": found["vout"]})
+    print(f"BTC funding verified: {found['txid']}:{found['vout']} "
+          f"pays {rec['btc_amount']:,} sats to "
+          f"{rec['btc']['address']}")
+    _swap_print(new)
+
+
+def cmd_wallet_swap_claim_btc(args):
+    w, pw, rec = _swap_load(args)
+    _swap_require_role(rec, "maker")
+    _swap_check_move(rec, "btc-claimed", role="maker")
+    _swap_network(args, rec)
+    try:
+        secret = _swap_hex(args.secret, "secret", 32)
+        dest_spk = _btc_dest_spk(args)
+        res = swap_mod.build_btc_claim(
+            rec, secret, dest_spk, _btc_pub_to_priv(w),
+            fee_rate=args.fee_rate)
+    except SwapError as e:
+        raise SystemExit(f"swap claim-btc refused: {e}")
+    _swap_commit(w, pw, rec, "btc-claimed", role="maker", leg="btc",
+                 updates={"claim_txid": res["txid"]})
+    if args.save:
+        _btc_save_spend(args, res)
+    print("BTC leg claimed — the secret is now public on chain; the "
+          "taker claims the EXCAL leg with it next.")
+    _print_btc_tx_result(res)
+
+
+def cmd_wallet_swap_note_btc_claimed(args):
+    w, pw, rec = _swap_load(args)
+    _swap_require_role(rec, "taker")
+    _swap_check_move(rec, "btc-claimed", role="taker")
+    try:
+        found = swap_mod.verify_btc_claim_raw(rec, args.raw_hex)
+    except SwapError as e:
+        raise SystemExit(f"swap note-btc-claimed refused: {e}")
+    _swap_commit(w, pw, rec, "btc-claimed", role="taker", leg="btc",
+                 updates={"claim_txid": found["txid"]})
+    print(f"BTC leg claimed by the maker: {found['txid']} — the secret "
+          f"is now public on chain:")
+    print(f"  {found['secret'].hex()}")
+    print("Claim the EXCAL leg with it: `wallet swap claim-excal "
+          f"--swap-id {rec['swap_id']} --secret <above> ...`")
+
+
+def cmd_wallet_swap_claim_excal(args):
+    w, pw, rec = _swap_load(args)
+    _swap_require_role(rec, "taker")
+    _swap_check_move(rec, "complete", role="taker")
+    try:
+        txid, vout = _parse_utxo_ref(args.utxo)
+        dest_lock = parse_lock_hex(args.dest)
+        secret = _swap_hex(args.secret, "secret", 32)
+        entry = _swap_fork_entry(rec)
+        if entry["txid"] != txid or entry["vout"] != vout:
+            raise SystemExit(
+                f"swap claim-excal: --utxo {txid}:{vout} is not the "
+                f"recorded EXCAL funding "
+                f"{entry['txid']}:{entry['vout']}")
+        claim_priv = None
+        for pub, priv in _btc_pub_to_priv(w).items():
+            if pub == bytes.fromhex(rec["taker_pubkey"]):
+                claim_priv = priv
+                break
+        if claim_priv is None:
+            raise SystemExit("swap claim-excal: claim key (taker) is "
+                             "not a wallet key")
+        res = swap_mod.build_excal_claim(
+            rec, entry, dest_lock, args.fee, secret, claim_priv,
+            args.fork_height + 1)
+    except SwapError as e:
+        raise SystemExit(f"swap claim-excal refused: {e}")
+    _swap_commit(w, pw, rec, "complete", role="taker", leg="excal",
+                 updates={"claim_txid": res["txid"]})
+    print("EXCAL leg claimed — swap complete.")
+    _print_tx_result(res)
+
+
+def cmd_wallet_swap_note_excal_claimed(args):
+    w, pw, rec = _swap_load(args)
+    _swap_require_role(rec, "maker")
+    _swap_check_move(rec, "complete", role="maker")
+    _swap_commit(w, pw, rec, "complete", role="maker", leg="excal",
+                 updates={"claim_txid": args.txid})
+    print(f"EXCAL leg claimed by the taker: {args.txid} — swap "
+          f"complete.")
+
+
+def cmd_wallet_swap_refund_excal(args):
+    w, pw, rec = _swap_load(args)
+    _swap_require_role(rec, "maker")
+    _swap_check_move(rec, "excal-refunded", role="maker",
+                     fork_height=args.fork_height,
+                     btc_height=args.btc_height)
+    try:
+        txid, vout = _parse_utxo_ref(args.utxo)
+        dest_lock = parse_lock_hex(args.dest)
+        entry = _swap_fork_entry(rec)
+        if entry["txid"] != txid or entry["vout"] != vout:
+            raise SystemExit(
+                f"swap refund-excal: --utxo {txid}:{vout} is not the "
+                f"recorded EXCAL funding "
+                f"{entry['txid']}:{entry['vout']}")
+        refund_priv = None
+        for pub, priv in _btc_pub_to_priv(w).items():
+            if pub == bytes.fromhex(rec["maker_pubkey"]):
+                refund_priv = priv
+                break
+        if refund_priv is None:
+            raise SystemExit("swap refund-excal: refund key (maker) "
+                             "is not a wallet key")
+        res = swap_mod.build_excal_refund(
+            rec, entry, dest_lock, args.fee, refund_priv,
+            args.fork_height + 1)
+    except SwapError as e:
+        raise SystemExit(f"swap refund-excal refused: {e}")
+    _swap_commit(w, pw, rec, "excal-refunded", role="maker",
+                 fork_height=args.fork_height,
+                 btc_height=args.btc_height, leg="excal",
+                 updates={"refund_txid": res["txid"]})
+    print(f"EXCAL leg refunded (fork height {args.fork_height} >= "
+          f"timeout {rec['excal_timeout']}; BTC leg expired first).")
+    _print_tx_result(res)
+
+
+def cmd_wallet_swap_refund_btc(args):
+    w, pw, rec = _swap_load(args)
+    _swap_require_role(rec, "taker")
+    _swap_check_move(rec, "btc-refunded", role="taker",
+                     btc_height=args.btc_height)
+    _swap_network(args, rec)
+    try:
+        dest_spk = _btc_dest_spk(args)
+        res = swap_mod.build_btc_refund(
+            rec, dest_spk, _btc_pub_to_priv(w), fee_rate=args.fee_rate,
+            current_height=args.btc_height)
+    except SwapError as e:
+        raise SystemExit(f"swap refund-btc refused: {e}")
+    _swap_commit(w, pw, rec, "btc-refunded", role="taker", leg="btc",
+                 updates={"refund_txid": res["txid"]})
+    if args.save:
+        _btc_save_spend(args, res)
+    print(f"BTC leg refunded (BTC height {args.btc_height} >= timeout "
+          f"{rec['btc_timeout']}).")
+    _print_btc_tx_result(res)
+
+
 def cmd_wallet_qhtlc_create(args):
     w, pw = _load_wallet(args)
     try:
@@ -1160,6 +1919,241 @@ def build_parser():
     p.add_argument("--utxo", required=True, help="TXID:VOUT")
     p.add_argument("--dest", required=True)
     p.add_argument("--fee", type=int, default=1000)
+
+    p = wadd("btc-htlc", None, "Bitcoin HTLC (P2WSH, standalone)")
+    bs = p.add_subparsers(dest="bcmd", required=True)
+
+    def badd(name, fn, help_):
+        q = bs.add_parser(name, help=help_)
+        q.set_defaults(fn=fn)
+        return q
+
+    p = badd("show", cmd_wallet_btc_htlc_show,
+             "derive a BTC HTLC address + script (no wallet needed)")
+    p.add_argument("--claim-pubkey", required=True)
+    p.add_argument("--refund-pubkey", required=True)
+    p.add_argument("--secret-hash", required=True,
+                   help="32-byte SHA256 of the secret, hex")
+    p.add_argument("--timeout", type=int, required=True,
+                   help="refund at BTC height >= this")
+    p.add_argument("--network", default="mainnet",
+                   choices=["mainnet", "testnet", "regtest", "signet"])
+    p = badd("create", cmd_wallet_btc_htlc_create,
+             "create a BTC HTLC lock (records it in the wallet)")
+    p.add_argument("--secret", help="32-byte secret hex (generated if omitted)")
+    p.add_argument("--claim-pubkey", required=True)
+    p.add_argument("--refund-pubkey", required=True)
+    p.add_argument("--timeout", type=int, required=True)
+    p.add_argument("--network", default="mainnet",
+                   choices=["mainnet", "testnet", "regtest", "signet"])
+    p = badd("lock", cmd_wallet_btc_htlc_lock,
+             "fund a BTC HTLC from a wallet P2WPKH UTXO (NO broadcast)")
+    p.add_argument("--utxo", required=True, help="funding TXID:VOUT")
+    p.add_argument("--utxo-value", type=int, required=True,
+                   help="funding UTXO value in sats")
+    p.add_argument("--utxo-scriptpubkey", required=True,
+                   help="funding UTXO scriptPubKey hex (must be a wallet P2WPKH)")
+    p.add_argument("--amount", type=int, required=True,
+                   help="HTLC output value in sats")
+    p.add_argument("--claim-pubkey", required=True)
+    p.add_argument("--refund-pubkey", required=True)
+    p.add_argument("--secret-hash",
+                   help="32-byte SHA256 of the secret, hex")
+    p.add_argument("--secret", help="32-byte secret hex (hash derived)")
+    p.add_argument("--timeout", type=int, required=True)
+    p.add_argument("--change-index", type=int, default=None,
+                   help="wallet change key index (default: next)")
+    p.add_argument("--fee-rate", type=int, default=5,
+                   help="sats per vbyte (default 5)")
+    p.add_argument("--network", default="mainnet",
+                   choices=["mainnet", "testnet", "regtest", "signet"])
+    p.add_argument("--save", help="write the signed tx JSON (0600) for "
+                   "`wallet broadcast --file`")
+    p = badd("claim", cmd_wallet_btc_htlc_claim,
+             "claim a BTC HTLC (secret + claim key, NO broadcast)")
+    p.add_argument("--utxo", required=True, help="HTLC TXID:VOUT")
+    p.add_argument("--utxo-value", type=int, required=True,
+                   help="HTLC UTXO value in sats")
+    p.add_argument("--secret", required=True, help="32-byte secret hex")
+    p.add_argument("--dest-address", required=True,
+                   help="destination SegWit v0 address (bc1q...)")
+    p.add_argument("--witness-script",
+                   help="witness script hex (or --address of a recorded lock)")
+    p.add_argument("--address",
+                   help="recorded BTC HTLC address (looks up the script)")
+    p.add_argument("--fee", type=int, default=None,
+                   help="explicit fee in sats (default: fee-rate * vsize)")
+    p.add_argument("--fee-rate", type=int, default=5,
+                   help="sats per vbyte (default 5)")
+    p.add_argument("--network", default="mainnet",
+                   choices=["mainnet", "testnet", "regtest", "signet"])
+    p.add_argument("--save", help="write the signed tx JSON (0600)")
+    p = badd("refund", cmd_wallet_btc_htlc_refund,
+             "refund a BTC HTLC (refund key, after timeout, NO broadcast)")
+    p.add_argument("--utxo", required=True, help="HTLC TXID:VOUT")
+    p.add_argument("--utxo-value", type=int, required=True,
+                   help="HTLC UTXO value in sats")
+    p.add_argument("--dest-address", required=True,
+                   help="destination SegWit v0 address (bc1q...)")
+    p.add_argument("--witness-script",
+                   help="witness script hex (or --address of a recorded lock)")
+    p.add_argument("--address",
+                   help="recorded BTC HTLC address (looks up the script)")
+    p.add_argument("--btc-height", type=int, required=True,
+                   help="current Bitcoin tip height (must be >= timeout)")
+    p.add_argument("--fee", type=int, default=None,
+                   help="explicit fee in sats (default: fee-rate * vsize)")
+    p.add_argument("--fee-rate", type=int, default=5,
+                   help="sats per vbyte (default 5)")
+    p.add_argument("--network", default="mainnet",
+                   choices=["mainnet", "testnet", "regtest", "signet"])
+    p.add_argument("--save", help="write the signed tx JSON (0600)")
+
+    p = wadd("swap", None,
+             "Cross-chain atomic swap (EXCAL HTLC + BTC HTLC)")
+    ss = p.add_subparsers(dest="scmd", required=True)
+
+    def sadd(name, fn, help_):
+        q = ss.add_parser(name, help=help_)
+        q.set_defaults(fn=fn)
+        return q
+
+    p = sadd("create", cmd_wallet_swap_create,
+             "create a swap (shared hashlock, staggered timeouts)")
+    p.add_argument("--role", required=True, choices=["maker", "taker"],
+                   help="maker locks EXCAL + claims BTC; taker locks "
+                   "BTC + claims EXCAL")
+    p.add_argument("--counterparty-pubkey", required=True,
+                   help="counterparty compressed pubkey hex (33 bytes)")
+    p.add_argument("--excal-amount", type=int, required=True,
+                   help="EXCAL locked, in swords")
+    p.add_argument("--btc-amount", type=int, required=True,
+                   help="BTC locked, in sats")
+    p.add_argument("--excal-timeout", type=int, required=True,
+                   help="EXCAL refund at fork height >= this (must be "
+                   "later than the BTC timeout in wall-clock terms)")
+    p.add_argument("--btc-timeout", type=int, required=True,
+                   help="BTC refund at BTC height >= this (expires first)")
+    p.add_argument("--fork-height", type=int, required=True,
+                   help="current fork tip height (timeout validation)")
+    p.add_argument("--btc-height", type=int, required=True,
+                   help="current Bitcoin tip height (timeout validation)")
+    p.add_argument("--secret", help="32-byte secret hex (maker only; "
+                   "generated if omitted — shown once, never stored)")
+    p.add_argument("--secret-hash", help="32-byte secret hash hex "
+                   "(taker only — the maker's published hash)")
+    p.add_argument("--network", default="mainnet",
+                   choices=["mainnet", "testnet", "regtest", "signet"])
+    p = sadd("show", cmd_wallet_swap_show,
+             "show a swap's state + both legs")
+    p.add_argument("--swap-id", required=True)
+    p = sadd("list", cmd_wallet_swap_list, "list all swaps in the wallet")
+    p = sadd("fund-excal", cmd_wallet_swap_fund_excal,
+             "maker: fund the EXCAL leg from live-node UTXOs "
+             "(NO broadcast)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--fee-rate", type=int, default=1,
+                   help="swords per vbyte (default 1)")
+    p.add_argument("--save", help="write the signed tx JSON (0600) for "
+                   "`wallet broadcast --file`")
+    p = sadd("note-excal-funded", cmd_wallet_swap_note_excal_funded,
+             "record + verify an EXCAL funding tx (maker's own, or "
+             "the counterparty's for the taker)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--raw-hex", required=True,
+                   help="EXCAL funding tx, raw hex (verified against "
+                   "the swap lock + amount)")
+    p = sadd("fund-btc", cmd_wallet_swap_fund_btc,
+             "taker: fund the BTC leg from a wallet P2WPKH UTXO "
+             "(NO broadcast)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--utxo", required=True, help="funding TXID:VOUT")
+    p.add_argument("--utxo-value", type=int, required=True,
+                   help="funding UTXO value in sats")
+    p.add_argument("--utxo-scriptpubkey", required=True,
+                   help="funding UTXO scriptPubKey hex (must be a wallet "
+                   "P2WPKH)")
+    p.add_argument("--change-index", type=int, default=None,
+                   help="wallet change key index (default: next)")
+    p.add_argument("--fee-rate", type=int, default=5,
+                   help="sats per vbyte (default 5)")
+    p.add_argument("--save", help="write the signed tx JSON (0600)")
+    p = sadd("note-btc-funded", cmd_wallet_swap_note_btc_funded,
+             "record + verify a BTC funding tx (taker's own, or the "
+             "counterparty's for the maker)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--raw-hex", required=True,
+                   help="BTC funding tx, raw hex (verified against "
+                   "the swap P2WSH address + amount)")
+    p = sadd("claim-btc", cmd_wallet_swap_claim_btc,
+             "maker: claim the BTC leg with the secret (NO broadcast)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--secret", required=True, help="32-byte secret hex")
+    p.add_argument("--dest-address", required=True,
+                   help="destination SegWit v0 address (bc1q...)")
+    p.add_argument("--fee-rate", type=int, default=5,
+                   help="sats per vbyte (default 5)")
+    p.add_argument("--network", default="mainnet",
+                   choices=["mainnet", "testnet", "regtest", "signet"])
+    p.add_argument("--save", help="write the signed tx JSON (0600)")
+    p = sadd("note-btc-claimed", cmd_wallet_swap_note_btc_claimed,
+             "taker: record + verify the maker's BTC claim (reveals "
+             "the secret)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--raw-hex", required=True,
+                   help="maker's BTC claim tx, raw hex (verified "
+                   "against the swap funding + secret hash; the "
+                   "revealed secret is printed)")
+    p = sadd("claim-excal", cmd_wallet_swap_claim_excal,
+             "taker: claim the EXCAL leg with the revealed secret "
+             "(NO broadcast)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--secret", required=True,
+                   help="32-byte secret hex (revealed by the maker's "
+                   "BTC claim)")
+    p.add_argument("--dest", required=True,
+                   help="destination fork lock hex (21 bytes)")
+    p.add_argument("--utxo", required=True,
+                   help="recorded EXCAL funding TXID:VOUT")
+    p.add_argument("--fee", type=int, default=1000,
+                   help="fee in swords (default 1000)")
+    p.add_argument("--fork-height", type=int, required=True,
+                   help="current fork tip height (validation height is "
+                   "tip+1)")
+    p = sadd("note-excal-claimed", cmd_wallet_swap_note_excal_claimed,
+             "maker: record the taker's EXCAL claim (swap complete)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--txid", required=True,
+                   help="taker's EXCAL claim txid")
+    p = sadd("refund-excal", cmd_wallet_swap_refund_excal,
+             "maker: refund the EXCAL leg after both timeouts "
+             "(NO broadcast)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--dest", required=True,
+                   help="destination fork lock hex (21 bytes)")
+    p.add_argument("--utxo", required=True,
+                   help="recorded EXCAL funding TXID:VOUT")
+    p.add_argument("--fee", type=int, default=1000,
+                   help="fee in swords (default 1000)")
+    p.add_argument("--fork-height", type=int, required=True,
+                   help="current fork tip height (must be >= the EXCAL "
+                   "timeout)")
+    p.add_argument("--btc-height", type=int, required=True,
+                   help="current Bitcoin tip height (must be >= the BTC "
+                   "timeout when the BTC leg was funded)")
+    p = sadd("refund-btc", cmd_wallet_swap_refund_btc,
+             "taker: refund the BTC leg after its timeout "
+             "(NO broadcast)")
+    p.add_argument("--swap-id", required=True)
+    p.add_argument("--dest-address", required=True,
+                   help="destination SegWit v0 address (bc1q...)")
+    p.add_argument("--btc-height", type=int, required=True,
+                   help="current Bitcoin tip height (must be >= timeout)")
+    p.add_argument("--fee-rate", type=int, default=5,
+                   help="sats per vbyte (default 5)")
+    p.add_argument("--network", default="mainnet",
+                   choices=["mainnet", "testnet", "regtest", "signet"])
+    p.add_argument("--save", help="write the signed tx JSON (0600)")
 
     p = wadd("qhtlc", None, "QHTLC locks (hash-only)")
     qs = p.add_subparsers(dest="qcmd", required=True)

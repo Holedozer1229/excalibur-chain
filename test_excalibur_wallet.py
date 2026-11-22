@@ -36,6 +36,10 @@ from excalibur_wallet.txbuild import (build_send, build_htlc_claim,
                                       parse_amount, TxBuildError)
 from excalibur_wallet import frostgate
 from excalibur_wallet import uruu
+from excalibur_wallet import btc_htlc as btc
+from excalibur_wallet.btc_htlc import BtcHtlcError
+from excalibur_wallet import atomic_swap as swap
+from excalibur_wallet.atomic_swap import SwapError
 
 PASSED = []
 FAILED = []
@@ -796,6 +800,1199 @@ def test_cli_smoke():
           and ("fork node" in r.stdout))
 
 
+def test_btc_htlc():
+    """BTC-side HTLC (P2WSH): script, bech32, vendored cross-check,
+    funding / claim / refund through the PSBT flow, broadcast parse."""
+    import secp256k1 as secp
+    claim_priv, refund_priv = 0x1111, 0x2222
+    fund_priv, dest_priv = 0x3333, 0x4444
+    claim_pub = keys.priv_to_pub_compressed(claim_priv)
+    refund_pub = keys.priv_to_pub_compressed(refund_priv)
+    fund_pub = keys.priv_to_pub_compressed(fund_priv)
+    dest_pub = keys.priv_to_pub_compressed(dest_priv)
+    secret = bytes(range(1, 33))  # test-only secret, never a real one
+    secret_hash = hashlib.sha256(secret).digest()
+    timeout = 977200
+
+    # --- script build / parse
+    script = btc.build_witness_script(claim_pub, refund_pub, secret_hash,
+                                      timeout)
+    parsed = btc.parse_witness_script(script)
+    check("btc-htlc script parses to the same roles",
+          parsed["claim_pubkey"] == claim_pub
+          and parsed["refund_pubkey"] == refund_pub
+          and parsed["secret_hash"] == secret_hash
+          and parsed["timeout"] == timeout)
+    swapped = btc.build_witness_script(refund_pub, claim_pub, secret_hash,
+                                       timeout)
+    check("btc-htlc roles are not interchangeable (swapped = new lock)",
+          btc.p2wsh_address(swapped) != btc.p2wsh_address(script))
+    for bad in (lambda: btc.build_witness_script(claim_pub, refund_pub,
+                                                 secret_hash[:31], timeout),
+                lambda: btc.build_witness_script(claim_pub, refund_pub,
+                                                 secret_hash, 0),
+                lambda: btc.build_witness_script(claim_pub, claim_pub,
+                                                 secret_hash, timeout),
+                lambda: btc.build_witness_script(b"\x02" * 32, refund_pub,
+                                                 secret_hash, timeout)):
+        try:
+            bad()
+            check("btc-htlc bad params refused", False)
+        except BtcHtlcError:
+            check("btc-htlc bad params refused", True)
+    check("btc-htlc trailing bytes refused",
+          _raises_btc(lambda: btc.parse_witness_script(script + b"\x00")))
+
+    # --- bech32 + known P2WPKH vector (maker pubkey -> signal address)
+    maker_pub = bytes.fromhex(
+        "02e8311342cb7accd4edef31462fcda1ef56bfbf7d4f03d3c8872dbec9a1bba1b3")
+    check("btc-htlc P2WPKH address matches the known maker address",
+          btc.p2wpkh_address(maker_pub)
+          == "bc1qj37xg5qmyedwfe70cz0f385cxmf6642kcznjdg")
+    addr = btc.p2wsh_address(script)
+    hrp, ver, prog = btc.bech32_decode(addr)
+    check("btc-htlc P2WSH address decodes (bc, v0, 32-byte program)",
+          hrp == "bc" and ver == 0 and len(prog) == 32
+          and prog == hashlib.sha256(script).digest())
+    check("btc-htlc scriptPubKey from address round-trips",
+          btc.script_pubkey_from_address(addr)
+          == btc.p2wsh_script_pubkey(script))
+    try:
+        btc.bech32_decode(addr[:-1] + ("q" if addr[-1] != "q" else "p"))
+        check("btc-htlc bad bech32 checksum refused", False)
+    except BtcHtlcError:
+        check("btc-htlc bad bech32 checksum refused", True)
+
+    # --- cross-check against the vendored self-serve BTC HTLC module
+    sys.path.insert(0, os.path.join(os.path.dirname(
+        os.path.abspath(__file__)), "self-serve", "vendor"))
+    import btc_htlc as vendored
+    v_script = vendored.build_witness_script(
+        maker_pub, refund_pub, vendored.SECRET_HASH, timeout)
+    check("btc-htlc witness script matches the vendored module",
+          btc.build_witness_script(maker_pub, refund_pub,
+                                   vendored.SECRET_HASH, timeout) == v_script)
+    check("btc-htlc P2WSH address matches the vendored module",
+          btc.p2wsh_address(v_script) == vendored.p2wsh_address(v_script))
+    v_tx = {"version": 2,
+            "vin": [{"prev_txid": bytes.fromhex(_funding_txid("btc-x"))[::-1],
+                     "prev_vout": 0, "sequence": 0xFFFFFFFF}],
+            "vout": [{"value": 499_000,
+                      "script_pubkey": btc.p2wpkh_script_pubkey(dest_pub)}],
+            "locktime": 0}
+    check("btc-htlc BIP143 sighash matches the vendored module",
+          btc.bip143_sighash(v_tx, 0, v_script, 500_000)
+          == vendored.bip143_sighash(v_tx, 0, v_script, 500_000))
+
+    # --- funding (P2WPKH -> P2WSH + change), PSBT flow
+    fund_txid = _funding_txid("btc-fund")
+    utxo = {"txid": fund_txid, "vout": 0, "value": 1_000_000,
+            "script_pubkey": btc.p2wpkh_script_pubkey(fund_pub).hex()}
+    lock = btc.build_lock(claim_pub, refund_pub, secret_hash, timeout)
+    res = btc.build_btc_htlc_lock([utxo], {fund_pub: fund_priv},
+                                  500_000, claim_pub, refund_pub,
+                                  secret_hash, timeout, fund_pub,
+                                  fee_rate=5)
+    check("btc-htlc funding validates locally", res["validated"] is True)
+    check("btc-htlc funding fee covers the rate (exact vsize)",
+          res["fee"] >= 5 * res["vsize"]
+          and res["fee"] - 5 * res["vsize"] < 15)
+    check("btc-htlc funding outputs are HTLC + change",
+          res["outputs"][0]["value"] == 500_000
+          and res["outputs"][0]["script_pubkey"] == lock["script_pubkey_hex"]
+          and res["outputs"][1]["value"]
+          == 1_000_000 - 500_000 - res["fee"])
+    check("btc-htlc funding address matches the lock",
+          res["address"] == lock["address"])
+    seg = btc.parse_segwit_tx(bytes.fromhex(res["raw_hex"]))
+    check("btc-htlc funding raw parses back (v2, 1 in, 2 out, witness)",
+          seg["version"] == 2 and len(seg["vin"]) == 1
+          and len(seg["vout"]) == 2 and len(seg["vin"][0]["witness"]) == 2)
+    check("btc-htlc funding txid/wtxid match the build",
+          btc.txid_display(seg) == res["txid"]
+          and btc.wtxid_display(seg) == res["wtxid"])
+    # the funding signature verifies independently (BIP143, P2WPKH)
+    wit = seg["vin"][0]["witness"]
+    h = btc.bip143_sighash({**seg, "vin": [{**seg["vin"][0],
+                                            "witness": None}]},
+                           0, btc.p2wpkh_script_code(fund_pub), 1_000_000)
+    r, s = secp.der_decode(wit[0][:-1])
+    check("btc-htlc funding signature verifies (independent secp check)",
+          secp.verify(fund_pub, r.to_bytes(32, "big")
+                      + s.to_bytes(32, "big"), h))
+    # PSBT round-trip: parse, re-finalize, same raw hex
+    doc = btc.parse_psbt(res["psbt"])
+    check("btc-htlc funding PSBT parses (unsigned tx + witness_utxo)",
+          doc["tx"]["version"] == 2
+          and doc["inputs"][0]["witness_utxo"]["value"] == 1_000_000
+          and len(doc["inputs"][0]["partial_sigs"]) == 1)
+    fin2 = btc.finalize_psbt(res["psbt"])
+    check("btc-htlc funding PSBT re-finalizes to the same raw tx",
+          fin2["raw_hex"] == res["raw_hex"])
+
+    # --- claim
+    dest_spk = btc.p2wpkh_script_pubkey(dest_pub)
+    claim = btc.build_btc_htlc_claim(res["txid"], 0, 500_000, dest_spk,
+                                     secret, script, claim_priv, fee_rate=5)
+    check("btc-htlc claim validates locally", claim["validated"] is True)
+    cseg = btc.parse_segwit_tx(bytes.fromhex(claim["raw_hex"]))
+    cwit = cseg["vin"][0]["witness"]
+    check("btc-htlc claim witness is [sig, secret, 0x01, script]",
+          len(cwit) == 4 and cwit[1] == secret and cwit[2] == b"\x01"
+          and cwit[3] == script)
+    check("btc-htlc claim txid matches the build",
+          btc.txid_display(cseg) == claim["txid"])
+    ch = btc.bip143_sighash({**cseg, "vin": [{**cseg["vin"][0],
+                                              "witness": None}]},
+                            0, script, 500_000)
+    r, s = secp.der_decode(cwit[0][:-1])
+    check("btc-htlc claim signature verifies (independent secp check)",
+          secp.verify(claim_pub, r.to_bytes(32, "big")
+                      + s.to_bytes(32, "big"), ch))
+    check("btc-htlc claim output pays the destination",
+          cseg["vout"][0]["script_pubkey"] == dest_spk
+          and cseg["vout"][0]["value"] == 500_000 - claim["fee"])
+    _btc_exec_check("btc-htlc claim executes in the script interpreter",
+                    cwit, script, ch, 0, 0xFFFFFFFF)
+    try:
+        btc.build_btc_htlc_claim(res["txid"], 0, 500_000, dest_spk,
+                                 bytes(32), script, claim_priv, fee_rate=5)
+        check("btc-htlc claim refuses a wrong secret", False)
+    except BtcHtlcError:
+        check("btc-htlc claim refuses a wrong secret", True)
+    try:
+        btc.build_btc_htlc_claim(res["txid"], 0, 500_000, dest_spk,
+                                 secret, script, refund_priv, fee_rate=5)
+        check("btc-htlc claim refuses the refund key", False)
+    except BtcHtlcError:
+        check("btc-htlc claim refuses the refund key", True)
+    check("btc-htlc validate_claim true/false",
+          btc.validate_claim(secret, script) is True
+          and btc.validate_claim(bytes(32), script) is False)
+
+    # --- refund
+    try:
+        btc.build_btc_htlc_refund(res["txid"], 0, 500_000, dest_spk,
+                                  script, refund_priv,
+                                  current_height=timeout - 1, fee_rate=5)
+        check("btc-htlc refund refuses before timeout", False)
+    except BtcHtlcError:
+        check("btc-htlc refund refuses before timeout", True)
+    refund = btc.build_btc_htlc_refund(res["txid"], 0, 500_000, dest_spk,
+                                       script, refund_priv,
+                                       current_height=timeout, fee_rate=5)
+    check("btc-htlc refund validates at timeout", refund["validated"] is True)
+    rseg = btc.parse_segwit_tx(bytes.fromhex(refund["raw_hex"]))
+    rwit = rseg["vin"][0]["witness"]
+    check("btc-htlc refund witness is [sig, <empty>, script] + CLTV fields",
+          len(rwit) == 3 and rwit[1] == b"" and rwit[2] == script
+          and rseg["locktime"] == timeout
+          and rseg["vin"][0]["sequence"] == 0xFFFFFFFE)
+    rh = btc.bip143_sighash({**rseg, "vin": [{**rseg["vin"][0],
+                                              "witness": None}]},
+                            0, script, 500_000)
+    _btc_exec_check("btc-htlc refund executes in the script interpreter",
+                    rwit, script, rh, timeout, 0xFFFFFFFE)
+    check("btc-htlc validate_refund true/false",
+          btc.validate_refund(timeout, 0xFFFFFFFE, script) is True
+          and btc.validate_refund(timeout - 1, 0xFFFFFFFE, script) is False
+          and btc.validate_refund(timeout, 0xFFFFFFFF, script) is False)
+
+    # --- PSBT tamper: a flipped partial-sig byte must fail finalize
+    doc = btc.parse_psbt(claim["psbt"])
+    sig = bytearray(bytes.fromhex(
+        list(doc["inputs"][0]["partial_sigs"].values())[0].hex()))
+    sig[10] ^= 0x01
+    doc["inputs"][0]["partial_sigs"][claim_pub.hex()] = bytes(sig)
+    tampered = btc._encode_psbt(doc["tx"], doc["inputs"])
+    try:
+        btc.finalize_psbt(tampered, {0: {"branch": "claim",
+                                         "secret": secret}})
+        check("btc-htlc tampered PSBT signature refused at finalize",
+              False)
+    except BtcHtlcError:
+        check("btc-htlc tampered PSBT signature refused at finalize",
+              True)
+
+    # --- broadcast parse: segwit v2/locktime txs on the bitcoin path
+    from excalibur_wallet.broadcast import (
+        parse_raw_tx, broadcast_bitcoin, BroadcastError)
+    _raw, _p, c_txid, _i = parse_raw_tx(claim["raw_hex"],
+                                        network="bitcoin")
+    check("broadcast parses a BTC HTLC claim (v2 segwit), txid matches",
+          c_txid == claim["txid"])
+    try:
+        parse_raw_tx(claim["raw_hex"])  # fork default: version 1 only
+        check("broadcast fork path refuses a v2 segwit tx", False)
+    except BroadcastError:
+        check("broadcast fork path refuses a v2 segwit tx", True)
+    _raw, _p, r_txid, _i = parse_raw_tx(refund["raw_hex"],
+                                        network="bitcoin")
+    check("broadcast parses a BTC HTLC refund (locktime != 0)",
+          r_txid == refund["txid"])
+    try:
+        parse_raw_tx(refund["raw_hex"])
+        check("broadcast fork path refuses a locktime tx", False)
+    except BroadcastError:
+        check("broadcast fork path refuses a locktime tx", True)
+
+    # --- broadcast_bitcoin with a segwit-aware fake (stripped txid)
+    class _SegwitFakeBtcRpc(_FakeBtcRpc):
+        def call(self, method, params=None):
+            if method == "sendrawtransaction":
+                seg = btc.parse_segwit_tx(bytes.fromhex(params[0]))
+                txid = btc.txid_display(seg)
+                self.submitted.append(txid)
+                return txid
+            return super().call(method, params)
+
+    fake = _SegwitFakeBtcRpc(allowed=True)
+    out = broadcast_bitcoin(claim["raw_hex"], btc_rpc=fake)
+    check("broadcast bitcoin submits a BTC HTLC claim + verifies mempool",
+          out["mempool"] is True and out["txid"] == claim["txid"]
+          and out["network"] == "bitcoin")
+    fake_dry = _SegwitFakeBtcRpc(allowed=True)
+    out = broadcast_bitcoin(claim["raw_hex"], btc_rpc=fake_dry,
+                            dry_run=True)
+    check("broadcast bitcoin dry-run does not submit a BTC HTLC claim",
+          out["dry_run"] is True and fake_dry.submitted == [])
+
+    # --- CLI smoke: show (no wallet) + full lock/claim flow on an
+    # imported legacy key (funding key 0x3333 == claim key here)
+    tmp = tempfile.mkdtemp(prefix="excal-btc-htlc-cli-")
+    pwfile = os.path.join(tmp, "pw.txt")
+    with open(pwfile, "w") as f:
+        f.write("btc-htlc-passphrase")
+    os.chmod(pwfile, 0o600)
+    datadir = os.path.join(tmp, "wallet-data")
+    cli = [sys.executable, "-m", "excalibur_wallet"]
+
+    def run(*args):
+        return subprocess.run(cli + ["--datadir", datadir,
+                                     "--passphrase-file", pwfile] + list(args),
+                              capture_output=True, text=True, timeout=120)
+
+    r = run("wallet", "btc-htlc", "show", "--claim-pubkey",
+            claim_pub.hex(), "--refund-pubkey", refund_pub.hex(),
+            "--secret-hash", secret_hash.hex(), "--timeout", str(timeout))
+    check("cli btc-htlc show prints the P2WSH address",
+          r.returncode == 0 and lock["address"] in r.stdout)
+    node_wallet = os.path.join(tmp, "node-wallet.json")
+    with open(node_wallet, "w") as f:
+        json.dump({"priv": f"{fund_priv:064x}",
+                   "pub": fund_pub.hex()}, f)
+    r = run("wallet", "import-node", "--wallet", node_wallet)
+    check("cli btc-htlc flow: legacy key import succeeds",
+          r.returncode == 0 and "imported node wallet" in r.stdout)
+    r = run("wallet", "btc-htlc", "create", "--secret", secret.hex(),
+            "--claim-pubkey", fund_pub.hex(), "--refund-pubkey",
+            refund_pub.hex(), "--timeout", str(timeout))
+    check("cli btc-htlc create records the lock",
+          r.returncode == 0 and "Recorded in the wallet lock book"
+          in r.stdout)
+    addr2 = btc.p2wsh_address(btc.build_witness_script(
+        fund_pub, refund_pub, secret_hash, timeout))
+    r = run("wallet", "btc-htlc", "lock", "--utxo", f"{fund_txid}:0",
+            "--utxo-value", "1000000", "--utxo-scriptpubkey",
+            btc.p2wpkh_script_pubkey(fund_pub).hex(),
+            "--amount", "500000", "--claim-pubkey", fund_pub.hex(),
+            "--refund-pubkey", refund_pub.hex(),
+            "--secret-hash", secret_hash.hex(), "--timeout", str(timeout),
+            "--save", os.path.join(tmp, "funding.json"))
+    check("cli btc-htlc lock builds + signs (NOT broadcast)",
+          r.returncode == 0 and "NOT broadcast" in r.stdout
+          and addr2 in r.stdout)
+    with open(os.path.join(tmp, "funding.json")) as f:
+        saved = json.load(f)
+    check("cli btc-htlc lock --save writes bitcoin saved-tx JSON",
+          saved["network"] == "bitcoin" and saved["validated"] is True
+          and saved["txid"] in r.stdout)
+    r = run("wallet", "btc-htlc", "claim", "--utxo",
+            f"{saved['txid']}:0", "--utxo-value", "500000",
+            "--secret", secret.hex(), "--dest-address",
+            btc.p2wpkh_address(dest_pub), "--address", addr2,
+            "--save", os.path.join(tmp, "claim.json"))
+    check("cli btc-htlc claim builds + signs (NOT broadcast)",
+          r.returncode == 0 and "NOT broadcast" in r.stdout)
+    # Refund path: a second lock whose REFUND key is the wallet key
+    # (the first lock's refund key is not a wallet key, so a refund
+    # there would fail on the key, not on the timeout).
+    addr3 = btc.p2wsh_address(btc.build_witness_script(
+        claim_pub, fund_pub, secret_hash, timeout))
+    r = run("wallet", "btc-htlc", "lock", "--utxo", f"{fund_txid}:0",
+            "--utxo-value", "1000000", "--utxo-scriptpubkey",
+            btc.p2wpkh_script_pubkey(fund_pub).hex(),
+            "--amount", "500000", "--claim-pubkey", claim_pub.hex(),
+            "--refund-pubkey", fund_pub.hex(),
+            "--secret-hash", secret_hash.hex(), "--timeout", str(timeout))
+    check("cli btc-htlc second lock (refund key = wallet key) builds",
+          r.returncode == 0 and addr3 in r.stdout)
+    r = run("wallet", "btc-htlc", "refund", "--utxo",
+            f"{saved['txid']}:0", "--utxo-value", "500000",
+            "--dest-address", btc.p2wpkh_address(dest_pub),
+            "--address", addr3, "--btc-height", str(timeout - 1))
+    check("cli btc-htlc refund refuses before timeout",
+          r.returncode != 0 and "below the timeout" in (r.stdout
+                                                        + r.stderr))
+
+
+def _raises_btc(fn):
+    try:
+        fn()
+        return False
+    except BtcHtlcError:
+        return True
+
+
+def _btc_exec_check(name, witness, script, sighash, locktime, sequence):
+    """Execute a witness + script in the workspace Bitcoin Script
+    interpreter (bitcoin_script.py). Skips (never passes) when the
+    interpreter is unavailable."""
+    ws = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if ws not in sys.path:
+        sys.path.insert(0, ws)
+    try:
+        import bitcoin_script
+    except Exception as e:
+        skip(name, f"bitcoin_script interpreter unavailable ({e})")
+        return
+    combined = b"".join(btc.push(item) for item in witness[:-1]) + script
+    # witness[-1] IS the script: it is executed, not pushed as data
+    # (the vendored module's execute_witness takes the same convention).
+    ok, reason = bitcoin_script.eval_script(
+        combined, lambda t=None: sighash,
+        context={"tx_locktime": locktime, "sequence": sequence,
+                 "version": 2})
+    check(name, ok is True)
+
+
+def test_btc_htlc_regtest():
+    """End-to-end BTC HTLC on a local regtest node (real bitcoind):
+    fund the P2WSH lock, confirm it, claim it, confirm the claim,
+    then fund a second lock and refund it after its timeout. Skips
+    when bitcoind is unavailable — never fakes a node."""
+    import shutil
+    bitcoind = os.path.expanduser(
+        "~/workspace/bitcoin/bitcoin-28.0/bin/bitcoind")
+    bitcoin_cli = os.path.expanduser(
+        "~/workspace/bitcoin/bitcoin-28.0/bin/bitcoin-cli")
+    if not (os.path.isfile(bitcoind) and os.path.isfile(bitcoin_cli)):
+        skip("regtest btc-htlc end-to-end", "bitcoind binary not found")
+        return
+    tmp = tempfile.mkdtemp(prefix="btc-htlc-regtest-")
+    datadir = os.path.join(tmp, "regtest")
+    os.makedirs(datadir, exist_ok=True)
+
+    def cli(*args):
+        return subprocess.run([bitcoin_cli, "-regtest",
+                               f"-datadir={datadir}"] + list(args),
+                              capture_output=True, text=True, timeout=120)
+
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            [bitcoind, "-regtest", f"-datadir={datadir}",
+             "-daemon=0", "-printtoconsole=0", "-fallbackfee=0.00001"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        tip = None
+        for _ in range(60):
+            r = cli("getblockcount")
+            if r.returncode == 0 and r.stdout.strip().isdigit():
+                tip = int(r.stdout.strip())
+                break
+            import time as _t
+            _t.sleep(1)
+        if tip is None:
+            skip("regtest btc-htlc end-to-end",
+                 "regtest node did not come up in 60s")
+            return
+        claim_priv, refund_priv = 0x1111, 0x2222
+        fund_priv, dest_priv = 0x3333, 0x4444
+        claim_pub = keys.priv_to_pub_compressed(claim_priv)
+        refund_pub = keys.priv_to_pub_compressed(refund_priv)
+        fund_pub = keys.priv_to_pub_compressed(fund_priv)
+        dest_pub = keys.priv_to_pub_compressed(dest_priv)
+        fund_addr = btc.p2wpkh_address(fund_pub, "regtest")
+        dest_addr = btc.p2wpkh_address(dest_pub, "regtest")
+        r = cli("generatetoaddress", "101", fund_addr)
+        if r.returncode != 0:
+            skip("regtest btc-htlc end-to-end",
+                 f"generatetoaddress failed: {r.stderr[:120]}")
+            return
+        r = cli("scantxoutset", "start",
+                json.dumps([{"desc": f"addr({fund_addr})"}]))
+        if r.returncode != 0:
+            skip("regtest btc-htlc end-to-end",
+                 f"scantxoutset failed: {r.stderr[:120]}")
+            return
+        unsp = json.loads(r.stdout)["unspents"]
+        # scantxoutset returns coinbases of every height, including
+        # immature ones (< 100 conf) — spend only a mature coinbase.
+        tip_now = int(cli("getblockcount").stdout.strip())
+        unsp = [x for x in unsp if x["height"] <= tip_now - 100]
+        if not unsp:
+            skip("regtest btc-htlc end-to-end",
+                 "no mature funding UTXO after 101 blocks")
+            return
+        u = min(unsp, key=lambda x: x["height"])
+        height = int(cli("getblockcount").stdout.strip())
+        secret = bytes(range(1, 33))
+        secret_hash = hashlib.sha256(secret).digest()
+        timeout = height + 10
+        res = btc.build_btc_htlc_lock(
+            [{"txid": u["txid"], "vout": u["vout"],
+              "value": int(u["amount"] * 100_000_000),
+              "script_pubkey": u["scriptPubKey"]}],
+            {fund_pub: fund_priv}, 500_000, claim_pub, refund_pub,
+            secret_hash, timeout, fund_pub, fee_rate=5,
+            network="regtest")
+        r = cli("sendrawtransaction", res["raw_hex"])
+        check("regtest btc-htlc funding broadcasts to the node",
+              r.returncode == 0 and r.stdout.strip() == res["txid"])
+        r = cli("generatetoaddress", "1", dest_addr)
+        check("regtest btc-htlc funding confirms in a block",
+              r.returncode == 0)
+        r = cli("gettxout", res["txid"], "0")
+        got = json.loads(r.stdout) if r.returncode == 0 else {}
+        check("regtest HTLC UTXO is unspent at the P2WSH scriptPubKey",
+              got.get("value") == 0.005
+              and got.get("scriptPubKey", {}).get("hex")
+              == res["lock"]["script_pubkey_hex"])
+        script = bytes.fromhex(res["lock"]["witness_script_hex"])
+        claim = btc.build_btc_htlc_claim(
+            res["txid"], 0, 500_000,
+            btc.p2wpkh_script_pubkey(dest_pub), secret, script,
+            claim_priv, fee_rate=5)
+        r = cli("testmempoolaccept", json.dumps([claim["raw_hex"]]))
+        allowed = json.loads(r.stdout)[0].get("allowed") \
+            if r.returncode == 0 else False
+        check("regtest node accepts the claim (testmempoolaccept)",
+              allowed is True)
+        r = cli("sendrawtransaction", claim["raw_hex"])
+        check("regtest claim broadcasts to the node",
+              r.returncode == 0 and r.stdout.strip() == claim["txid"])
+        r = cli("generatetoaddress", "1", dest_addr)
+        check("regtest claim confirms in a block", r.returncode == 0)
+        r = cli("gettxout", claim["txid"], "0")
+        got = json.loads(r.stdout) if r.returncode == 0 else {}
+        check("regtest claim output pays the destination P2WPKH",
+              got.get("value") == (500_000 - claim["fee"]) / 100_000_000)
+        # Second lock, refunded after its timeout.
+        height = int(cli("getblockcount").stdout.strip())
+        timeout2 = height + 2
+        script2 = btc.build_witness_script(claim_pub, refund_pub,
+                                           secret_hash, timeout2)
+        u2_all = json.loads(cli(
+            "scantxoutset", "start",
+            json.dumps([{"desc": f"addr({fund_addr})"}])).stdout)["unspents"]
+        height_now = int(cli("getblockcount").stdout.strip())
+        u2_all = [x for x in u2_all if x["height"] <= height_now - 100]
+        if not u2_all:
+            skip("regtest btc-htlc end-to-end",
+                 "no mature funding UTXO for the second lock")
+            return
+        u2 = min(u2_all, key=lambda x: x["height"])
+        res2 = btc.build_btc_htlc_lock(
+            [{"txid": u2["txid"], "vout": u2["vout"],
+              "value": int(u2["amount"] * 100_000_000),
+              "script_pubkey": u2["scriptPubKey"]}],
+            {fund_pub: fund_priv}, 400_000, claim_pub, refund_pub,
+            secret_hash, timeout2, fund_pub, fee_rate=5,
+            network="regtest")
+        r = cli("sendrawtransaction", res2["raw_hex"])
+        check("regtest second HTLC funding broadcasts",
+              r.returncode == 0 and r.stdout.strip() == res2["txid"])
+        cli("generatetoaddress", "1", dest_addr)
+        try:
+            btc.build_btc_htlc_refund(
+                res2["txid"], 0, 400_000,
+                btc.p2wpkh_script_pubkey(dest_pub), script2, refund_priv,
+                current_height=timeout2 - 1, fee_rate=5)
+            check("regtest refund refused before timeout", False)
+        except BtcHtlcError:
+            check("regtest refund refused before timeout", True)
+        cli("generatetoaddress", "3", dest_addr)
+        height = int(cli("getblockcount").stdout.strip())
+        refund = btc.build_btc_htlc_refund(
+            res2["txid"], 0, 400_000,
+            btc.p2wpkh_script_pubkey(dest_pub), script2, refund_priv,
+            current_height=height, fee_rate=5)
+        r = cli("testmempoolaccept", json.dumps([refund["raw_hex"]]))
+        allowed = json.loads(r.stdout)[0].get("allowed") \
+            if r.returncode == 0 else False
+        check("regtest node accepts the refund (testmempoolaccept)",
+              allowed is True)
+        r = cli("sendrawtransaction", refund["raw_hex"])
+        check("regtest refund broadcasts to the node",
+              r.returncode == 0 and r.stdout.strip() == refund["txid"])
+    finally:
+        try:
+            cli("stop")
+        except Exception:
+            pass
+        if proc is not None:
+            try:
+                proc.wait(timeout=30)
+            except Exception:
+                proc.kill()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_atomic_swap():
+    """Cross-chain atomic swap: EXCAL HTLC + BTC P2WSH HTLC, one shared
+    secret hash, staggered timeouts, state machine, both legs, both
+    refunds. Deterministic throwaway keys (same family as the BTC
+    HTLC test); nothing is broadcast, nothing touches mainnet."""
+    from txscript import lock_pkh_for_pubkey
+    import secp256k1 as secp
+    maker_priv, taker_priv, dest_priv = 0x3333, 0x2222, 0x4444
+    maker_pub = keys.priv_to_pub_compressed(maker_priv)
+    taker_pub = keys.priv_to_pub_compressed(taker_priv)
+    dest_pub = keys.priv_to_pub_compressed(dest_priv)
+    secret = bytes(range(1, 33))
+    secret_hash = hashlib.sha256(secret).digest()
+    fork_h, btc_h = 50000, 977000
+    excal_timeout, btc_timeout = 52880, 977144  # Strange: +2880 / +144
+    excal_amt, btc_amt = 50_000_000, 49_999_000
+
+    def _raises_swap(fn):
+        try:
+            fn()
+            return False
+        except SwapError:
+            return True
+
+    # --- timeout ordering: the safety invariant ----------------
+    rec = swap.new_swap("maker", maker_pub, taker_pub, excal_amt,
+                        btc_amt, excal_timeout, btc_timeout, fork_h,
+                        btc_h, secret=secret)
+    check("swap create: state created, id is the secret-hash prefix",
+          rec["state"] == "created"
+          and rec["swap_id"] == secret_hash[:8].hex()
+          and rec["role"] == "maker")
+    check("swap record stores the hash only — the secret value is "
+          "nowhere in the record",
+          secret.hex() not in json.dumps(rec))
+    check("swap refuses a BTC timeout after the EXCAL timeout",
+          _raises_swap(lambda: swap.new_swap(
+              "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+              50100, 977144, fork_h, btc_h, secret=secret)))
+    check("swap refuses too small a safety gap (24h required)",
+          _raises_swap(lambda: swap.new_swap(
+              "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+              52000, 977144, fork_h, btc_h, secret=secret)))
+    check("swap refuses a past BTC timeout",
+          _raises_swap(lambda: swap.new_swap(
+              "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+              excal_timeout, btc_h, fork_h, btc_h, secret=secret)))
+    check("swap refuses a past EXCAL timeout",
+          _raises_swap(lambda: swap.new_swap(
+              "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+              fork_h, btc_timeout, fork_h, btc_h, secret=secret)))
+    check("swap refuses dust amounts",
+          _raises_swap(lambda: swap.new_swap(
+              "maker", maker_pub, taker_pub, 500, btc_amt,
+              excal_timeout, btc_timeout, fork_h, btc_h,
+              secret=secret))
+          and _raises_swap(lambda: swap.new_swap(
+              "maker", maker_pub, taker_pub, excal_amt, 100,
+              excal_timeout, btc_timeout, fork_h, btc_h,
+              secret=secret)))
+    check("swap taker needs the hash, not the secret",
+          _raises_swap(lambda: swap.new_swap(
+              "taker", maker_pub, taker_pub, excal_amt, btc_amt,
+              excal_timeout, btc_timeout, fork_h, btc_h,
+              secret=secret))
+          and _raises_swap(lambda: swap.new_swap(
+              "taker", maker_pub, taker_pub, excal_amt, btc_amt,
+              excal_timeout, btc_timeout, fork_h, btc_h)))
+    taker_rec = swap.new_swap("taker", maker_pub, taker_pub, excal_amt,
+                              btc_amt, excal_timeout, btc_timeout,
+                              fork_h, btc_h, secret_hash=secret_hash)
+    check("maker and taker records derive the same legs",
+          taker_rec["excal"] == rec["excal"]
+          and taker_rec["btc"] == rec["btc"]
+          and taker_rec["swap_id"] == rec["swap_id"])
+
+    # --- cross-check against the Strange template (reference only) --
+    strange_dir = os.path.normpath(os.path.expanduser(
+        "~/workspace/strange-atomic-swap-2026-11-11"))
+    if os.path.isdir(strange_dir):
+        with open(os.path.join(strange_dir, "strange_swap.json")) as f:
+            sj = json.load(f)
+        s_hash = bytes.fromhex(
+            sj["secret_derivation"]["secret_hash_hex"])
+        s_maker = bytes.fromhex(sj["keys"]["miner_pubkey_hex"])
+        s_taker = bytes.fromhex(
+            sj["keys"]["overflow_pubkey_compressed_hex"])
+        legs = swap.derive_legs(s_hash, s_maker, s_taker, 46623, 975663)
+        check("swap legs reproduce the Strange EXCAL lock",
+              legs["excal"]["lock"]
+              == sj["excal_leg"]["lock_hex"])
+        check("swap legs reproduce the Strange BTC address",
+              legs["btc"]["address"]
+              == sj["btc_leg"]["p2wsh_address"])
+        s_rec = swap.new_swap(
+            "maker", s_maker, s_taker, 50_000_000, 49_999_000, 46623,
+            975663, 43743, 975519,
+            secret=bytes.fromhex(
+                sj["secret_derivation"]["secret_hex"]))
+        with open(os.path.join(strange_dir,
+                               "btc_funding_raw.hex")) as f:
+            btc_raw = f.read().strip()
+        with open(os.path.join(strange_dir,
+                               "excal_funding_raw.hex")) as f:
+            ex_raw = f.read().strip()
+        found_btc = swap.verify_btc_funding_raw(s_rec, btc_raw)
+        check("swap verifies the Strange BTC funding tx",
+              found_btc["txid"]
+              == sj["btc_leg"]["funding_template"]["template_txid"]
+              and found_btc["vout"] == 0)
+        found_ex = swap.verify_excal_funding_raw(s_rec, ex_raw)
+        check("swap verifies the Strange EXCAL funding tx",
+              found_ex["txid"]
+              == sj["excal_leg"]["funding_template"]["template_txid"]
+              and found_ex["vout"] == 0)
+        check("swap refuses a BTC funding tx paying the wrong amount",
+              _raises_swap(lambda: swap.verify_btc_funding_raw(
+                  dict(s_rec, btc_amount=1), btc_raw)))
+    else:
+        skip("swap Strange-template cross-checks",
+             "strange-atomic-swap-2026-11-11 not present")
+
+    # --- state machine ------------------------------------------
+    check("swap refuses created -> btc-funded",
+          _raises_swap(lambda: swap.transition(rec, "btc-funded")))
+    check("swap refuses created -> complete",
+          _raises_swap(lambda: swap.transition(rec, "complete")))
+    r1 = swap.transition(rec, "excal-funded")
+    check("swap moves created -> excal-funded",
+          r1["state"] == "excal-funded" and rec["state"] == "created")
+    check("swap refuses excal-funded -> btc-claimed",
+          _raises_swap(lambda: swap.transition(r1, "btc-claimed")))
+    r2 = swap.transition(r1, "btc-funded")
+    check("swap allows btc-funded -> btc-claimed recorded by either "
+          "role (the claim tx is the proof)",
+          swap.transition(r2, "btc-claimed", role="taker")["state"]
+          == "btc-claimed"
+          and swap.transition(r2, "btc-claimed", role="maker")["state"]
+          == "btc-claimed")
+    check("swap refuses btc-funded -> btc-refunded as maker",
+          _raises_swap(lambda: swap.transition(
+              r2, "btc-refunded", role="maker")))
+    # The atomicity rule: EXCAL refund while the BTC leg is still
+    # live is refused even after the fork timeout. (r2's BTC leg is
+    # marked funded here — an unfunded BTC leg imposes no condition.)
+    r2f = dict(r2)
+    r2f["btc"] = dict(r2["btc"], funding_txid="ab" * 32)
+    check("swap refuses EXCAL refund while the BTC leg is still live",
+          _raises_swap(lambda: swap.transition(
+              r2f, "excal-refunded", role="maker",
+              fork_height=excal_timeout, btc_height=btc_timeout - 1)))
+    check("swap refuses BTC refund before the BTC timeout",
+          _raises_swap(lambda: swap.transition(
+              r2, "btc-refunded", role="taker",
+              btc_height=btc_timeout - 1)))
+    r3 = swap.transition(r2, "btc-claimed", role="maker")
+    check("swap moves btc-funded -> btc-claimed (maker)",
+          r3["state"] == "btc-claimed")
+    check("swap refuses EXCAL refund after the BTC claim",
+          _raises_swap(lambda: swap.transition(
+              r3, "excal-refunded", role="maker",
+              fork_height=excal_timeout + 100,
+              btc_height=btc_timeout + 100)))
+    r4 = swap.transition(r3, "complete")
+    check("swap moves btc-claimed -> complete",
+          r4["state"] == "complete")
+    check("swap refuses any move out of a terminal state",
+          _raises_swap(lambda: swap.transition(r4, "excal-funded")))
+    # Refund branches from a fresh btc-funded record.
+    r2b = dict(r2)
+    r2b["btc"] = dict(r2["btc"], funding_txid="ab" * 32)
+    r5 = swap.transition(r2b, "excal-refunded", role="maker",
+                         fork_height=excal_timeout,
+                         btc_height=btc_timeout)
+    check("swap allows EXCAL refund once BOTH legs expired",
+          r5["state"] == "excal-refunded")
+    r6 = swap.transition(r2, "btc-refunded", role="taker",
+                         btc_height=btc_timeout)
+    check("swap allows BTC refund at the BTC timeout",
+          r6["state"] == "btc-refunded")
+
+    # --- full happy path with real builders ----------------------
+    # EXCAL funding (maker): a normal fork send to the HTLC lock.
+    maker_pkh = lock_pkh_for_pubkey(maker_pub)
+    fund_utxos = [_fake_utxo(_funding_txid("swap-excal-fund"), 0,
+                             60_000_000, maker_pkh)]
+    ex_fund = swap.build_excal_funding(
+        rec, fund_utxos, {maker_pkh.hex(): maker_priv}, maker_pkh,
+        fee_rate=1, height=fork_h + 1)
+    check("swap EXCAL funding validates locally",
+          ex_fund["validated"] is True)
+    check("swap EXCAL funding pays the HTLC lock",
+          ex_fund["outputs"][0]["lock"] == rec["excal"]["lock"]
+          and ex_fund["outputs"][0]["value"] == excal_amt)
+    found = swap.verify_excal_funding_raw(rec, ex_fund["raw_hex"])
+    check("swap verifies its own EXCAL funding tx",
+          found["txid"] == ex_fund["txid"] and found["vout"] == 0)
+    rec_funded = swap.transition(rec, "excal-funded")
+    rec_funded["excal"]["funding_txid"] = ex_fund["txid"]
+    rec_funded["excal"]["funding_vout"] = 0
+    # BTC funding (taker): one P2WPKH UTXO into the P2WSH lock.
+    btc_utxo = {"txid": _funding_txid("swap-btc-fund"), "vout": 0,
+                "value": 60_000_000,
+                "script_pubkey": btc.p2wpkh_script_pubkey(
+                    taker_pub).hex()}
+    btc_fund = swap.build_btc_funding(
+        taker_rec, btc_utxo, {taker_pub: taker_priv}, taker_pub,
+        fee_rate=5)
+    check("swap BTC funding validates locally",
+          btc_fund["validated"] is True)
+    check("swap BTC funding pays the P2WSH address",
+          btc_fund["address"] == rec["btc"]["address"])
+    found_b = swap.verify_btc_funding_raw(taker_rec,
+                                          btc_fund["raw_hex"])
+    check("swap verifies its own BTC funding tx",
+          found_b["txid"] == btc_fund["txid"] and found_b["vout"] == 0)
+    taker_funded = swap.transition(taker_rec, "excal-funded")
+    taker_funded["excal"]["funding_txid"] = ex_fund["txid"]
+    taker_funded["excal"]["funding_vout"] = 0
+    taker_funded = swap.transition(taker_funded, "btc-funded")
+    taker_funded["btc"]["funding_txid"] = btc_fund["txid"]
+    taker_funded["btc"]["funding_vout"] = 0
+    maker_funded = swap.transition(rec_funded, "btc-funded")
+    maker_funded["btc"]["funding_txid"] = btc_fund["txid"]
+    maker_funded["btc"]["funding_vout"] = 0
+    # BTC claim (maker): reveals the secret on chain.
+    dest_spk = btc.p2wpkh_script_pubkey(dest_pub)
+    claim = swap.build_btc_claim(maker_funded, secret, dest_spk,
+                                 {maker_pub: maker_priv}, fee_rate=5)
+    check("swap BTC claim validates locally",
+          claim["validated"] is True)
+    cseg = btc.parse_segwit_tx(bytes.fromhex(claim["raw_hex"]))
+    cwit = cseg["vin"][0]["witness"]
+    check("swap BTC claim witness is [sig, secret, 0x01, script]",
+          cwit[1] == secret)
+    chash = btc.bip143_sighash(
+        {**cseg, "vin": [{**cseg["vin"][0], "witness": None}]}, 0,
+        bytes.fromhex(rec["btc"]["witness_script"]), btc_amt)
+    r, s = secp.der_decode(cwit[0][:-1])
+    check("swap BTC claim signature verifies (independent secp check)",
+          secp.verify(maker_pub, r.to_bytes(32, "big")
+                      + s.to_bytes(32, "big"), chash))
+    _btc_exec_check("swap BTC claim executes in the script interpreter",
+                    cwit, bytes.fromhex(rec["btc"]["witness_script"]),
+                    chash, 0, 0xFFFFFFFF)
+    check("swap BTC claim refuses a wrong secret",
+          _raises_swap(lambda: swap.build_btc_claim(
+              maker_funded, bytes(32), dest_spk,
+              {maker_pub: maker_priv})))
+    found_claim = swap.verify_btc_claim_raw(maker_funded,
+                                            claim["raw_hex"])
+    check("swap verifies the BTC claim tx + recovers the secret",
+          found_claim["txid"] == claim["txid"]
+          and found_claim["secret"] == secret)
+    check("swap refuses a BTC claim with the wrong secret hash",
+          _raises_swap(lambda: swap.verify_btc_claim_raw(
+              dict(maker_funded, secret_hash="00" * 32),
+              claim["raw_hex"])))
+    # EXCAL claim (taker): spends the revealed secret.
+    entry = {"txid": ex_fund["txid"], "vout": 0, "value": excal_amt,
+             "lock": rec["excal"]["lock"], "coinbase": False,
+             "cb_h": 0, "mature": True}
+    dest_lock = lock_pkh_for_pubkey(dest_pub)
+    ex_claim = swap.build_excal_claim(
+        taker_funded, entry, dest_lock, 1000, secret, taker_priv,
+        fork_h + 1)
+    check("swap EXCAL claim validates locally",
+          ex_claim["validated"] is True)
+    check("swap EXCAL claim refuses a wrong secret",
+          _raises_swap(lambda: swap.build_excal_claim(
+              taker_funded, entry, dest_lock, 1000, bytes(32),
+              taker_priv, fork_h + 1)))
+
+    # --- refund paths --------------------------------------------
+    r_ex = swap.transition(rec, "excal-funded")
+    r_ex["excal"]["funding_txid"] = ex_fund["txid"]
+    r_ex["excal"]["funding_vout"] = 0
+    check("swap EXCAL refund refuses before the fork timeout",
+          _raises_swap(lambda: swap.build_excal_refund(
+              r_ex, entry, dest_lock, 1000, maker_priv,
+              excal_timeout - 1)))
+    ex_ref = swap.build_excal_refund(r_ex, entry, dest_lock, 1000,
+                                     maker_priv, excal_timeout)
+    check("swap EXCAL refund validates at the fork timeout",
+          ex_ref["validated"] is True)
+    r_bt = taker_funded  # already btc-funded from the happy path above
+    check("swap BTC refund refuses before the BTC timeout",
+          _raises_swap(lambda: swap.build_btc_refund(
+              r_bt, dest_spk, {taker_pub: taker_priv}, 5,
+              btc_timeout - 1)))
+    btc_ref = swap.build_btc_refund(r_bt, dest_spk,
+                                    {taker_pub: taker_priv}, 5,
+                                    btc_timeout)
+    check("swap BTC refund validates at the BTC timeout",
+          btc_ref["validated"] is True)
+    rseg = btc.parse_segwit_tx(bytes.fromhex(btc_ref["raw_hex"]))
+    rwit = rseg["vin"][0]["witness"]
+    check("swap BTC refund witness is [sig, <empty>, script]",
+          len(rwit) == 3 and rwit[1] == b""
+          and rwit[2] == bytes.fromhex(rec["btc"]["witness_script"]))
+    rhash = btc.bip143_sighash(
+        {**rseg, "vin": [{**rseg["vin"][0], "witness": None}]}, 0,
+        bytes.fromhex(rec["btc"]["witness_script"]), btc_amt)
+    _btc_exec_check("swap BTC refund executes in the script interpreter",
+                    rwit, bytes.fromhex(rec["btc"]["witness_script"]),
+                    rhash, btc_timeout, 0xFFFFFFFE)
+
+    # --- CLI: maker wallet + taker wallet, full flow --------------
+    import shutil
+    tmp = tempfile.mkdtemp(prefix="excal-swap-cli-")
+    pwfile = os.path.join(tmp, "pw.txt")
+    with open(pwfile, "w") as f:
+        f.write("swap-test-passphrase\n")
+    os.chmod(pwfile, 0o600)
+    cli = [sys.executable, "-m", "excalibur_wallet"]
+
+    def run_cli(datadir, *args):
+        return subprocess.run(
+            cli + ["--datadir", datadir, "--passphrase-file", pwfile]
+            + list(args), capture_output=True, text=True, timeout=300,
+            cwd=os.path.dirname(os.path.abspath(__file__)))
+
+    def import_legacy(datadir, priv):
+        node_file = os.path.join(tmp, f"node-{priv:x}.json")
+        pub = keys.priv_to_pub_compressed(priv)
+        with open(node_file, "w") as f:
+            json.dump({"priv": f"{priv:064x}", "pub": pub.hex()}, f)
+        r = run_cli(datadir, "wallet", "import-node", "--wallet",
+                    node_file)
+        return r.returncode == 0
+
+    maker_dir = os.path.join(tmp, "maker")
+    taker_dir = os.path.join(tmp, "taker")
+    check("cli swap: maker wallet imports the maker key",
+          import_legacy(maker_dir, maker_priv))
+    check("cli swap: taker wallet imports the taker key",
+          import_legacy(taker_dir, taker_priv))
+    create_args = ["--counterparty-pubkey", taker_pub.hex(),
+                   "--excal-amount", str(excal_amt),
+                   "--btc-amount", str(btc_amt),
+                   "--excal-timeout", str(excal_timeout),
+                   "--btc-timeout", str(btc_timeout),
+                   "--fork-height", str(fork_h),
+                   "--btc-height", str(btc_h)]
+    r = run_cli(maker_dir, "wallet", "swap", "create", "--role", "maker",
+                "--secret", secret.hex(), *create_args)
+    check("cli swap create (maker) records the swap + shows the secret",
+          r.returncode == 0 and rec["swap_id"] in r.stdout
+          and secret.hex() in r.stdout
+          and rec["btc"]["address"] in r.stdout)
+    r = run_cli(taker_dir, "wallet", "swap", "create", "--role", "taker",
+                "--counterparty-pubkey", maker_pub.hex(),
+                "--secret-hash", secret_hash.hex(),
+                "--excal-amount", str(excal_amt),
+                "--btc-amount", str(btc_amt),
+                "--excal-timeout", str(excal_timeout),
+                "--btc-timeout", str(btc_timeout),
+                "--fork-height", str(fork_h),
+                "--btc-height", str(btc_h))
+    check("cli swap create (taker) derives the same swap id",
+          r.returncode == 0 and rec["swap_id"] in r.stdout)
+    r = run_cli(maker_dir, "wallet", "swap", "create", "--role", "maker",
+                "--secret", secret.hex(), *create_args)
+    check("cli swap create refuses a duplicate swap id",
+          r.returncode != 0 and "already exists" in (r.stdout + r.stderr))
+    r = run_cli(maker_dir, "wallet", "swap", "show", "--swap-id",
+                rec["swap_id"])
+    check("cli swap show prints both legs",
+          r.returncode == 0 and "created" in r.stdout
+          and rec["excal"]["lock"] in r.stdout)
+    r = run_cli(maker_dir, "wallet", "swap", "list")
+    check("cli swap list shows the swap",
+          r.returncode == 0 and rec["swap_id"] in r.stdout)
+    # Maker funds EXCAL off-CLI (needs the live fork node); the taker
+    # records + verifies the funding tx from its raw hex.
+    r = run_cli(taker_dir, "wallet", "swap", "note-excal-funded",
+                "--swap-id", rec["swap_id"], "--raw-hex",
+                ex_fund["raw_hex"])
+    check("cli swap note-excal-funded verifies + records",
+          r.returncode == 0 and "excal-funded" in r.stdout)
+    r = run_cli(maker_dir, "wallet", "swap", "note-excal-funded",
+                "--swap-id", rec["swap_id"], "--raw-hex",
+                ex_fund["raw_hex"])
+    check("cli swap maker notes own EXCAL funding",
+          r.returncode == 0 and "excal-funded" in r.stdout)
+    r = run_cli(taker_dir, "wallet", "swap", "fund-btc", "--swap-id",
+                rec["swap_id"], "--utxo",
+                f"{_funding_txid('swap-btc-fund')}:0",
+                "--utxo-value", "60000000", "--utxo-scriptpubkey",
+                btc.p2wpkh_script_pubkey(taker_pub).hex())
+    check("cli swap fund-btc builds + signs (NOT broadcast)",
+          r.returncode == 0 and "NOT broadcast" in r.stdout
+          and btc_fund["txid"] in r.stdout)
+    r = run_cli(maker_dir, "wallet", "swap", "note-btc-funded",
+                "--swap-id", rec["swap_id"], "--raw-hex",
+                btc_fund["raw_hex"])
+    check("cli swap note-btc-funded verifies + records",
+          r.returncode == 0 and "btc-funded" in r.stdout)
+    r = run_cli(maker_dir, "wallet", "swap", "claim-btc", "--swap-id",
+                rec["swap_id"], "--secret", secret.hex(),
+                "--dest-address", btc.p2wpkh_address(dest_pub))
+    check("cli swap claim-btc builds + signs (NOT broadcast)",
+          r.returncode == 0 and "NOT broadcast" in r.stdout
+          and claim["txid"] in r.stdout)
+    r = run_cli(taker_dir, "wallet", "swap", "claim-btc", "--swap-id",
+                rec["swap_id"], "--secret", secret.hex(),
+                "--dest-address", btc.p2wpkh_address(dest_pub))
+    check("cli swap claim-btc refuses the taker (maker's move)",
+          r.returncode != 0)
+    r = run_cli(taker_dir, "wallet", "swap", "note-btc-claimed",
+                "--swap-id", rec["swap_id"], "--raw-hex",
+                claim["raw_hex"])
+    check("cli swap note-btc-claimed verifies + reveals the secret",
+          r.returncode == 0 and secret.hex() in r.stdout)
+    r = run_cli(taker_dir, "wallet", "swap", "show", "--swap-id",
+                rec["swap_id"])
+    check("cli swap show reports state btc-claimed (taker)",
+          r.returncode == 0 and "btc-claimed" in r.stdout)
+    r = run_cli(taker_dir, "wallet", "swap", "claim-excal", "--swap-id",
+                rec["swap_id"], "--secret", secret.hex(), "--dest",
+                dest_lock.hex(), "--utxo", f"{ex_fund['txid']}:0",
+                "--fork-height", str(fork_h))
+    check("cli swap claim-excal builds + signs (swap complete)",
+          r.returncode == 0 and "swap complete" in r.stdout
+          and ex_claim["txid"] in r.stdout)
+    r = run_cli(taker_dir, "wallet", "swap", "show", "--swap-id",
+                rec["swap_id"])
+    check("cli swap show reports state complete",
+          r.returncode == 0 and "complete" in r.stdout)
+    r = run_cli(maker_dir, "wallet", "swap", "refund-excal", "--swap-id",
+                rec["swap_id"], "--dest", dest_lock.hex(), "--utxo",
+                f"{ex_fund['txid']}:0", "--fork-height",
+                str(excal_timeout), "--btc-height", str(btc_timeout))
+    check("cli swap refund-excal refuses a completed swap",
+          r.returncode != 0)
+    # Refund CLI: fresh taker swap, fund BTC, refund before/after.
+    secret2 = bytes([7]) * 32
+    hash2 = hashlib.sha256(secret2).digest()
+    rec2 = swap.new_swap("taker", maker_pub, taker_pub, excal_amt,
+                         btc_amt, excal_timeout, btc_timeout, fork_h,
+                         btc_h, secret_hash=hash2)
+    r = run_cli(taker_dir, "wallet", "swap", "create", "--role", "taker",
+                "--counterparty-pubkey", maker_pub.hex(),
+                "--secret-hash", hash2.hex(),
+                "--excal-amount", str(excal_amt),
+                "--btc-amount", str(btc_amt),
+                "--excal-timeout", str(excal_timeout),
+                "--btc-timeout", str(btc_timeout),
+                "--fork-height", str(fork_h),
+                "--btc-height", str(btc_h))
+    check("cli swap create (taker, second swap) records",
+          r.returncode == 0 and rec2["swap_id"] in r.stdout)
+    r = run_cli(taker_dir, "wallet", "swap", "note-excal-funded",
+                "--swap-id", rec2["swap_id"], "--raw-hex",
+                ex_fund["raw_hex"])
+    check("cli swap second swap: EXCAL funding refused (lock differs)",
+          r.returncode != 0)
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_atomic_swap_regtest():
+    """Atomic swap end-to-end against a real bitcoind (regtest): the
+    BTC leg funds, confirms, and is claimed on the node; the EXCAL
+    leg funds and claims against the fork validator locally. A second
+    swap's BTC leg is refunded on the node after its timeout. Skips
+    when bitcoind is unavailable."""
+    import shutil
+    import time
+    bitcoind = os.path.expanduser(
+        "~/workspace/bitcoin/bitcoin-28.0/bin/bitcoind")
+    bitcoin_cli = os.path.expanduser(
+        "~/workspace/bitcoin/bitcoin-28.0/bin/bitcoin-cli")
+    if not (os.path.isfile(bitcoind) and os.path.isfile(bitcoin_cli)):
+        skip("regtest atomic swap end-to-end", "bitcoind not present")
+        return
+    from txscript import lock_pkh_for_pubkey
+    maker_priv, taker_priv, dest_priv = 0x3333, 0x2222, 0x4444
+    maker_pub = keys.priv_to_pub_compressed(maker_priv)
+    taker_pub = keys.priv_to_pub_compressed(taker_priv)
+    dest_pub = keys.priv_to_pub_compressed(dest_priv)
+    secret = bytes(range(1, 33))
+    secret_hash = hashlib.sha256(secret).digest()
+    fork_h = 50000
+    tmp = tempfile.mkdtemp(prefix="excal-swap-regtest-")
+    datadir = os.path.join(tmp, "regtest")
+    os.makedirs(datadir, exist_ok=True)
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            [bitcoind, "-regtest", f"-datadir={datadir}", "-daemon=0",
+             "-printtoconsole=0", "-fallbackfee=0.00001"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        tip = None
+        for _ in range(60):
+            r = subprocess.run(
+                [bitcoin_cli, "-regtest", f"-datadir={datadir}",
+                 "getblockcount"], capture_output=True, text=True,
+                timeout=30)
+            if r.returncode == 0 and r.stdout.strip().isdigit():
+                tip = int(r.stdout.strip())
+                break
+            time.sleep(1)
+        if tip is None:
+            skip("regtest atomic swap end-to-end",
+                 "bitcoind did not start")
+            return
+
+        def cli(*a):
+            return subprocess.run(
+                [bitcoin_cli, "-regtest", f"-datadir={datadir}"]
+                + list(a), capture_output=True, text=True, timeout=120)
+
+        taker_addr = btc.p2wpkh_address(taker_pub, "regtest")
+        dest_addr = btc.p2wpkh_address(dest_pub, "regtest")
+        cli("generatetoaddress", "101", taker_addr)
+        btc_h = int(cli("getblockcount").stdout.strip())
+        btc_timeout = btc_h + 144
+        excal_timeout = fork_h + 2880
+        excal_amt, btc_amt = 50_000_000, 49_999_000
+        maker_rec = swap.new_swap(
+            "maker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h, secret=secret,
+            network="regtest")
+        taker_rec = swap.new_swap(
+            "taker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h,
+            secret_hash=secret_hash, network="regtest")
+        # EXCAL leg (local fork validation): fund + record.
+        maker_pkh = lock_pkh_for_pubkey(maker_pub)
+        ex_fund = swap.build_excal_funding(
+            maker_rec,
+            [_fake_utxo(_funding_txid("swap-reg-excal"), 0, 60_000_000,
+                        maker_pkh)],
+            {maker_pkh.hex(): maker_priv}, maker_pkh, fee_rate=1,
+            height=fork_h + 1)
+        check("regtest swap EXCAL funding validates locally",
+              ex_fund["validated"] is True)
+        # BTC leg (real node): taker funds from a mature coinbase.
+        unsp = json.loads(cli(
+            "scantxoutset", "start",
+            json.dumps([{"desc": f"addr({taker_addr})"}])).stdout)[
+                "unspents"]
+        unsp = [x for x in unsp if x["height"] <= btc_h - 100]
+        if not unsp:
+            skip("regtest atomic swap end-to-end",
+                 "no mature funding UTXO after 101 blocks")
+            return
+        u = min(unsp, key=lambda x: x["height"])
+        btc_fund = swap.build_btc_funding(
+            taker_rec,
+            {"txid": u["txid"], "vout": u["vout"],
+             "value": int(u["amount"] * 100_000_000),
+             "script_pubkey": u["scriptPubKey"]},
+            {taker_pub: taker_priv}, taker_pub, fee_rate=5,
+            network="regtest")
+        r = cli("sendrawtransaction", btc_fund["raw_hex"])
+        check("regtest swap BTC funding broadcasts to the node",
+              r.returncode == 0
+              and r.stdout.strip() == btc_fund["txid"])
+        cli("generatetoaddress", "1", dest_addr)
+        btc_vout = next(
+            i for i, o in enumerate(btc_fund["outputs"])
+            if o["script_pubkey"] == taker_rec["btc"]["script_pubkey"])
+        got = json.loads(cli("gettxout", btc_fund["txid"],
+                             str(btc_vout)).stdout)
+        check("regtest swap HTLC UTXO is unspent at the P2WSH lock",
+              got.get("value") == btc_amt / 100_000_000)
+        # Maker claims the BTC leg on the node (reveals the secret).
+        maker_rec["btc"]["funding_txid"] = btc_fund["txid"]
+        maker_rec["btc"]["funding_vout"] = btc_vout
+        claim = swap.build_btc_claim(
+            maker_rec, secret, btc.p2wpkh_script_pubkey(dest_pub),
+            {maker_pub: maker_priv}, fee_rate=5)
+        r = cli("testmempoolaccept",
+                json.dumps([claim["raw_hex"]]))
+        check("regtest swap node accepts the BTC claim",
+              json.loads(r.stdout)[0].get("allowed") is True)
+        r = cli("sendrawtransaction", claim["raw_hex"])
+        check("regtest swap BTC claim broadcasts to the node",
+              r.returncode == 0
+              and r.stdout.strip() == claim["txid"])
+        cli("generatetoaddress", "1", dest_addr)
+        got = json.loads(cli("gettxout", claim["txid"], "0").stdout)
+        check("regtest swap BTC claim pays the destination P2WPKH",
+              got.get("value") is not None)
+        # Taker claims the EXCAL leg with the revealed secret.
+        entry = {"txid": ex_fund["txid"], "vout": 0,
+                 "value": excal_amt,
+                 "lock": maker_rec["excal"]["lock"], "coinbase": False,
+                 "cb_h": 0, "mature": True}
+        ex_claim = swap.build_excal_claim(
+            taker_rec, entry, lock_pkh_for_pubkey(dest_pub), 1000,
+            secret, taker_priv, fork_h + 1)
+        check("regtest swap EXCAL claim validates locally",
+              ex_claim["validated"] is True)
+        # Second swap: BTC leg refunded on the node after timeout.
+        secret2 = bytes([9]) * 32
+        hash2 = hashlib.sha256(secret2).digest()
+        taker2 = swap.new_swap(
+            "taker", maker_pub, taker_pub, excal_amt, btc_amt,
+            excal_timeout, btc_timeout, fork_h, btc_h,
+            secret_hash=hash2, network="regtest")
+        height_now = int(cli("getblockcount").stdout.strip())
+        unsp2 = json.loads(cli(
+            "scantxoutset", "start",
+            json.dumps([{"desc": f"addr({taker_addr})"}])).stdout)[
+                "unspents"]
+        unsp2 = [x for x in unsp2 if x["height"] <= height_now - 100]
+        u2 = min(unsp2, key=lambda x: x["height"])
+        fund2 = swap.build_btc_funding(
+            taker2,
+            {"txid": u2["txid"], "vout": u2["vout"],
+             "value": int(u2["amount"] * 100_000_000),
+             "script_pubkey": u2["scriptPubKey"]},
+            {taker_pub: taker_priv}, taker_pub, fee_rate=5,
+            network="regtest")
+        r = cli("sendrawtransaction", fund2["raw_hex"])
+        check("regtest swap second BTC funding broadcasts",
+              r.returncode == 0
+              and r.stdout.strip() == fund2["txid"])
+        cli("generatetoaddress", "1", dest_addr)
+        # Mine past the BTC timeout, then refund.
+        height_now = int(cli("getblockcount").stdout.strip())
+        if height_now < btc_timeout:
+            cli("generatetoaddress", str(btc_timeout - height_now),
+                dest_addr)
+        taker2["btc"]["funding_txid"] = fund2["txid"]
+        taker2["btc"]["funding_vout"] = 0
+        height_now = int(cli("getblockcount").stdout.strip())
+        refund = swap.build_btc_refund(
+            taker2, btc.p2wpkh_script_pubkey(dest_pub),
+            {taker_pub: taker_priv}, 5, height_now)
+        r = cli("testmempoolaccept", json.dumps([refund["raw_hex"]]))
+        check("regtest swap node accepts the BTC refund",
+              json.loads(r.stdout)[0].get("allowed") is True)
+        r = cli("sendrawtransaction", refund["raw_hex"])
+        check("regtest swap BTC refund broadcasts to the node",
+              r.returncode == 0
+              and r.stdout.strip() == refund["txid"])
+    finally:
+        if proc is not None:
+            try:
+                subprocess.run(
+                    [bitcoin_cli, "-regtest", f"-datadir={datadir}",
+                     "stop"], capture_output=True, text=True,
+                    timeout=30)
+            except Exception:
+                pass
+            try:
+                proc.wait(timeout=30)
+            except Exception:
+                proc.kill()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     test_bip39()
     test_keys()
@@ -813,6 +2010,10 @@ def main():
     test_broadcast_replay()
     test_broadcast_fork_fake_rpc()
     test_broadcast_bitcoin_fake_rpc()
+    test_btc_htlc()
+    test_btc_htlc_regtest()
+    test_atomic_swap()
+    test_atomic_swap_regtest()
     test_infancy()
     test_cli_broadcast()
     test_cli_smoke()

@@ -12,6 +12,11 @@ Layout:
   ledger.py      balance / UTXOs / history — RPC-first, local-chain fallback
   txbuild.py     send: build + sign EVERY input + verify locally, no broadcast
   locks.py       lock constructors for every live lock type (KNOT refused)
+  btc_htlc.py    Bitcoin-side HTLC (P2WSH): build + PSBT-sign + verify,
+                 standalone — no EXCAL leg, no swap flow, no broadcast
+  atomic_swap.py cross-chain atomic swap (EXCAL HTLC + BTC HTLC):
+                 shared hashlock, staggered timeouts, state machine,
+                 both fundings / claims / refunds, dry-run only
   checkpoints.py QAI-audited Trifold checkpoint attestation verification
   p2p_sync.py    header-first sync from a live P2P peer (seeds bootstrap)
   uruu.py        read-only URUU view via public zkSync Era RPC

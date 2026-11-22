@@ -237,7 +237,13 @@ def _finish_single(t, utxo_entry, height, spent_pairs=None):
     from txscript import txid_display
     return {"raw_hex": raw.hex(), "txid": txid_display(raw), "fee": vfee,
             "validated": True, "validated_at_height": height,
-            "broadcast": False}
+            "broadcast": False,
+            "inputs": [{"txid": utxo_entry["txid"],
+                        "vout": utxo_entry["vout"],
+                        "value": utxo_entry["value"]}],
+            "outputs": [{"value": v["value"],
+                         "lock": v["script"].hex()}
+                        for v in t["vout"]]}
 
 
 def build_htlc_claim(utxo_entry, dest_lock, fee, secret, descriptor,

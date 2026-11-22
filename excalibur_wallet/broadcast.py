@@ -63,10 +63,18 @@ class BroadcastError(Exception):
 
 
 # ------------------------------------------------------------------ parsing
-def parse_raw_tx(raw_hex):
+def parse_raw_tx(raw_hex, network="fork"):
     """(raw bytes, parsed dict, display txid, internal txid hex).
 
-    Raises BroadcastError on bad hex, oversize tx, or unparsable tx."""
+    Raises BroadcastError on bad hex, oversize tx, or unparsable tx.
+
+    The FORK path keeps the wallet's original strict shape (version 1,
+    locktime 0 — the fork has no other form). The BITCOIN path accepts
+    version 1 or 2 and any locktime (a BTC HTLC refund needs version 2
+    + locktime = timeout), and parses segwit txs with the wallet's own
+    segwit parser — the fork's parse_tx has no marker/flag handling
+    and would misread a segwit tx as having zero inputs. Bitcoin Core
+    (testmempoolaccept) remains the final arbiter; this only parses."""
     try:
         raw = bytes.fromhex(raw_hex.strip())
     except (ValueError, AttributeError):
@@ -76,15 +84,46 @@ def parse_raw_tx(raw_hex):
     if len(raw) > MAX_TX_BYTES:
         raise BroadcastError(
             f"raw tx is {len(raw)} bytes (limit {MAX_TX_BYTES})")
+    if network == "bitcoin" and len(raw) > 5 and raw[4:6] == b"\x00\x01":
+        # Segwit tx: parse with the BTC HTLC module, then normalize to
+        # the fork parser's dict shape (plus the witness lists). The
+        # txid is the STRIPPED hash (Bitcoin's txid), not the wtxid —
+        # a node returns the stripped txid from sendrawtransaction,
+        # and the mempool check below compares against it.
+        try:
+            from .btc_htlc import parse_segwit_tx, txid_display as btc_txid
+            seg = parse_segwit_tx(raw)
+        except Exception as e:
+            raise BroadcastError(f"raw tx does not parse: {e}")
+        parsed = {"version": seg["version"],
+                  "vin": [{"prev": v["prev_txid"], "idx": v["prev_vout"],
+                           "script": v["script_sig"], "seq": v["sequence"]}
+                          for v in seg["vin"]],
+                  "vout": [{"value": o["value"], "script": o["script_pubkey"]}
+                           for o in seg["vout"]],
+                  "locktime": seg["locktime"],
+                  "witness": [v["witness"] for v in seg["vin"]],
+                  "segwit": True, "raw": raw}
+        if parsed["version"] not in (1, 2):
+            raise BroadcastError(
+                f"unsupported Bitcoin tx version {parsed['version']} "
+                f"(want 1 or 2)")
+        from .btc_htlc import sha256d as btc_sha256d, ser_stripped_tx
+        return raw, parsed, btc_txid(seg), btc_sha256d(
+            ser_stripped_tx(seg)).hex()
     try:
         parsed = parse_tx(raw)
     except ValueError as e:
         raise BroadcastError(f"raw tx does not parse: {e}")
-    if parsed["version"] != 1:
+    if network == "fork":
+        if parsed["version"] != 1:
+            raise BroadcastError(
+                f"unsupported tx version {parsed['version']} (want 1)")
+        if parsed["locktime"] != 0:
+            raise BroadcastError("locktime != 0 (unsupported by this wallet)")
+    elif parsed["version"] not in (1, 2):
         raise BroadcastError(
-            f"unsupported tx version {parsed['version']} (want 1)")
-    if parsed["locktime"] != 0:
-        raise BroadcastError("locktime != 0 (unsupported by this wallet)")
+            f"unsupported Bitcoin tx version {parsed['version']} (want 1 or 2)")
     return raw, parsed, txid_display(raw), txid_internal(raw).hex()
 
 
@@ -302,7 +341,7 @@ def broadcast_bitcoin(raw_hex, btc_rpc=None, host=DEFAULT_BTC_HOST,
     """Submit a Bitcoin tx: testmempoolaccept first, then
     sendrawtransaction, then mempool verification. Returns the same
     result shape as broadcast_fork."""
-    raw, parsed, txid, txid_int = parse_raw_tx(raw_hex)
+    raw, parsed, txid, txid_int = parse_raw_tx(raw_hex, network="bitcoin")
     check_replay_safe(parsed, "bitcoin")
     if btc_rpc is None:
         user, password = load_btc_credentials(config_path)
