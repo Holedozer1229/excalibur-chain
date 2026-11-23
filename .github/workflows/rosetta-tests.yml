@@ -1,6 +1,7 @@
 name: EXCAL Rosetta tests
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "rosetta/**"
@@ -11,7 +12,7 @@ on:
       - "spent_leaf_registry.py"
       - ".github/workflows/rosetta-tests.yml"
   push:
-    branches: [master]
+    branches: [master, feature/excal-rosetta-native-v1]
     paths:
       - "rosetta/**"
       - "tests/test_excal_rosetta.py"
