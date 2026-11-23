@@ -113,7 +113,7 @@ class Construction:
                     outs.append({"value": val, "lock": lock.hex(), "lock_type": lock_type(lock)})
                     total_out += val
                 elif typ == "fee":
-                    v = amount(op)
+                    v = amount(op, self.currency)
                     if v >= 0: raise ValueError("fee must be negative")
                     fee_op += -v
                 else:
