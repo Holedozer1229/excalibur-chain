@@ -44,7 +44,7 @@ def lock_from_account(account):
 def amount(op, currency=CURRENCY):
     a = op.get("amount") or {}
     if a.get("currency") != currency:
-        raise ValueError("currency must be EXCAL (8 decimals)")
+        raise ValueError("currency symbol and 8 decimals must match the selected network")
     return int(a["value"])
 
 
@@ -108,7 +108,7 @@ class Construction:
                     total_in += live["value"]
                 elif typ == "output":
                     lock = lock_from_account(op.get("account"))
-                    val = amount(op)
+                    val = amount(op, self.currency)
                     if val <= 0: raise ValueError("output must be positive")
                     outs.append({"value": val, "lock": lock.hex(), "lock_type": lock_type(lock)})
                     total_out += val
@@ -293,7 +293,7 @@ class Construction:
                 lock=bytes(out["script"])
                 ops.append({"operation_identifier":{"index":len(ops)},"type":"output",
                     "account":{"address":"lock:"+lock.hex()},
-                    "amount":{"value":str(int(out["value"])),"currency":CURRENCY},
+                    "amount":{"value":str(int(out["value"])),"currency":self.currency},
                     "metadata":{"lock_type":lock_type(lock)}})
             return {"operations":ops,"account_identifier_signers":[]}
         if path == "/construction/hash":
