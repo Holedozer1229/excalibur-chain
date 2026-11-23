@@ -28,5 +28,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Compile Rosetta modules
+        run: python -m compileall -q rosetta tests/test_excal_rosetta.py
       - name: Run Rosetta unit tests
-        run: python -m unittest discover -s tests -p "test_excal_rosetta.py" -v
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -p "test_excal_rosetta.py" -v 2>&1 | tee rosetta-test.log
+      - name: Preserve test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rosetta-test-log
+          path: rosetta-test.log
+          if-no-files-found: ignore
