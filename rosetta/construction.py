@@ -51,15 +51,17 @@ def amount(op, currency=CURRENCY):
     return int(a["value"])
 
 
-def active(lt, height):
+def active(lt, height, output=False):
     gates = {"pkh": qlock_activation(), "open": qlock_activation(),
              "pqh": qday_activation(), "htlc": htlc_activation(),
              "qhtlc": qhtlc_activation(), "bridge": bridge_activation(),
              "knot": knot_activation()}
     if lt in gates and height < gates[lt]:
         raise ValueError(f"{lt} not active at height {height}")
-    if lt in ("p2pk", "anyone") and height >= qlock_activation():
-        raise ValueError(f"legacy {lt} is retired")
+    # Consensus preserves legacy P2PK/OP_TRUE spends after Q-Lock activation;
+    # only creation of new outputs with these locks is retired.
+    if output and lt in ("p2pk", "anyone") and height >= qlock_activation():
+        raise ValueError(f"legacy {lt} outputs are retired")
     
 
 class Construction:
@@ -152,7 +154,7 @@ class Construction:
                 out_lock = bytes.fromhex(out["lock"])
                 out_type = lock_type(out_lock)
                 if out_type not in LOCKS: raise ValueError("unknown output lock")
-                active(out_type, height)
+                active(out_type, height, output=True)
             if sum(x["value"] for x in ins) - sum(int(x["value"]) for x in outs) != int(opts["fee"]):
                 raise ValueError("input/output/fee values do not reconcile")
             return {"metadata": {"inputs": ins, "outputs": outs,
@@ -185,7 +187,7 @@ class Construction:
                 lt = lock_type(lock)
                 if lt not in LOCKS or lt != x.get("lock_type"):
                     raise ValueError("unknown output lock or lock type mismatch")
-                active(lt, height)
+                active(lt, height, output=True)
                 value = int(x["value"])
                 if value <= 0: raise ValueError("output value must be positive")
                 total_out += value
