@@ -28,7 +28,10 @@ def coin_key(value):
     txid, sep, n = str(value).rpartition(":")
     if not sep or len(txid) != 64:
         raise ValueError("coin id must be display_txid:vout")
-    return bytes.fromhex(txid)[::-1], int(n)
+    index = int(n)
+    if index < 0 or index > 0xffffffff:
+        raise ValueError("coin vout out of range")
+    return bytes.fromhex(txid)[::-1], index
 
 
 def lock_from_account(account):
@@ -141,6 +144,8 @@ class Construction:
                 ins.append({**item, "lock_type": live["type"],
                             "coinbase": live["coinbase"], "cb_height": live["cb_height"]})
             outs = opts.get("outputs") or []
+            if not ins or not outs:
+                raise ValueError("metadata requires at least one input and output")
             for out in outs:
                 out_lock = bytes.fromhex(out["lock"])
                 out_type = lock_type(out_lock)
@@ -158,8 +163,11 @@ class Construction:
             outputs = md.get("outputs", [])
             if not inputs or not outputs: raise ValueError("metadata requires inputs and outputs")
             total_in = 0
+            seen = set()
             for x in inputs:
                 live = self._input(x["coin"])
+                if live["key"] in seen: raise ValueError("duplicate input outpoint")
+                seen.add(live["key"])
                 if live["lock"].hex() != x["lock"] or live["type"] != x["lock_type"]:
                     raise ValueError("UTXO lock/type changed")
                 if live["value"] != int(x["value"]): raise ValueError("UTXO value changed")
