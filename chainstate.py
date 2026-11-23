@@ -298,8 +298,8 @@ class ChainState:
         if len(declared_hash) != 64 or any(c not in "0123456789abcdef" for c in declared_hash):
             raise RuntimeError("snapshot manifest sha256d must be 32-byte hex")
         if not os.path.exists(p["db"]):
-            build_snapshot_db(p["dat"], p["db"], meta["sha256d"],
-                              meta["height"], log=print)
+            build_snapshot_db(p["dat"], p["db"], declared_hash,
+                              declared_height, log=print)
         db = SnapshotDB(p["db"])
         db_meta = {
             "snapshot_hash": db.get_meta("snapshot_hash"),
