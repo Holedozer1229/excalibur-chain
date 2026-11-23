@@ -92,16 +92,21 @@ class RosettaDataTests(unittest.TestCase):
             self.assertEqual(lock_type(lock), name)
             prev = bytes([i]) * 32
             coin = prev[::-1].hex() + ":0"
+            legacy = name in ("p2pk", "anyone")
+            height = 0 if legacy else 100000
+            out_lock = bytes([0x51]) if legacy else bytes([0]) + bytes([0xaa]) * 20
+            out_type = lock_type(out_lock)
             cs = SimpleNamespace(
                 utxo={(prev, 0): [(10000, lock, False, 0)]},
-                tip=lambda: {"height": 100000, "hash": bytes(32)})
+                tip=lambda: {"height": height, "hash": bytes(32)})
             builder = Construction(cs)
             result = builder.handle("/construction/payloads", {
                 "metadata": {
                     "inputs": [{"coin": coin, "value": 10000,
                                 "lock": lock.hex(), "lock_type": name}],
-                    "outputs": [{"value": 9000,
-                                 "lock": (b"\x00" + b"\xaa" * 20).hex()}]}})
+                    "outputs": [{"value": 9000, "lock": out_lock.hex(),
+                                 "lock_type": out_type}],
+                    "fee": 1000}})
             types = [p["signature_type"] for p in result["payloads"]]
             self.assertEqual(types, [] if expected[name] is None else [expected[name]])
 
