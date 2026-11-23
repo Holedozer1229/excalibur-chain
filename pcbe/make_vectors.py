@@ -128,12 +128,13 @@ def _verify_cases(example: dict) -> list[dict[str, object]]:
                   "now": EXAMPLE_NOW, "expected_outcome": "UNVERIFIABLE"})
 
     def mismatched_predecessor(bundle) -> None:
+        # No predecessor resolver is configured in v1, so any non-empty
+        # predecessor list is UNVERIFIABLE, whatever digest it claims.
         bundle["event"]["predecessors"] = [
             {"event_id": b"p" * 32, "digest": b"d" * 32}]
-        bundle["predecessor_digests"] = {b"p" * 32: b"x" * 32}
     cases.append({"name": "predecessor-mismatch",
                   "bundle": _to_jsonable(bundle_with(mismatched_predecessor)),
-                  "now": EXAMPLE_NOW, "expected_outcome": "INVALID"})
+                  "now": EXAMPLE_NOW, "expected_outcome": "UNVERIFIABLE"})
     return cases
 
 

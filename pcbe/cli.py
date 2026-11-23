@@ -42,8 +42,6 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         now=args.now,
         dispute_open=bundle.get("dispute_open", False),
         revocation_updated_at=bundle.get("revocation_updated_at"),
-        expected_network=bundle.get("expected_network"),
-        predecessor_digests=bundle.get("predecessor_digests"),
     )
     print(json.dumps(report, sort_keys=True, indent=2))
     return 0 if report["outcome"] == "VALID" else 1

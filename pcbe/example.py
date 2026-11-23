@@ -40,6 +40,8 @@ def build_example(now: int = EXAMPLE_NOW) -> dict[str, Any]:
     policy = {
         "policy_id": "invoice-approval-v1",
         "version": 1,
+        "network": "excal-testnet",
+        "genesis_hash": EXAMPLE_GENESIS,
         "required_roles": ["seller"],
         "max_ttl": 3600,
         "max_revocation_age": 3600,
@@ -95,7 +97,4 @@ def build_example(now: int = EXAMPLE_NOW) -> dict[str, Any]:
         "revocation_updated_at": now,
         "dispute_open": False,
         "replay_seen": [],
-        "expected_network": {"network": "excal-testnet",
-                             "genesis_hash": EXAMPLE_GENESIS},
-        "predecessor_digests": {},
     }

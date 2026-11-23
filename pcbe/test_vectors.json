@@ -327,23 +327,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
         "trust": {
@@ -425,23 +422,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
         "trust": {
@@ -523,23 +517,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
         "trust": {
@@ -621,23 +612,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
         "trust": {
@@ -719,23 +707,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
         "trust": {
@@ -808,23 +793,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
         "trust": {
@@ -906,23 +888,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
         "trust": {
@@ -1004,23 +983,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [
           [
             {
@@ -1120,23 +1096,20 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
         },
-        "predecessor_digests": {},
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
         "trust": {
@@ -1227,26 +1200,19 @@
           },
           "version": 1
         },
-        "expected_network": {
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
           "genesis_hash": {
             "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
           },
-          "network": "excal-testnet"
-        },
-        "format": "excal-pcbe-bundle-v1",
-        "policy": {
           "max_revocation_age": 3600,
           "max_ttl": 3600,
+          "network": "excal-testnet",
           "policy_id": "invoice-approval-v1",
           "required_roles": [
             "seller"
           ],
           "version": 1
-        },
-        "predecessor_digests": {
-          "7070707070707070707070707070707070707070707070707070707070707070": {
-            "$bytes": "7878787878787878787878787878787878787878787878787878787878787878"
-          }
         },
         "replay_seen": [],
         "revocation_updated_at": 1800000000,
@@ -1265,7 +1231,7 @@
           }
         }
       },
-      "expected_outcome": "INVALID",
+      "expected_outcome": "UNVERIFIABLE",
       "name": "predecessor-mismatch",
       "now": 1800000000
     }

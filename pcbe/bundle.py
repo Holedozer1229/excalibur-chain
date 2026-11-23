@@ -15,9 +15,7 @@ Bundle format ``excal-pcbe-bundle-v1``::
       "trust": {"key-id": {...}},      # required; public_key as {"$bytes": hex}
       "revocation_updated_at": 1800000000,
       "dispute_open": false,
-      "replay_seen": [["<genesis hex>", "<nonce hex>"], ...],
-      "expected_network": {"network": "...", "genesis_hash": {"$bytes": hex}},
-      "predecessor_digests": {"<event_id hex>": "<digest hex>"}
+      "replay_seen": [["<genesis hex>", "<nonce hex>"], ...]
     }
 
 Only the listed top-level keys are accepted. Unknown keys, non-hex bytes,
@@ -34,7 +32,7 @@ from .core import PCBEError
 BUNDLE_FORMAT = "excal-pcbe-bundle-v1"
 _BUNDLE_KEYS = {
     "format", "event", "policy", "trust", "revocation_updated_at",
-    "dispute_open", "replay_seen", "expected_network", "predecessor_digests",
+    "dispute_open", "replay_seen",
 }
 _TRUST_KEYS = {"public_key", "roles", "org_id", "not_before", "expires_at", "revoked"}
 
@@ -43,8 +41,7 @@ def _to_jsonable(value: Any) -> Any:
     if isinstance(value, bytes):
         return {"$bytes": value.hex()}
     if isinstance(value, Mapping):
-        # Byte-string map keys (predecessor event ids) become hex strings;
-        # bundle_from_json converts them back for predecessor_digests.
+        # Byte-string map keys become hex strings.
         return {(k.hex() if isinstance(k, bytes) else k): _to_jsonable(v)
                 for k, v in value.items()}
     if isinstance(value, (list, tuple)):
@@ -117,20 +114,6 @@ def bundle_from_json(text: str) -> dict[str, Any]:
             raise PCBEError(f"bundle is missing required section: {name}")
         if not isinstance(bundle[name], dict):
             raise PCBEError(f"bundle section {name} must be an object")
-    # JSON object keys are strings: predecessor ids arrive as hex strings.
-    if "predecessor_digests" in bundle:
-        converted = {}
-        for key, value in bundle["predecessor_digests"].items():
-            if not isinstance(key, str):
-                raise PCBEError("predecessor_digests keys must be hex strings")
-            try:
-                raw_key = bytes.fromhex(key)
-            except ValueError:
-                raise PCBEError("predecessor_digests key is not valid hex")
-            if raw_key.hex() != key:
-                raise PCBEError("predecessor_digests key hex must be lowercase without prefix")
-            converted[raw_key] = value
-        bundle["predecessor_digests"] = converted
     for key_id, entry in bundle["trust"].items():
         if not isinstance(entry, dict) or set(entry) - _TRUST_KEYS:
             raise PCBEError(f"trust entry {key_id!r} is malformed")
@@ -141,13 +124,6 @@ def bundle_from_json(text: str) -> dict[str, Any]:
                 or not all(isinstance(x, bytes) and len(x) == 32 for x in pair)
                 for pair in seen):
             raise PCBEError("replay_seen must be a list of [genesis_hash, nonce] byte pairs")
-    if "predecessor_digests" in bundle:
-        preds = bundle["predecessor_digests"]
-        if not isinstance(preds, dict) or any(
-                not isinstance(k, bytes) or len(k) != 32
-                or not isinstance(v, bytes) or len(v) != 32
-                for k, v in preds.items()):
-            raise PCBEError("predecessor_digests must map 32-byte event ids to 32-byte digests")
     if "dispute_open" in bundle and not isinstance(bundle["dispute_open"], bool):
         raise PCBEError("dispute_open must be a boolean")
     if "revocation_updated_at" in bundle:

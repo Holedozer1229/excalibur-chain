@@ -1,15 +1,26 @@
 import hashlib
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey, Ed25519PublicKey)
 
+from pcbe.bundle import bundle_from_json
 from pcbe.core import (
     ATTESTATION_DOMAIN, EVENT_DOMAIN, PROTOCOL, VERSION, ReplayRegistry,
     PCBEError, attachments_merkle_root, attestation_message, canonical_cbor,
-    decode_canonical_cbor, event_digest, evidence_digest, merkle_proof,
-    verify_event, verify_merkle_proof,
+    decode_canonical_cbor, event_digest, event_payload, evidence_digest,
+    merkle_proof, verify_event, verify_merkle_proof,
 )
+from pcbe.make_vectors import build_vectors
+
+VECTORS_PATH = Path(__file__).resolve().parent.parent / "pcbe" / "test_vectors.json"
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_fixture(now=1_800_000_000):
@@ -250,57 +261,53 @@ class PCBEVerifierExtensionTests(unittest.TestCase):
             sign_event(event, self.private, "seller-key-1", "seller",
                        self.policy["version"])]
 
-    def test_matching_expected_network_is_valid(self):
-        result = self.verify(expected_network={"network": "excal-testnet",
-                                               "genesis_hash": b"g" * 32})
-        self.assertEqual(result["outcome"], "VALID")
-
-    def test_wrong_network_or_genesis_is_invalid(self):
-        result = self.verify(expected_network={"network": "excal-mainnet",
-                                               "genesis_hash": b"g" * 32})
-        self.assertEqual(result["outcome"], "INVALID")
-        result = self.verify(expected_network={"network": "excal-testnet",
-                                               "genesis_hash": b"h" * 32})
-        self.assertEqual(result["outcome"], "INVALID")
+    def test_policy_pinned_network_must_match(self):
+        # The matching policy pin is exercised by every VALID test; a policy
+        # pinned to another network or genesis rejects the same event.
+        wrong_network = dict(self.policy, network="excal-mainnet")
+        self.assertEqual(self.verify(policy=wrong_network)["outcome"], "INVALID")
+        wrong_genesis = dict(self.policy, genesis_hash=b"h" * 32)
+        self.assertEqual(self.verify(policy=wrong_genesis)["outcome"], "INVALID")
 
     def test_replay_is_scoped_by_genesis_hash(self):
         registry = ReplayRegistry()
         self.assertEqual(self.verify(replay=registry)["outcome"], "VALID")
+        # Same nonce on another genesis is a different replay scope, so it
+        # verifies under a policy pinned to that genesis.
         other = dict(self.event)
         other["network"] = {"network": "excal-testnet", "genesis_hash": b"h" * 32}
         self.resign(other)
-        self.assertEqual(self.verify(other, replay=registry)["outcome"], "VALID")
+        other_policy = dict(self.policy, genesis_hash=b"h" * 32)
+        result = self.verify(other, policy=other_policy, replay=registry)
+        self.assertEqual(result["outcome"], "VALID")
 
-    def test_predecessor_match_is_valid(self):
+    def test_predecessor_list_is_unverifiable_without_resolver(self):
+        # No predecessor resolver is configured in v1: any non-empty
+        # predecessor list is UNVERIFIABLE, even when the claimed digest
+        # matches a known prior event.
         pred = dict(self.event)
         pred["event_id"] = b"p" * 32
         pred_digest = event_digest(pred)
         changed = dict(self.event)
         changed["predecessors"] = [{"event_id": b"p" * 32, "digest": pred_digest}]
         self.resign(changed)
-        result = self.verify(changed, predecessor_digests={b"p" * 32: pred_digest})
-        self.assertEqual(result["outcome"], "VALID")
+        result = self.verify(changed)
+        self.assertEqual(result["outcome"], "UNVERIFIABLE")
+        self.assertIn("predecessor resolver", result["reason"])
 
     def test_unknown_predecessor_is_unverifiable(self):
-        changed = dict(self.event)
-        changed["predecessors"] = [{"event_id": b"p" * 32, "digest": b"d" * 32}]
-        self.resign(changed)
-        result = self.verify(changed, predecessor_digests={})
-        self.assertEqual(result["outcome"], "UNVERIFIABLE")
-
-    def test_predecessor_without_digests_is_unverifiable(self):
         changed = dict(self.event)
         changed["predecessors"] = [{"event_id": b"p" * 32, "digest": b"d" * 32}]
         self.resign(changed)
         result = self.verify(changed)
         self.assertEqual(result["outcome"], "UNVERIFIABLE")
 
-    def test_predecessor_mismatch_is_invalid(self):
+    def test_predecessor_mismatch_is_unverifiable(self):
         changed = dict(self.event)
         changed["predecessors"] = [{"event_id": b"p" * 32, "digest": b"d" * 32}]
         self.resign(changed)
-        result = self.verify(changed, predecessor_digests={b"p" * 32: b"x" * 32})
-        self.assertEqual(result["outcome"], "INVALID")
+        result = self.verify(changed)
+        self.assertEqual(result["outcome"], "UNVERIFIABLE")
 
     def test_dispute_overrides_valid_but_not_invalid(self):
         result = self.verify(dispute_open=True)
@@ -364,8 +371,10 @@ class PCBEVerifierExtensionTests(unittest.TestCase):
                          "UNVERIFIABLE")
         self.assertEqual(self.verify(trust=["not", "a", "mapping"])["outcome"],
                          "UNVERIFIABLE")
-        self.assertEqual(self.verify(policy={"policy_id": "invoice-approval-v1"})
-                         ["outcome"], "UNVERIFIABLE")
+        self.assertEqual(self.verify(policy={
+            "policy_id": "invoice-approval-v1",
+            "network": "excal-testnet", "genesis_hash": b"g" * 32})
+            ["outcome"], "UNVERIFIABLE")
         self.assertEqual(self.verify(now="not-a-time")["outcome"], "UNVERIFIABLE")
 
     def test_distinct_organizations_policy(self):
@@ -393,6 +402,141 @@ class PCBEVerifierExtensionTests(unittest.TestCase):
                                              org_id="buyer-corp")
         result = self.verify(event, policy=policy, trust=trust_distinct)
         self.assertEqual(result["outcome"], "VALID")
+
+
+def _decode_vectors(value):
+    """Decode the $bytes markers used in the published vectors file."""
+    if isinstance(value, dict):
+        if set(value) == {"$bytes"}:
+            return bytes.fromhex(value["$bytes"])
+        return {k: _decode_vectors(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_decode_vectors(v) for v in value]
+    return value
+
+
+class VectorTests(unittest.TestCase):
+    """Pin every published vector by independent recomputation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.vectors = json.loads(VECTORS_PATH.read_text(encoding="utf-8"))
+
+    def test_vectors_are_reproducible(self):
+        self.assertEqual(build_vectors(), self.vectors)
+
+    def test_cbor_vectors(self):
+        for case in self.vectors["cbor"]:
+            value = _decode_vectors(case["json"])
+            with self.subTest(value=repr(value)):
+                self.assertEqual(canonical_cbor(value).hex(), case["cbor_hex"])
+                self.assertEqual(decode_canonical_cbor(bytes.fromhex(case["cbor_hex"])),
+                                 value)
+
+    def test_cbor_rejected_vectors(self):
+        for raw in self.vectors["cbor_rejected"]:
+            with self.subTest(raw=raw):
+                with self.assertRaises(PCBEError):
+                    decode_canonical_cbor(bytes.fromhex(raw))
+
+    def test_evidence_vectors(self):
+        for item in self.vectors["evidence"]:
+            self.assertEqual(
+                evidence_digest(item["media_type"], bytes.fromhex(item["bytes_hex"])).hex(),
+                item["digest_hex"])
+
+    def test_merkle_vectors(self):
+        merkle = self.vectors["merkle"]
+        leaves = [bytes.fromhex(x) for x in merkle["leaves_hex"]]
+        root = bytes.fromhex(merkle["root_hex"])
+        self.assertEqual(attachments_merkle_root(leaves), root)
+        self.assertNotEqual(bytes.fromhex(merkle["reordered_root_hex"]), root)
+        for proof in merkle["proofs"]:
+            steps = [{"sibling": bytes.fromhex(s["sibling_hex"]),
+                      "sibling_is_left": s["sibling_is_left"]}
+                     for s in proof["steps"]]
+            self.assertTrue(verify_merkle_proof(leaves[proof["index"]], steps, root))
+
+    def test_event_and_attestation_vectors(self):
+        event = _decode_vectors(self.vectors["event"])
+        self.assertEqual(canonical_cbor(event_payload(event)).hex(),
+                         self.vectors["event_payload_cbor_hex"])
+        digest = event_digest(event)
+        self.assertEqual(digest.hex(), self.vectors["event_digest_hex"])
+        att = self.vectors["attestation"]
+        message = attestation_message(digest, att["key_id"], att["role"],
+                                      att["policy_version"])
+        self.assertEqual(message.hex(), att["message_hex"])
+        public = Ed25519PublicKey.from_public_bytes(bytes.fromhex(att["public_key_hex"]))
+        public.verify(bytes.fromhex(att["signature_hex"]), message)
+
+    def test_verify_cases(self):
+        for case in self.vectors["verify_cases"]:
+            with self.subTest(case=case["name"]):
+                bundle = bundle_from_json(json.dumps(case["bundle"]))
+                replay = ReplayRegistry()
+                for genesis, nonce in bundle.get("replay_seen", []):
+                    replay.record(genesis, nonce)
+                report = verify_event(
+                    bundle["event"], bundle["policy"], bundle["trust"],
+                    replay=replay, now=case["now"],
+                    dispute_open=bundle.get("dispute_open", False),
+                    revocation_updated_at=bundle.get("revocation_updated_at"))
+                self.assertEqual(report["outcome"], case["expected_outcome"])
+
+
+def _run_cli(*args):
+    return subprocess.run([sys.executable, "-m", "pcbe.cli", *args],
+                          cwd=REPO_ROOT, capture_output=True, text=True, timeout=120)
+
+
+class CLITests(unittest.TestCase):
+    """End-to-end tests for the offline PCBE CLI (``python3 -m pcbe.cli``)."""
+
+    def test_example_bundle_verifies_valid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "bundle.json"
+            result = _run_cli("example", "--out", str(bundle))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            result = _run_cli("verify", "--bundle", str(bundle), "--now", "1800000000")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report["outcome"], "VALID")
+            self.assertEqual(report["event_digest"],
+                             "83e67afa323b48091c595af5b2c9494bc48a387e67e4c3d0bba141405cb6bf19")
+
+    def test_tampered_bundle_exits_1_invalid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "bundle.json"
+            self.assertEqual(_run_cli("example", "--out", str(bundle)).returncode, 0)
+            data = json.loads(bundle.read_text(encoding="utf-8"))
+            data["event"]["claims"]["invoice_total_minor"] = 99999
+            bundle.write_text(json.dumps(data), encoding="utf-8")
+            result = _run_cli("verify", "--bundle", str(bundle), "--now", "1800000000")
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(json.loads(result.stdout)["outcome"], "INVALID")
+
+    def test_malformed_bundle_exits_2(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "bundle.json"
+            bundle.write_text("{not json", encoding="utf-8")
+            result = _run_cli("verify", "--bundle", str(bundle), "--now", "1800000000")
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("invalid bundle", result.stderr)
+
+    def test_missing_bundle_file_exits_2(self):
+        result = _run_cli("verify", "--bundle", "/tmp/does-not-exist-pcbe.json")
+        self.assertEqual(result.returncode, 2)
+
+    def test_verify_without_now_uses_wall_clock(self):
+        # The fixed example is dated 2027-01-15, so at the real wall clock
+        # it is not yet valid: the CLI must report INVALID, not crash.
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "bundle.json"
+            self.assertEqual(_run_cli("example", "--out", str(bundle)).returncode, 0)
+            result = _run_cli("verify", "--bundle", str(bundle))
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(json.loads(result.stdout)["outcome"], "INVALID")
 
 
 if __name__ == "__main__":

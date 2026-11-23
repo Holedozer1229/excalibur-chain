@@ -146,7 +146,7 @@ The implementation fixes these v1 details:
 - Replay registry is an in-memory reference implementation only. A production verifier must provide durable, atomic, network-scoped replay storage.
 - Verification requires an explicit fresh revocation snapshot; missing, future-dated, or stale trust/revocation data returns `UNVERIFIABLE`.
 
-The implementation is not yet a complete PCBE deployment: it does not provide a production trust-root distribution mechanism, durable replay database, predecessor-chain resolver, evidence-byte retrieval service, HTTP API, CLI, or independent second implementation. Its local Ed25519 profile must be reviewed against the issuer ecosystem before interoperability claims. The test workflow is not evidence of passing until GitHub Actions actually executes the test steps successfully.
+The implementation is not yet a complete PCBE deployment: it does not provide a production trust-root distribution mechanism, durable replay database, predecessor-chain resolver, evidence-byte retrieval service, HTTP API, or independent second implementation. An offline CLI verifier is provided (`python3 -m pcbe.cli verify`). Its local Ed25519 profile must be reviewed against the issuer ecosystem before interoperability claims. The test workflow is not evidence of passing until GitHub Actions actually executes the test steps successfully.
 
 ## Acceptance criteria
 
@@ -167,11 +167,11 @@ A Python reference implementation of the v1 envelope lives in `pcbe/`:
   proofs, Ed25519 role-bound attestations, replay registry, and
   `verify_event` with the explicit outcomes `VALID`, `INVALID`,
   `INCOMPLETE`, `EXPIRED`, `REVOKED`, `DISPUTED` and `UNVERIFIABLE`.
-  Predecessor digests are checked against caller-supplied known digests
-  (unknown predecessor: `UNVERIFIABLE`; mismatch: `INVALID`), and an
-  optional expected network/genesis rejects events from any other network.
-  A dispute overrides only `VALID`/`INCOMPLETE`; cryptographic failure,
-  expiry and revocation stand over a dispute. Malformed policy, trust or
+  The policy pins the network name and 32-byte genesis hash; an event
+  from any other network is `INVALID`. A non-empty predecessor list is
+  `UNVERIFIABLE` until a predecessor resolver is configured. A dispute
+  overrides only `VALID`/`INCOMPLETE`; cryptographic failure, expiry
+  and revocation stand over a dispute. Malformed policy, trust or
   revocation data fails closed as `UNVERIFIABLE`, never by exception.
 - `pcbe/bundle.py` — the JSON diagnostic bundle form
   (`excal-pcbe-bundle-v1`, bytes as `{"$bytes": hex}`).
@@ -183,10 +183,11 @@ A Python reference implementation of the v1 envelope lives in `pcbe/`:
   `python3 -m pcbe.make_vectors`): CBOR encodings and rejected
   non-canonical encodings, evidence digests, Merkle roots and proofs,
   the example event digest and attestation, and ten verify cases.
-- `tests/test_pcbe.py`, `tests/test_pcbe_vectors.py`,
-  `tests/test_pcbe_cli.py` — 50 tests, all passing on this branch
-  (`python3 -m unittest tests.test_pcbe tests.test_pcbe_vectors
-  tests.test_pcbe_cli`).
+- `tests/test_pcbe.py` — 48 tests, all passing on this branch
+  (`python3 -m unittest tests.test_pcbe`), covering the core verifier,
+  the published vectors and the CLI end to end. The CI workflow
+  (`.github/workflows/pcbe-tests.yml`) runs this file on Python 3.11
+  and 3.12.
 
 Still open (not claimed): a second independent verifier implementation
 against the same vectors, the read-only HTTP API, EXCAL anchoring (deferred
