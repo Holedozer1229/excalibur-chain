@@ -6,7 +6,7 @@ The active adapter is in rosetta/excal_rosetta.py with construction logic in
 rosetta/construction.py. It is backed by the live EXCAL ChainState and UTXO
 set. The network identifier is blockchain "excal", network "mainnet" (or
 "testnet" for the test network). Currency is EXCAL / 8 decimals on mainnet
-and TEXCAL / 8 decimals on testnet.
+and tEXCAL / 8 decimals on testnet.
 
 This is an implementation under validation, not a statement of Coinbase
 approval or Rosetta certification.
