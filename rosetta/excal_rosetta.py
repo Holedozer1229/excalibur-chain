@@ -21,6 +21,8 @@ from rosetta.construction import Construction
 
 BLOCKCHAIN = "excal"
 CURRENCY = {"symbol": "EXCAL", "decimals": 8}
+CURRENCIES = {"mainnet": CURRENCY, "fork": CURRENCY,
+              "testnet": {"symbol": "TEXCAL", "decimals": 8}}
 NETWORK = "mainnet"
 NETWORK_ID = {"blockchain": BLOCKCHAIN, "network": NETWORK}
 ERRORS = [
@@ -67,7 +69,8 @@ class ExcalRosetta:
         self.cs = chainstate
         self.mempool = mempool
         self.node = node
-        self.construction = Construction(chainstate, mempool, node)
+        self.currency = CURRENCIES.get(network, CURRENCY)
+        self.construction = Construction(chainstate, mempool, node, self.currency)
         self.network = network
         self.network_id = {"blockchain": BLOCKCHAIN, "network": network}
         self.lock = threading.RLock()
@@ -112,7 +115,7 @@ class ExcalRosetta:
                 "operation_identifier": {"index": idx},
                 "type": "transfer", "status": "success",
                 "account": {"address": _script_account(lock)},
-                "amount": {"value": str(-int(value)), "currency": CURRENCY},
+                "amount": {"value": str(-int(value)), "currency": self.currency},
                 "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
                                 "coin_action": "coin_spent"},
             })
