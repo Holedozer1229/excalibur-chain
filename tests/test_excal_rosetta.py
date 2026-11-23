@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from rosetta.excal_rosetta import ExcalRosetta, CURRENCY, _display_hash
 from rosetta.construction import Construction
 from txscript import lock_type, ser_tx, txid_internal
+from genesis_fork import qlock_activation
 import secp256k1 as secp
 
 
@@ -122,6 +123,46 @@ class RosettaDataTests(unittest.TestCase):
                     "fee": 1000}})
             types = [p["signature_type"] for p in result["payloads"]]
             self.assertEqual(types, [] if expected[name] is None else [expected[name]])
+
+    def test_grandfathered_p2pk_spend_survives_qlock_activation(self):
+        pub = secp.compress(secp.priv_to_pub(1))
+        p2pk = b"\\x21" + pub + b"\\xac"
+        pkh = b"\\x00" + b"\\x77" * 20
+        prev = bytes.fromhex("ab" * 32)
+        coin = prev[::-1].hex() + ":0"
+        height = qlock_activation()
+        cs = SimpleNamespace(
+            utxo={(prev, 0): [(10000, p2pk, False, 0)]},
+            tip=lambda: {"height": height - 1, "hash": bytes(32)})
+        builder = Construction(cs)
+        result = builder.handle("/construction/payloads", {
+            "metadata": {
+                "inputs": [{"coin": coin, "value": 10000,
+                            "lock": p2pk.hex(), "lock_type": "p2pk"}],
+                "outputs": [{"value": 9000, "lock": pkh.hex(),
+                             "lock_type": "pkh"}],
+                "fee": 1000}})
+        self.assertEqual([p["signature_type"] for p in result["payloads"]], ["ecdsa"])
+
+    def test_new_p2pk_output_is_rejected_after_qlock_activation(self):
+        pub = secp.compress(secp.priv_to_pub(1))
+        p2pk = b"\\x21" + pub + b"\\xac"
+        pkh = b"\\x00" + b"\\x77" * 20
+        prev = bytes.fromhex("ac" * 32)
+        coin = prev[::-1].hex() + ":0"
+        height = qlock_activation()
+        cs = SimpleNamespace(
+            utxo={(prev, 0): [(10000, pkh, False, 0)]},
+            tip=lambda: {"height": height - 1, "hash": bytes(32)})
+        builder = Construction(cs)
+        with self.assertRaisesRegex(ValueError, "legacy p2pk outputs are retired"):
+            builder.handle("/construction/payloads", {
+                "metadata": {
+                    "inputs": [{"coin": coin, "value": 10000,
+                                "lock": pkh.hex(), "lock_type": "pkh"}],
+                    "outputs": [{"value": 9000, "lock": p2pk.hex(),
+                                 "lock_type": "p2pk"}],
+                    "fee": 1000}})
 
     def test_block_transaction_reports_fee_from_historical_prevout(self):
         lock = bytes([0]) + bytes.fromhex("77" * 20)
