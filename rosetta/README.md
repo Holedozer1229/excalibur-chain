@@ -28,7 +28,7 @@ limitations and release gates.
 
 From the repository root, with a synchronized node data directory:
 
-    python3 rosetta/excal_rosetta.py --data-dir ./chaindata --host 127.0.0.1 --port 8070 --network fork
+    python3 rosetta/excal_rosetta.py --data-dir ./chaindata --host 127.0.0.1 --port 8070 --network mainnet --chain-network fork
 
 Standalone mode cannot broadcast because it does not own the live Node.
 Production embedding must call serve(node.cs, ..., mempool=node.mempool,
