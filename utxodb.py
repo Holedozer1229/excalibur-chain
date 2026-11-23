@@ -52,7 +52,8 @@ class SnapshotDB:
         """key = (txid_bytes, vout) -> [(value, spk, is_cb, cb_h)] or None."""
         txid_b, vout = key
         row = self._db.execute(
-            "SELECT value, spk, is_cb, cb_h FROM utxo WHERE txid=? AND vout=?",
+            "SELECT value, spk, is_cb, cb_h FROM utxo "
+            "WHERE txid=? AND vout=? AND spendable=1",
             (txid_b, vout)).fetchone()
         if row is None:
             return None
@@ -77,7 +78,8 @@ class SnapshotDB:
         """All snapshot outputs paying to lock script spk: [(key, entry)]."""
         out = []
         for txid_b, vout, value, is_cb, cb_h in self._db.execute(
-                "SELECT txid, vout, value, is_cb, cb_h FROM utxo WHERE spk=?",
+                "SELECT txid, vout, value, is_cb, cb_h FROM utxo "
+                "WHERE spk=? AND spendable=1",
                 (bytes(spk),)):
             out.append(((bytes(txid_b), vout),
                         (value, bytes(spk), is_cb, cb_h)))
@@ -97,12 +99,12 @@ def build_snapshot_db(dat_path, db_path, snapshot_hash_hex, height,
     db = sqlite3.connect(db_path)
     db.executescript("PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;")
     db.executescript(SCHEMA)
-    n = _load_dat_into_db(db, dat_path, log)
+    n = _load_dat_into_db(db, dat_path, log, expected_height=height)
     log("creating spk index...")
     db.execute("CREATE INDEX IF NOT EXISTS idx_spk ON utxo(spk)")
     db.execute("INSERT INTO meta(k,v) VALUES "
                "('snapshot_hash',?),('height',?),('format',?)",
-               (snapshot_hash_hex, str(height), "fork-snapshot-v1"))
+               (snapshot_hash_hex, str(height), "fork-snapshot-v2"))
     db.commit()
     cnt, total = db.execute(
         "SELECT COUNT(*), COALESCE(SUM(value),0) FROM utxo").fetchone()
@@ -124,41 +126,79 @@ def _sha256d_file(path):
     return hashlib.sha256(h.digest()).hexdigest()
 
 
+def _read_exact(f, size, field):
+    data = f.read(size)
+    if len(data) != size:
+        raise ValueError(f"truncated snapshot while reading {field}")
+    return data
+
+
 def _read_varint(f):
-    b = f.read(1)
-    if not b:
-        raise EOFError
-    n = b[0]
-    if n < 0xfd:
+    """Read a canonical Bitcoin-style varint; reject truncation/noncanonical forms."""
+    first = _read_exact(f, 1, "varint")[0]
+    if first < 0xfd:
+        return first
+    if first == 0xfd:
+        n = int.from_bytes(_read_exact(f, 2, "varint-u16"), "little")
+        if n < 0xfd:
+            raise ValueError("non-canonical varint")
         return n
-    if n == 0xfd:
-        return int.from_bytes(f.read(2), "little")
-    if n == 0xfe:
-        return int.from_bytes(f.read(4), "little")
-    return int.from_bytes(f.read(8), "little")
+    if first == 0xfe:
+        n = int.from_bytes(_read_exact(f, 4, "varint-u32"), "little")
+        if n <= 0xffff:
+            raise ValueError("non-canonical varint")
+        return n
+    n = int.from_bytes(_read_exact(f, 8, "varint-u64"), "little")
+    if n <= 0xffffffff:
+        raise ValueError("non-canonical varint")
+    return n
 
 
-def _load_dat_into_db(db, dat_path, log):
-    """Stream snapshot_968698.dat records into the utxo table."""
+def _load_dat_into_db(db, dat_path, log, expected_height):
+    """Import strict v2 snapshot records.
+
+    v2 record: txid[32], vout[u32le], value[u64le], script[varbytes],
+    flags[u8: bit0=spendable], is_coinbase[u8], coinbase_height[u32le].
+    v1 is deliberately rejected: it omits coinbase lineage and cannot
+    preserve Bitcoin's 100-block coinbase maturity rule.
+    """
     import struct
     n = 0
     batch = []
     with open(dat_path, "rb") as f:
-        magic = struct.unpack("<I", f.read(4))[0]
-        assert magic == 0x45425346, f"bad snapshot magic {magic:#x}"
-        ver = struct.unpack("<I", f.read(4))[0]
-        assert ver == 1, f"bad snapshot version {ver}"
-        height = struct.unpack("<I", f.read(4))[0]
-        count = struct.unpack("<Q", f.read(8))[0]
-        log(f"snapshot v{ver} height={height} count={count}")
+        magic = struct.unpack("<I", _read_exact(f, 4, "magic"))[0]
+        if magic != 0x45425346:
+            raise ValueError(f"bad snapshot magic {magic:#x}")
+        ver = struct.unpack("<I", _read_exact(f, 4, "version"))[0]
+        if ver != 2:
+            raise ValueError(
+                f"unsupported snapshot version {ver}; v2 required to preserve coinbase lineage")
+        embedded_height = struct.unpack(
+            "<I", _read_exact(f, 4, "height"))[0]
+        if embedded_height != int(expected_height):
+            raise ValueError(
+                f"snapshot height mismatch: file={embedded_height} expected={expected_height}")
+        count = struct.unpack("<Q", _read_exact(f, 8, "count"))[0]
+        log(f"snapshot v{ver} height={embedded_height} count={count}")
         for _ in range(count):
-            txid_b = f.read(32)
-            vout = struct.unpack("<I", f.read(4))[0]
-            value = struct.unpack("<Q", f.read(8))[0]
+            txid_b = _read_exact(f, 32, "txid")
+            vout = struct.unpack("<I", _read_exact(f, 4, "vout"))[0]
+            value = struct.unpack("<Q", _read_exact(f, 8, "value"))[0]
             ll = _read_varint(f)
-            lock = f.read(ll)
-            flags = f.read(1)[0]
-            batch.append((txid_b, vout, value, lock, 0, 0,
+            lock = _read_exact(f, ll, "script")
+            flags = _read_exact(f, 1, "flags")[0]
+            if flags & ~1:
+                raise ValueError(f"unknown snapshot output flags: {flags:#x}")
+            is_cb = _read_exact(f, 1, "coinbase flag")[0]
+            if is_cb not in (0, 1):
+                raise ValueError(f"invalid coinbase flag: {is_cb}")
+            cb_h = struct.unpack(
+                "<I", _read_exact(f, 4, "coinbase height"))[0]
+            if is_cb and cb_h > embedded_height:
+                raise ValueError("coinbase creation height exceeds snapshot height")
+            if not is_cb and cb_h != 0:
+                raise ValueError("non-coinbase output has nonzero coinbase height")
+            batch.append((txid_b, vout, value, lock, is_cb, cb_h,
                           1 if flags & 1 else 0))
             n += 1
             if len(batch) >= 50000:
@@ -172,7 +212,10 @@ def _load_dat_into_db(db, dat_path, log):
             db.executemany(
                 "INSERT INTO utxo(txid,vout,value,spk,is_cb,cb_h,spendable)"
                 " VALUES (?,?,?,?,?,?,?)", batch)
-    assert n == count, (n, count)
+        if f.read(1):
+            raise ValueError("trailing bytes after declared snapshot records")
+    if n != count:
+        raise ValueError(f"snapshot record count mismatch: parsed={n} declared={count}")
     return n
 
 
@@ -272,7 +315,8 @@ class UtxoSet:
         if self.snapshot is not None:
             db = self.snapshot._db
             for txid_b, vout, value, spk, is_cb, cb_h in db.execute(
-                    "SELECT txid, vout, value, spk, is_cb, cb_h FROM utxo"):
+                    "SELECT txid, vout, value, spk, is_cb, cb_h FROM utxo "
+                    "WHERE spendable=1"):
                 key = (bytes(txid_b), vout)
                 if key not in self.spent and key not in self.overlay:
                     yield key, [(value, bytes(spk), is_cb, cb_h)]
