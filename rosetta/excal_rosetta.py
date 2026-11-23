@@ -70,7 +70,8 @@ class ExcalRosetta:
         self.mempool = mempool
         self.node = node
         self.currency = CURRENCIES.get(network, CURRENCY)
-        self.construction = Construction(chainstate, mempool, node, self.currency)
+        self.construction = Construction(chainstate, mempool, node, self.currency,
+                                         self._historical_output)
         self.network = network
         self.network_id = {"blockchain": BLOCKCHAIN, "network": network}
         self.lock = threading.RLock()
@@ -97,6 +98,10 @@ class ExcalRosetta:
                     self._output_index[(txid, n)] = out
         self._indexed_height = tip_height
         self._indexed_tip_hash = tip_hash
+
+    def _historical_output(self, outpoint):
+        self._ensure_output_index()
+        return self._output_index.get((bytes(outpoint[0]), int(outpoint[1])))
 
     def _mempool_transaction(self, raw):
         tx = parse_tx(raw)
@@ -321,8 +326,11 @@ class ExcalRosetta:
             with self.lock:
                 height, block_hash = self._tip()
                 requested = body.get("block_identifier")
-                if requested and requested.get("index", height) != height:
-                    return 500, self._error(5)
+                if requested:
+                    if requested.get("index", height) != height:
+                        return 500, self._error(5)
+                    if requested.get("hash") and requested["hash"].lower() != _display_hash(block_hash):
+                        return 500, self._error(5)
                 total = 0
                 count = 0
                 finder = getattr(self.cs.utxo, "find_by_spk", None)
