@@ -29,7 +29,7 @@ ERRORS = [
     {"code": 3, "message": "transaction not found", "retriable": False},
     {"code": 4, "message": "invalid account identifier", "retriable": False},
     {"code": 5, "message": "historical balance lookup unsupported", "retriable": False},
-    {"code": 6, "message": "construction API not enabled for native EXCAL locks", "retriable": False},
+    {"code": 6, "message": "construction or consensus validation failed", "retriable": False},
     {"code": 7, "message": "invalid request", "retriable": False},
 ]
 ERROR_BY_CODE = {e["code"]: e for e in ERRORS}
@@ -203,12 +203,13 @@ class ExcalRosetta:
                             "middleware_version": "excal-rosetta/1.0.0"},
                 "allow": {"operation_statuses": [{"status": "SUCCESS", "successful": True},
                                                   {"status": "FAILURE", "successful": False}],
-                          "operation_types": ["MINING", "TRANSFER"],
+                          "operation_types": ["MINING", "TRANSFER", "INPUT", "OUTPUT", "FEE"],
                           "errors": ERRORS, "historical_balance_lookup": False,
-                          "call_methods": [], "balance_exemptions": [],
-                          "excal_extensions": {"trifold_signature_type": "trifold",
-                                               "knot_signature_type": "excal_knot",
-                                               "witness_encoding": "native scriptSig hex"}} ,
+                          "call_methods": [], "balance_exemptions": []},
+                "metadata": {"excal_extensions": {
+                    "trifold_signature_type": "trifold",
+                    "knot_signature_type": "excal_knot",
+                    "witness_encoding": "native scriptSig hex"}},
             }
         err = self._check_network(body)
         if err:
@@ -280,9 +281,17 @@ class ExcalRosetta:
                 total = 0
                 count = 0
                 finder = getattr(self.cs.utxo, "find_by_spk", None)
-                if not callable(finder):
-                    return 500, self._error(7, "UTXO backend lacks indexed script lookup")
-                for _key, entry in finder(script):
+                if callable(finder):
+                    matches = finder(script)
+                else:
+                    matches = []
+                    for key, entries in self.cs.utxo.items():
+                        if isinstance(entries, tuple):
+                            entries = [entries]
+                        for entry in entries:
+                            if bytes(entry[1]) == script:
+                                matches.append((key, entry))
+                for _key, entry in matches:
                     total += int(entry[0])
                     count += 1
                 return 200, {
