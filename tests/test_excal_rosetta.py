@@ -24,17 +24,17 @@ class RosettaDataTests(unittest.TestCase):
             tip=lambda: {"height": 1, "hash": b1hash},
         )
         self.app = ExcalRosetta(self.cs, network="fork")
-        self.net = {"network_identifier": {"blockchain": "EXCAL", "network": "fork" }}
+        self.net = {"network_identifier": {"blockchain": "excal", "network": "fork" }}
 
     def test_network_list(self):
         status, body = self.app.handle("/network/list", {})
         self.assertEqual(status, 200)
-        self.assertEqual(body["network_identifiers"][0]["blockchain"], "EXCAL")
+        self.assertEqual(body["network_identifiers"][0]["blockchain"], "excal")
 
     def test_network_options(self):
         status, body = self.app.handle("/network/options", self.net)
         self.assertEqual(status, 200)
-        self.assertIn("MINING", body["allow"]["operation_types"])
+        self.assertIn("coinbase", body["allow"]["operation_types"])
         self.assertFalse(body["allow"]["historical_balance_lookup"])
 
     def test_network_status_uses_tip(self):
