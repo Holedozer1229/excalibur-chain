@@ -95,7 +95,7 @@ class Construction:
             ins, outs, total_in, total_out, fee_op = [], [], 0, 0, 0
             for op in body.get("operations") or []:
                 typ = op.get("type")
-                if typ == "INPUT":
+                if typ == "input":
                     coin = (op.get("coin_change") or {}).get("coin_identifier", {}).get("identifier")
                     live = self._input(coin)
                     if lock_from_account(op.get("account")) != live["lock"]:
@@ -105,13 +105,13 @@ class Construction:
                     ins.append({"coin": coin, "value": live["value"],
                                 "lock": live["lock"].hex(), "lock_type": live["type"]})
                     total_in += live["value"]
-                elif typ == "OUTPUT":
+                elif typ == "output":
                     lock = lock_from_account(op.get("account"))
                     val = amount(op)
                     if val <= 0: raise ValueError("output must be positive")
                     outs.append({"value": val, "lock": lock.hex(), "lock_type": lock_type(lock)})
                     total_out += val
-                elif typ == "FEE":
+                elif typ == "fee":
                     v = amount(op)
                     if v >= 0: raise ValueError("fee must be negative")
                     fee_op += -v
@@ -283,14 +283,14 @@ class Construction:
             ops = []
             for vin in tx["vin"]:
                 live = self._input(vin["prev"][::-1].hex()+":"+str(vin["idx"]))
-                ops.append({"operation_identifier":{"index":len(ops)},"type":"INPUT",
+                ops.append({"operation_identifier":{"index":len(ops)},"type":"input",
                     "account":{"address":"lock:"+live["lock"].hex()},
                     "amount":{"value":str(-live["value"]),"currency":CURRENCY},
                     "coin_change":{"coin_identifier":{"identifier":live["coin"]},"coin_action":"coin_spent"},
                     "metadata":{"lock_type":live["type"],"witness_hex":vin["script"].hex()}})
             for out in tx["vout"]:
                 lock=bytes(out["script"])
-                ops.append({"operation_identifier":{"index":len(ops)},"type":"OUTPUT",
+                ops.append({"operation_identifier":{"index":len(ops)},"type":"output",
                     "account":{"address":"lock:"+lock.hex()},
                     "amount":{"value":str(int(out["value"])),"currency":CURRENCY},
                     "metadata":{"lock_type":lock_type(lock)}})
