@@ -258,11 +258,16 @@ class ExcalRosetta:
                 genesis = self._record(0)
                 if current is None or genesis is None:
                     return 500, self._error(2, "chainstate has no complete genesis/tip")
+                peers = []
+                if self.node is not None and getattr(self.node, "peermgr", None):
+                    for _session, address in self.node.peermgr.peers:
+                        peer = f"{address[0]}:{address[1]}"
+                        peers.append({"peer_id": peer, "metadata": {"address": peer}})
                 return 200, {
                     "current_block_identifier": current["block_identifier"],
                     "current_block_timestamp": current["timestamp"],
                     "genesis_block_identifier": self._record_identifier(genesis),
-                    "peers": [],
+                    "peers": peers,
                 }
         if path == "/block":
             ident = body.get("block_identifier") or {}
