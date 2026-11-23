@@ -8,7 +8,12 @@ other script forms are not collapsed into an ECDSA address.
 """
 import argparse
 import json
+import os
+import sys
 import threading
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from txscript import parse_tx, txid_internal
@@ -58,10 +63,11 @@ def _outpoint(txid_wire, vout):
 class ExcalRosetta:
     """Rosetta Data API backed by a live ChainState instance."""
 
-    def __init__(self, chainstate, network=NETWORK, mempool=None):
+    def __init__(self, chainstate, network=NETWORK, mempool=None, node=None):
         self.cs = chainstate
         self.mempool = mempool
-        self.construction = Construction(chainstate, mempool)
+        self.node = node
+        self.construction = Construction(chainstate, mempool, node)
         self.network = network
         self.network_id = {"blockchain": BLOCKCHAIN, "network": network}
         self.lock = threading.RLock()
@@ -353,8 +359,8 @@ def make_handler(app):
     return Handler
 
 
-def serve(chainstate, host="127.0.0.1", port=8070, network=NETWORK, mempool=None):
-    app = ExcalRosetta(chainstate, network=network, mempool=mempool)
+def serve(chainstate, host="127.0.0.1", port=8070, network=NETWORK, mempool=None, node=None):
+    app = ExcalRosetta(chainstate, network=network, mempool=mempool, node=node)
     server = ThreadingHTTPServer((host, int(port)), make_handler(app))
     server.serve_forever()
 
