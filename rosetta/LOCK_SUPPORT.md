@@ -31,7 +31,7 @@ rename these to ecdsa, ed25519 or another unrelated standard type.
 A Coinbase/rosetta-cli client must be tested to confirm it tolerates these
 chain-specific extensions before claiming conformance.
 
-For PQH and QHTLC, the signing service returns the complete native scriptSig
+The local helper rosetta/trifold_signer.py uses the EXCAL wallet's Trifold key for PQH/QHTLC, and rosetta/knot_signer.py constructs the staged KNOT preimage witness. For PQH and QHTLC, the signing service returns the complete native scriptSig
 as Signature.hex_bytes with signature_type: "trifold". The EXCAL node
 then decodes and consensus-validates it. For KNOT, the complete 56-byte
 witness is returned with signature_type: "excal_knot". HTLC ECDSA signatures
