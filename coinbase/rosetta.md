@@ -53,7 +53,7 @@ staged until its configured activation height; retired legacy locks are
 refused after their retirement height.
 
 PQH and QHTLC use the native Trifold witness codec and one-time spent-leaf
-registry. The local signer bridge is rosetta/trifold_signer.py and requires an
+registry. The local signer bridges are rosetta/trifold_signer.py (PQH/QHTLC) and rosetta/knot_signer.py (KNOT). The Trifold bridge requires an
 already-unlocked EXCAL Wallet object. HTLC claim/refund paths require their
 native descriptor, correct key and (for claims) secret. KNOT requires its
 time/preimage witness and descriptor.
