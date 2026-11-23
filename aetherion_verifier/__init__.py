@@ -4,6 +4,7 @@ This package is deliberately outside consensus and has no wallet or payout API.
 """
 from .core import (
     SCHEMA,
+    AttestationError,
     canonical_json,
     digest,
     sign_attestation,
@@ -12,6 +13,7 @@ from .core import (
 
 __all__ = [
     "SCHEMA",
+    "AttestationError",
     "canonical_json",
     "digest",
     "sign_attestation",
