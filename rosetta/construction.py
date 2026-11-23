@@ -1,274 +1,271 @@
-"""Rosetta construction helpers for native EXCAL transactions.
+"""EXCAL lock-aware Rosetta Construction API.
 
-Initial safe scope: PKH inputs and OPEN/anyone inputs. PQH, HTLC, QHTLC,
-Bridge, KNOT and legacy P2PK are rejected until their exact signing flows
-are represented and covered by vectors. No fallback signing is permitted.
+No wallet secrets are held here. External signers return native scriptSig
+witnesses; this adapter assembles them, checks every lock and runs the exact
+EXCAL consensus validator before returning or broadcasting a transaction.
+Trifold and KNOT use explicit EXCAL extension signature types.
 """
-import json
-
+import hashlib
 import secp256k1 as secp
+from txpq import decode_witness
 from txscript import (
     parse_tx, ser_tx, txid_internal, sighash_all, hash160, lock_type,
-    validate_tx, SIGHASH_ALL,
+    validate_tx, SIGHASH_ALL, COINBASE_MATURITY, parse_htlc_descriptor,
+    parse_qhtlc_descriptor, parse_qhtlc_witness, parse_knot_witness,
+    lock_htlc_for_descriptor, lock_qhtlc_for_descriptor,
+    lock_knot_for_descriptor, lock_pqh_for_root, sign_knot_input,
 )
+from genesis_fork import (qlock_activation, qday_activation, htlc_activation,
+                          qhtlc_activation, bridge_activation, knot_activation)
 
 CURRENCY = {"symbol": "EXCAL", "decimals": 8}
-SUPPORTED_INPUTS = {"pkh", "open", "anyone"}
+TRIFOLD = "trifold"
+KNOT = "excal_knot"
+LOCKS = {"pkh", "open", "pqh", "htlc", "qhtlc", "bridge", "knot", "p2pk", "anyone"}
 
 
-def _err(code, message):
-    return {"code": code, "message": str(message)[:256], "retriable": False}
+def coin_key(value):
+    txid, sep, n = str(value).rpartition(":")
+    if not sep or len(txid) != 64:
+        raise ValueError("coin id must be display_txid:vout")
+    return bytes.fromhex(txid)[::-1], int(n)
 
 
-def _coin_id(value):
-    if not isinstance(value, str) or ":" not in value:
-        raise ValueError("coin_identifier.identifier must be display_txid:vout")
-    txid, vout = value.rsplit(":", 1)
-    if len(txid) != 64:
-        raise ValueError("coin id txid must be 32-byte display-order hex")
-    raw = bytes.fromhex(txid)[::-1]
-    n = int(vout)
-    if n < 0 or n > 0xffffffff:
-        raise ValueError("vout out of range")
-    return raw, n
+def lock_from_account(account):
+    addr = (account or {}).get("address", "")
+    if not isinstance(addr, str) or not addr.startswith("lock:"):
+        raise ValueError("account must use lock:<script hex>")
+    lock = bytes.fromhex(addr[5:])
+    if lock_type(lock) not in LOCKS:
+        raise ValueError("unknown EXCAL lock")
+    return lock
 
 
-def _account_lock(account):
-    address = (account or {}).get("address", "")
-    if not isinstance(address, str) or not address.startswith("lock:"):
-        raise ValueError("account address must be lock:<scriptPubKey hex>")
-    script = bytes.fromhex(address[5:])
-    if not script or lock_type(script) is None:
-        raise ValueError("unknown or empty EXCAL locking script")
-    return script
+def amount(op):
+    a = op.get("amount") or {}
+    if a.get("currency") != CURRENCY:
+        raise ValueError("currency must be EXCAL (8 decimals)")
+    return int(a["value"])
 
 
-def _amount(op):
-    amount = op.get("amount") or {}
-    if amount.get("currency") != CURRENCY:
-        raise ValueError("operation currency must be EXCAL with 8 decimals")
-    return int(amount["value"])
-
-
-def _entry(utxo, key):
-    entries = utxo.get(key)
-    if not entries:
-        raise ValueError("input UTXO not found or already spent")
-    return entries[0]
-
+def active(lt, height):
+    gates = {"pkh": qlock_activation(), "open": qlock_activation(),
+             "pqh": qday_activation(), "htlc": htlc_activation(),
+             "qhtlc": qhtlc_activation(), "bridge": bridge_activation(),
+             "knot": knot_activation()}
+    if lt in gates and height < gates[lt]:
+        raise ValueError(f"{lt} not active at height {height}")
+    if lt in ("p2pk", "anyone") and height >= qlock_activation():
+        raise ValueError(f"legacy {lt} is retired")
+    
 
 class Construction:
-    def __init__(self, chainstate, mempool=None):
-        self.cs = chainstate
-        self.mempool = mempool
+    def __init__(self, chainstate, mempool=None, node=None):
+        self.cs, self.mempool, self.node = chainstate, mempool, node
+
+    def _input(self, coin):
+        key = coin_key(coin)
+        rows = self.cs.utxo.get(key)
+        if not rows:
+            raise ValueError("input UTXO unavailable or spent")
+        value, lock, cb, cbh = rows[0]
+        return {"coin": coin, "key": key, "value": int(value),
+                "lock": bytes(lock), "type": lock_type(bytes(lock)),
+                "coinbase": bool(cb), "cb_height": int(cbh)}
 
     def handle(self, path, body):
         height = int(self.cs.tip()["height"]) + 1
         if path == "/construction/derive":
-            pk = bytes.fromhex(body["public_key"]["hex_bytes"])
-            if len(pk) not in (33, 65):
-                raise ValueError("public key must be compressed or uncompressed secp256k1")
-            if len(pk) == 65:
-                pk = bytes([2 | (pk[64] & 1)]) + pk[1:33]
-            if pk[0] not in (2, 3) or secp.decompress(pk) is None:
-                raise ValueError("invalid secp256k1 public key")
-            return {"account_identifier": {"address": "lock:" + (b"\x00" + hash160(pk)).hex()}}
+            md = body.get("metadata") or {}
+            if md.get("lock_hex"):
+                lock = bytes.fromhex(md["lock_hex"])
+                if lock_type(lock) not in LOCKS: raise ValueError("unknown lock")
+            elif md.get("lock_type") == "pqh":
+                lock = lock_pqh_for_root(bytes.fromhex(md["root"]))
+            else:
+                pub = bytes.fromhex(body["public_key"]["hex_bytes"])
+                if len(pub) == 65 and pub[0] == 4:
+                    pub = bytes([2 | (pub[64] & 1)]) + pub[1:33]
+                if len(pub) != 33 or pub[0] not in (2, 3) or secp.decompress(pub) is None:
+                    raise ValueError("invalid secp256k1 public key")
+                lock = b"\x00" + hash160(pub)
+            return {"account_identifier": {"address": "lock:" + lock.hex()}}
 
         if path == "/construction/preprocess":
-            operations = body.get("operations") or []
-            inputs, outputs, required = [], [], []
-            total_in = total_out = total_fee = 0
-            for op in operations:
+            ins, outs, total_in, total_out, fee_op = [], [], 0, 0, 0
+            for op in body.get("operations") or []:
                 typ = op.get("type")
                 if typ == "INPUT":
                     coin = (op.get("coin_change") or {}).get("coin_identifier", {}).get("identifier")
-                    if not coin:
-                        raise ValueError("INPUT operation requires coin_change.coin_identifier")
-                    lock = _account_lock(op.get("account"))
-                    lt = lock_type(lock)
-                    if lt not in SUPPORTED_INPUTS:
-                        raise ValueError("unsupported input lock type: " + str(lt))
-                    value = _amount(op)
-                    if value >= 0:
-                        raise ValueError("INPUT amount must be negative")
-                    inputs.append({"coin": coin, "account": op["account"]["address"],
-                                   "value": -value, "lock": lock.hex(), "lock_type": lt})
-                    total_in += -value
-                    if lt == "pkh":
-                        required.append(op["account"])
+                    live = self._input(coin)
+                    if lock_from_account(op.get("account")) != live["lock"]:
+                        raise ValueError("input account does not match UTXO lock")
+                    if amount(op) != -live["value"]:
+                        raise ValueError("input amount must equal negative UTXO value")
+                    ins.append({"coin": coin, "value": live["value"],
+                                "lock": live["lock"].hex(), "lock_type": live["type"]})
+                    total_in += live["value"]
                 elif typ == "OUTPUT":
-                    lock = _account_lock(op.get("account"))
-                    if lock_type(lock) not in ("pkh", "open", "anyone"):
-                        raise ValueError("unsupported output lock type: " + str(lock_type(lock)))
-                    value = _amount(op)
-                    if value <= 0:
-                        raise ValueError("OUTPUT amount must be positive")
-                    outputs.append({"account": op["account"]["address"],
-                                    "value": value, "lock": lock.hex()})
-                    total_out += value
+                    lock = lock_from_account(op.get("account"))
+                    val = amount(op)
+                    if val <= 0: raise ValueError("output must be positive")
+                    outs.append({"value": val, "lock": lock.hex(), "lock_type": lock_type(lock)})
+                    total_out += val
                 elif typ == "FEE":
-                    fee_value = _amount(op)
-                    if fee_value >= 0:
-                        raise ValueError("FEE amount must be negative")
-                    total_fee += -fee_value
+                    v = amount(op)
+                    if v >= 0: raise ValueError("fee must be negative")
+                    fee_op += -v
                 else:
-                    raise ValueError("unsupported operation type: " + str(typ))
-            if not inputs or not outputs:
-                raise ValueError("at least one INPUT and one OUTPUT are required")
-            if total_out >= total_in:
-                raise ValueError("outputs must be less than inputs; fee must be positive")
-            calculated_fee = total_in - total_out
-            if total_fee and total_fee != calculated_fee:
-                raise ValueError("FEE operation does not equal input minus output value")
-            return {"options": {"inputs": inputs, "outputs": outputs,
-                                "fee": calculated_fee},
-                    "required_public_keys": required}
+                    raise ValueError("unsupported operation " + str(typ))
+            if not ins or not outs or total_out >= total_in:
+                raise ValueError("need inputs, outputs and positive fee")
+            fee = total_in - total_out
+            if fee_op and fee_op != fee: raise ValueError("fee operation does not reconcile")
+            return {"options": {"inputs": ins, "outputs": outs, "fee": fee},
+                    "required_public_keys": [],
+                    "metadata": {"lock_types": sorted({x["lock_type"] for x in ins})}}
 
         if path == "/construction/metadata":
-            options = body.get("options") or {}
-            checked = []
-            for item in options.get("inputs", []):
-                key = _coin_id(item["coin"])
-                entry = _entry(self.cs.utxo, key)
-                value, script, is_cb, cb_h = entry
-                if int(value) != int(item["value"]) or bytes(script).hex() != item["lock"]:
-                    raise ValueError("input metadata does not match live UTXO")
-                if is_cb and (height < int(cb_h) or height - int(cb_h) < 100):
-                    raise ValueError("coinbase input is immature")
-                if lock_type(bytes(script)) not in SUPPORTED_INPUTS:
-                    raise ValueError("input lock is not enabled for this Rosetta construction version")
-                checked.append({"coin": item["coin"], "value": int(value),
-                                "lock": bytes(script).hex(),
-                                "lock_type": lock_type(bytes(script))})
-            if not checked:
-                raise ValueError("no inputs")
-            return {"metadata": {"inputs": checked,
-                                 "outputs": options.get("outputs", []),
-                                 "fee": int(options["fee"]),
-                                 "network_height": height}}
+            opts = body.get("options") or {}
+            ins, seen = [], set()
+            for item in opts.get("inputs", []):
+                live = self._input(item["coin"])
+                if live["key"] in seen: raise ValueError("duplicate input")
+                seen.add(live["key"])
+                if live["value"] != int(item["value"]) or live["lock"].hex() != item["lock"]:
+                    raise ValueError("UTXO changed after preprocess")
+                if live["coinbase"] and height - live["cb_height"] < COINBASE_MATURITY:
+                    raise ValueError("coinbase input immature")
+                active(live["type"], height)
+                ins.append({**item, "lock_type": live["type"],
+                            "coinbase": live["coinbase"], "cb_height": live["cb_height"]})
+            outs = opts.get("outputs") or []
+            for out in outs: active(lock_type(bytes.fromhex(out["lock"])), height)
+            if sum(x["value"] for x in ins) - sum(int(x["value"]) for x in outs) != int(opts["fee"]):
+                raise ValueError("input/output/fee values do not reconcile")
+            return {"metadata": {"inputs": ins, "outputs": outs,
+                                 "fee": int(opts["fee"]), "network_height": height}}
 
         if path == "/construction/payloads":
-            metadata = body.get("metadata") or {}
-            inputs = metadata.get("inputs") or []
-            outputs = metadata.get("outputs") or []
-            if not inputs or not outputs:
-                raise ValueError("metadata must include inputs and outputs")
-            vin = []
-            for item in inputs:
-                prev, idx = _coin_id(item["coin"])
-                vin.append({"prev": prev, "idx": idx, "script": b"",
-                            "seq": 0xffffffff})
-            vout = []
-            for item in outputs:
-                lock = bytes.fromhex(item["lock"])
-                if lock_type(lock) not in ("pkh", "open", "anyone"):
-                    raise ValueError("unsupported output lock")
-                vout.append({"value": int(item["value"]), "script": lock})
-            tx = {"version": 1, "vin": vin, "vout": vout, "locktime": 0}
-            unsigned = ser_tx(tx)
-            payloads, required = [], []
-            for i, item in enumerate(inputs):
-                lock = bytes.fromhex(item["lock"])
-                lt = lock_type(lock)
-                if lt == "pkh":
-                    digest = sighash_all(tx, i, lock)
-                    payloads.append({
-                        "account_identifier": {"address": "lock:" + lock.hex()},
-                        "hex_bytes": digest.hex(),
-                        "signature_type": "ecdsa",
-                    })
-                    required.append({"address": "lock:" + lock.hex()})
-                elif lt in ("open", "anyone"):
-                    continue
-                else:
-                    raise ValueError("unsupported input lock type: " + str(lt))
-            return {"unsigned_transaction": unsigned.hex(),
-                    "payloads": payloads,
-                    "metadata": {"required_public_keys": required}}
+            md = body.get("metadata") or {}
+            tx = {"version": 1, "vin": [], "vout": [], "locktime": 0}
+            for x in md.get("inputs", []):
+                live = self._input(x["coin"])
+                if live["lock"].hex() != x["lock"]: raise ValueError("UTXO lock changed")
+                tx["vin"].append({"prev": live["key"][0], "idx": live["key"][1],
+                                  "script": b"", "seq": 0xffffffff})
+            for x in md.get("outputs", []):
+                lock = bytes.fromhex(x["lock"])
+                if lock_type(lock) not in LOCKS: raise ValueError("unknown output lock")
+                tx["vout"].append({"value": int(x["value"]), "script": lock})
+            payloads = []
+            for i, x in enumerate(md["inputs"]):
+                lock, lt = bytes.fromhex(x["lock"]), x["lock_type"]
+                if lt in ("open", "anyone"): continue
+                st = TRIFOLD if lt in ("pqh", "qhtlc") else KNOT if lt == "knot" else "ecdsa"
+                payloads.append({"account_identifier": {"address": "lock:" + lock.hex()},
+                    "hex_bytes": sighash_all(tx, i, lock).hex(), "signature_type": st,
+                    "metadata": {"input_index": i, "lock_type": lt, "lock_hex": lock.hex(),
+                                 "coin_identifier": x["coin"]}})
+            return {"unsigned_transaction": ser_tx(tx).hex(), "payloads": payloads}
 
         if path == "/construction/combine":
-            raw = bytes.fromhex(body["unsigned_transaction"])
-            tx = parse_tx(raw)
-            if any(v["script"] for v in tx["vin"]):
-                raise ValueError("unsigned transaction already contains scriptSigs")
-            metadata = body.get("metadata") or {}
-            inputs = []
-            for vin in tx["vin"]:
-                entry = _entry(self.cs.utxo, (vin["prev"], vin["idx"]))
-                value, lock, is_cb, cb_h = entry
-                inputs.append({"value": int(value), "lock": bytes(lock).hex(),
-                               "lock_type": lock_type(bytes(lock)),
-                               "coin": vin["prev"][::-1].hex() + ":" + str(vin["idx"])})
-            sigs = body.get("signatures") or []
-            by_payload = {}
-            for item in sigs:
-                payload = item.get("signing_payload") or {}
-                by_payload[payload.get("hex_bytes", "").lower()] = item
-            for i, item in enumerate(inputs):
-                lock = bytes.fromhex(item["lock"])
-                lt = lock_type(lock)
-                if lt in ("open", "anyone"):
+            tx = parse_tx(bytes.fromhex(body["unsigned_transaction"]))
+            if any(v["script"] for v in tx["vin"]): raise ValueError("transaction is not unsigned")
+            live_inputs = [self._input(v["prev"][::-1].hex()+":"+str(v["idx"])) for v in tx["vin"]]
+            sigmap = {}
+            for s in body.get("signatures") or []:
+                p = s.get("signing_payload") or {}
+                k = (p.get("hex_bytes", "").lower(), s.get("signature_type"))
+                if k in sigmap: raise ValueError("duplicate signature")
+                sigmap[k] = s
+            for i, live in enumerate(live_inputs):
+                lock, lt = live["lock"], live["type"]
+                if lt in ("open", "anyone"): continue
+                digest = sighash_all(tx, i, lock).hex()
+                if lt in ("pqh", "qhtlc"):
+                    s = sigmap.get((digest, TRIFOLD))
+                    if not s: raise ValueError(f"input {i}: missing Trifold witness")
+                    wit = bytes.fromhex(s["hex_bytes"])
+                    if lt == "pqh":
+                        root, _ = decode_witness(wit)
+                        if hash160(root) != lock[1:]: raise ValueError("PQH root mismatch")
+                    else:
+                        mode, root, _sig, secret, desc = parse_qhtlc_witness(wit)
+                        d = parse_qhtlc_descriptor(desc)
+                        if lock_qhtlc_for_descriptor(desc) != lock: raise ValueError("QHTLC descriptor mismatch")
+                        if mode == 1 and hashlib.sha256(secret).digest() != d["secret_hash"]:
+                            raise ValueError("QHTLC secret mismatch")
+                    tx["vin"][i]["script"] = wit
                     continue
-                if lt != "pkh":
-                    raise ValueError("unsupported input lock type: " + str(lt))
-                digest = sighash_all(tx, i, lock)
-                sig_item = by_payload.get(digest.hex())
-                if not sig_item:
-                    raise ValueError("missing signature for input " + str(i))
-                pub = bytes.fromhex(sig_item["public_key"]["hex_bytes"])
-                sig = bytes.fromhex(sig_item["hex_bytes"])
-                if len(pub) == 65 and pub[0] == 4:
-                    pub = bytes([2 | (pub[64] & 1)]) + pub[1:33]
-                if len(pub) != 33 or pub[0] not in (2, 3):
-                    raise ValueError("invalid compressed secp256k1 public key")
-                if hash160(pub) != lock[1:]:
-                    raise ValueError("public key does not match PKH lock")
-                if len(sig) != 64 or not secp.verify(pub, sig, digest):
-                    raise ValueError("invalid EXCAL ECDSA signature")
-                tx["vin"][i]["script"] = pub + sig + bytes([SIGHASH_ALL])
-            signed = ser_tx(tx)
-            ok, reason, _fee = validate_tx(signed, self.cs.utxo, height)
-            if not ok:
-                raise ValueError("consensus validation rejected transaction: " + reason)
-            return {"signed_transaction": signed.hex()}
+                if lt == "knot":
+                    s = sigmap.get((digest, KNOT))
+                    if not s: raise ValueError(f"input {i}: missing KNOT witness")
+                    tstar, desc = parse_knot_witness(bytes.fromhex(s["hex_bytes"]))
+                    if lock_knot_for_descriptor(desc) != lock: raise ValueError("KNOT descriptor mismatch")
+                    tx["vin"][i]["script"] = sign_knot_input(tx, i, lock, tstar, desc)
+                    continue
+                s = sigmap.get((digest, "ecdsa"))
+                if not s: raise ValueError(f"input {i}: missing ECDSA signature")
+                sig = bytes.fromhex(s["hex_bytes"])
+                pub = bytes.fromhex(s["public_key"]["hex_bytes"]) if s.get("public_key") else b""
+                if len(sig) != 64: raise ValueError("ECDSA signature must be 64-byte compact")
+                if lt in ("pkh", "bridge"):
+                    if len(pub) == 65 and pub[0] == 4: pub = bytes([2 | (pub[64]&1)]) + pub[1:33]
+                    if len(pub) != 33 or pub[0] not in (2,3): raise ValueError("invalid public key")
+                    if lt == "pkh" and hash160(pub) != lock[1:]: raise ValueError("PKH key mismatch")
+                    if lt == "bridge" and pub[1:] != lock[1:]: raise ValueError("BRIDGE x mismatch")
+                    if not secp.verify(pub, sig, bytes.fromhex(digest)): raise ValueError("ECDSA invalid")
+                    tx["vin"][i]["script"] = pub + sig + bytes([SIGHASH_ALL])
+                elif lt == "htlc":
+                    m = s.get("metadata") or {}
+                    desc = bytes.fromhex(m["descriptor"])
+                    d = parse_htlc_descriptor(desc)
+                    if lock_htlc_for_descriptor(desc) != lock: raise ValueError("HTLC descriptor mismatch")
+                    mode = m.get("mode")
+                    secret = bytes.fromhex(m["secret"]) if m.get("secret") else None
+                    if len(pub) == 65 and pub[0] == 4: pub = bytes([2 | (pub[64]&1)]) + pub[1:33]
+                    if len(pub) != 33 or not secp.verify(pub, sig, bytes.fromhex(digest)): raise ValueError("HTLC signature invalid")
+                    if mode == "claim" and pub == d["claim_pubkey"] and len(secret or b"")==32 and hashlib.sha256(secret).digest()==d["secret_hash"]:
+                        tx["vin"][i]["script"] = b"\x01"+pub+sig+bytes([SIGHASH_ALL])+secret+desc
+                    elif mode == "refund" and pub == d["refund_pubkey"]:
+                        tx["vin"][i]["script"] = b"\x02"+pub+sig+bytes([SIGHASH_ALL])+desc
+                    else: raise ValueError("HTLC mode/key/secret mismatch")
+                elif lt == "p2pk":
+                    tx["vin"][i]["script"] = bytes([65])+sig+bytes([SIGHASH_ALL])
+                else: raise ValueError("unsupported input lock " + str(lt))
+            raw = ser_tx(tx)
+            spent = set(self.mempool.chain_spent_pairs) if self.mempool and self.mempool.chain_spent_pairs is not None else set()
+            ok, reason, fee = validate_tx(raw, self.cs.utxo, height, spent_pairs=spent)
+            if not ok: raise ValueError("EXCAL consensus rejected tx: " + reason)
+            return {"signed_transaction": raw.hex(),
+                    "transaction_identifier": {"hash": txid_internal(raw)[::-1].hex()},
+                    "fee": str(fee)}
 
         if path == "/construction/parse":
-            raw = bytes.fromhex(body["transaction"])
-            tx = parse_tx(raw)
-            operations = []
-            for i, vin in enumerate(tx["vin"]):
-                key = (vin["prev"], vin["idx"])
-                entries = self.cs.utxo.get(key)
-                if not entries:
-                    raise ValueError("cannot resolve input prevout " + str(i))
-                value, lock, _cb, _cbh = entries[0]
-                operations.append({
-                    "operation_identifier": {"index": len(operations)},
-                    "type": "INPUT", "account": {"address": "lock:" + bytes(lock).hex()},
-                    "amount": {"value": str(-int(value)), "currency": CURRENCY},
-                    "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
-                                    "coin_action": "coin_spent"},
-                })
+            tx = parse_tx(bytes.fromhex(body["transaction"]))
+            ops = []
+            for vin in tx["vin"]:
+                live = self._input(vin["prev"][::-1].hex()+":"+str(vin["idx"]))
+                ops.append({"operation_identifier":{"index":len(ops)},"type":"INPUT",
+                    "account":{"address":"lock:"+live["lock"].hex()},
+                    "amount":{"value":str(-live["value"]),"currency":CURRENCY},
+                    "coin_change":{"coin_identifier":{"identifier":live["coin"]},"coin_action":"coin_spent"},
+                    "metadata":{"lock_type":live["type"],"witness_hex":vin["script"].hex()}})
             for out in tx["vout"]:
-                operations.append({
-                    "operation_identifier": {"index": len(operations)},
-                    "type": "OUTPUT", "account": {"address": "lock:" + bytes(out["script"]).hex()},
-                    "amount": {"value": str(int(out["value"])), "currency": CURRENCY},
-                })
-            return {"operations": operations, "account_identifier_signers": []}
-
+                lock=bytes(out["script"])
+                ops.append({"operation_identifier":{"index":len(ops)},"type":"OUTPUT",
+                    "account":{"address":"lock:"+lock.hex()},
+                    "amount":{"value":str(int(out["value"])),"currency":CURRENCY},
+                    "metadata":{"lock_type":lock_type(lock)}})
+            return {"operations":ops,"account_identifier_signers":[]}
         if path == "/construction/hash":
-            raw = bytes.fromhex(body["signed_transaction"])
-            parse_tx(raw)
-            return {"transaction_identifier": {"hash": txid_internal(raw)[::-1].hex()}}
-
+            raw=bytes.fromhex(body["signed_transaction"]); parse_tx(raw)
+            return {"transaction_identifier":{"hash":txid_internal(raw)[::-1].hex()}}
         if path == "/construction/submit":
-            if self.mempool is None:
-                raise ValueError("live mempool is not connected to Rosetta")
-            raw = bytes.fromhex(body["signed_transaction"])
-            ok, reason = self.mempool.add(raw, self.cs.utxo, height)
-            if not ok:
-                raise ValueError("mempool rejected transaction: " + reason)
-            return {"transaction_identifier": {"hash": txid_internal(raw)[::-1].hex()}}
-
+            raw=bytes.fromhex(body["signed_transaction"]); parse_tx(raw)
+            if self.node is None: raise ValueError("broadcast requires embedded live Node")
+            node_txid=self.node.dispatch("sendrawtransaction",[raw.hex()])
+            return {"transaction_identifier":{"hash":txid_internal(raw)[::-1].hex()},
+                    "metadata":{"node_txid_internal":node_txid,"broadcast":True}}
         raise KeyError("unknown construction endpoint")
