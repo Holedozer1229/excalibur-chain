@@ -1,0 +1,1273 @@
+{
+  "attestation": {
+    "key_id": "seller-key-1",
+    "message_hex": "455843414c2d504342452d4154544553544154494f4e2d763185582083e67afa323b48091c595af5b2c9494bc48a387e67e4c3d0bba141405cb6bf196673656c6c65726c73656c6c65722d6b65792d31016d455843414c2d504342452d7631",
+    "policy_version": 1,
+    "public_key_hex": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664",
+    "role": "seller",
+    "signature_hex": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+  },
+  "cbor": [
+    {
+      "cbor_hex": "00",
+      "json": 0
+    },
+    {
+      "cbor_hex": "17",
+      "json": 23
+    },
+    {
+      "cbor_hex": "1818",
+      "json": 24
+    },
+    {
+      "cbor_hex": "18ff",
+      "json": 255
+    },
+    {
+      "cbor_hex": "190100",
+      "json": 256
+    },
+    {
+      "cbor_hex": "19ffff",
+      "json": 65535
+    },
+    {
+      "cbor_hex": "1a00010000",
+      "json": 65536
+    },
+    {
+      "cbor_hex": "1b0000000100000000",
+      "json": 4294967296
+    },
+    {
+      "cbor_hex": "1bffffffffffffffff",
+      "json": 18446744073709551615
+    },
+    {
+      "cbor_hex": "20",
+      "json": -1
+    },
+    {
+      "cbor_hex": "37",
+      "json": -24
+    },
+    {
+      "cbor_hex": "3818",
+      "json": -25
+    },
+    {
+      "cbor_hex": "38ff",
+      "json": -256
+    },
+    {
+      "cbor_hex": "3bffffffffffffffff",
+      "json": -18446744073709551616
+    },
+    {
+      "cbor_hex": "60",
+      "json": ""
+    },
+    {
+      "cbor_hex": "6161",
+      "json": "a"
+    },
+    {
+      "cbor_hex": "73696e766f6963652e617070726f7665642f7631",
+      "json": "invoice.approved/v1"
+    },
+    {
+      "cbor_hex": "40",
+      "json": {
+        "$bytes": ""
+      }
+    },
+    {
+      "cbor_hex": "4200ff",
+      "json": {
+        "$bytes": "00ff"
+      }
+    },
+    {
+      "cbor_hex": "80",
+      "json": []
+    },
+    {
+      "cbor_hex": "83016374776f457468726565",
+      "json": [
+        1,
+        "two",
+        {
+          "$bytes": "7468726565"
+        }
+      ]
+    },
+    {
+      "cbor_hex": "a0",
+      "json": {}
+    },
+    {
+      "cbor_hex": "a2616102616201",
+      "json": {
+        "a": 2,
+        "b": 1
+      }
+    },
+    {
+      "cbor_hex": "a166636c61696d73a26863757272656e63796355534473696e766f6963655f746f74616c5f6d696e6f721930d4",
+      "json": {
+        "claims": {
+          "currency": "USD",
+          "invoice_total_minor": 12500
+        }
+      }
+    },
+    {
+      "cbor_hex": "f6",
+      "json": null
+    },
+    {
+      "cbor_hex": "f5",
+      "json": true
+    },
+    {
+      "cbor_hex": "f4",
+      "json": false
+    }
+  ],
+  "cbor_rejected": [
+    "1817",
+    "1900ff",
+    "1b0000000000000000",
+    "5f",
+    "9fff",
+    "c0",
+    "f93c00",
+    "fb3ff8000000000000",
+    "00ff",
+    "a2616201616102"
+  ],
+  "event": {
+    "attachments_root": {
+      "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+    },
+    "claims": {
+      "currency": "USD",
+      "invoice_total_minor": 12500
+    },
+    "event_id": {
+      "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+    },
+    "event_type": "invoice.approved/v1",
+    "evidence": [
+      {
+        "digest": {
+          "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+        },
+        "media_type": "application/pdf",
+        "source": "example-seller-erp"
+      },
+      {
+        "digest": {
+          "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+        },
+        "media_type": "text/plain",
+        "source": "example-carrier-pod"
+      }
+    ],
+    "expires_at": 1800000600,
+    "issued_at": 1799999940,
+    "network": {
+      "genesis_hash": {
+        "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+      },
+      "network": "excal-testnet"
+    },
+    "nonce": {
+      "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    },
+    "policy_id": "invoice-approval-v1",
+    "predecessors": [],
+    "protocol": "excal.pcbe",
+    "signatures": [
+      {
+        "key_id": "seller-key-1",
+        "policy_version": 1,
+        "role": "seller",
+        "signature": {
+          "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+        }
+      }
+    ],
+    "subject_commitment": {
+      "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+    },
+    "version": 1
+  },
+  "event_digest_hex": "83e67afa323b48091c595af5b2c9494bc48a387e67e4c3d0bba141405cb6bf19",
+  "event_payload_cbor_hex": "ae656e6f6e636558206e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e66636c61696d73a26863757272656e63796355534473696e766f6963655f746f74616c5f6d696e6f721930d4676e6574776f726ba2676e6574776f726b6d657863616c2d746573746e65746c67656e657369735f68617368582067676767676767676767676767676767676767676767676767676767676767676776657273696f6e01686576656e745f6964582065656565656565656565656565656565656565656565656565656565656565656865766964656e636582a36664696765737458200a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d5166736f75726365726578616d706c652d73656c6c65722d6572706a6d656469615f747970656f6170706c69636174696f6e2f706466a36664696765737458201ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a66736f75726365736578616d706c652d636172726965722d706f646a6d656469615f747970656a746578742f706c61696e6870726f746f636f6c6a657863616c2e70636265696973737565645f61741a6b49d1c469706f6c6963795f696473696e766f6963652d617070726f76616c2d76316a6576656e745f7479706573696e766f6963652e617070726f7665642f76316a657870697265735f61741a6b49d4586c7072656465636573736f727380706174746163686d656e74735f726f6f7458202a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf727375626a6563745f636f6d6d69746d656e7458207373737373737373737373737373737373737373737373737373737373737373",
+  "evidence": [
+    {
+      "bytes_hex": "6578616d706c6520696e766f69636520494e562d31303031206279746573",
+      "digest_hex": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51",
+      "media_type": "application/pdf"
+    },
+    {
+      "bytes_hex": "6578616d706c652064656c6976657279206e6f746520444c2d3737206279746573",
+      "digest_hex": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a",
+      "media_type": "text/plain"
+    }
+  ],
+  "format": "excal-pcbe-test-vectors-v1",
+  "merkle": {
+    "leaves_hex": [
+      "a9a61498ff109cac313e4a238a75b179d5d2b3e9317219bfb93438c2e7fab067",
+      "ac3da6f466bc92d66a04185c2cae37b254f6597ca45addafa94b9fc8384adb17",
+      "fe6dd48a3610c6bfeb7a50992bbdfef097c42e6cf3fdb16c832321adf4e05d5a"
+    ],
+    "proofs": [
+      {
+        "index": 0,
+        "steps": [
+          {
+            "sibling_hex": "8eee36e6dad46d260289f079a2d4436d6fcc6406ab9222cfb0ade7ca272627b6",
+            "sibling_is_left": false
+          },
+          {
+            "sibling_hex": "ac5821169942eb4b7c54d8e4b7013a4fab7038906b83aab79907199881327266",
+            "sibling_is_left": false
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "steps": [
+          {
+            "sibling_hex": "3ae6fed10bb70e5e0433cbf175370e2f3193e0246e8f5154e99acd34814a1b93",
+            "sibling_is_left": true
+          },
+          {
+            "sibling_hex": "ac5821169942eb4b7c54d8e4b7013a4fab7038906b83aab79907199881327266",
+            "sibling_is_left": false
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "steps": [
+          {
+            "sibling_hex": "1651ec50d042aa86b1d9aa09bd2a957c1163c9fc13c4eeae0076d20c1b3617a9",
+            "sibling_is_left": true
+          }
+        ]
+      }
+    ],
+    "reordered_root_hex": "ddea5f7d1e7579d13a28ddb911f39ffd48318d04f17bcbe353ad59146a632dc8",
+    "root_hex": "5c331f1ea3f08d110b4b906fb892680a961c7fa852f34fd2bf5d57907b8e7332"
+  },
+  "note": "TEST KEYS ONLY. The Ed25519 key is the public test vector bytes(range(1, 33)); it must never attest a real event. A VALID outcome here proves integrity, origin under the test key and protocol conditions only, not that any real-world statement is true.",
+  "verify_cases": [
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "VALID",
+      "name": "valid",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12501
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "INVALID",
+      "name": "tampered-claim",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-mainnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "INVALID",
+      "name": "wrong-network",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000000,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "EXPIRED",
+      "name": "expired",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": true,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "REVOKED",
+      "name": "revoked",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [],
+          "protocol": "excal.pcbe",
+          "signatures": [],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "INCOMPLETE",
+      "name": "missing-role",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": true,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "DISPUTED",
+      "name": "disputed",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [
+          [
+            {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            {
+              "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+            }
+          ]
+        ],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "INVALID",
+      "name": "duplicate-nonce",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [
+            {
+              "digest": {
+                "$bytes": "6464646464646464646464646464646464646464646464646464646464646464"
+              },
+              "event_id": {
+                "$bytes": "7070707070707070707070707070707070707070707070707070707070707070"
+              }
+            }
+          ],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {},
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "UNVERIFIABLE",
+      "name": "unknown-predecessor",
+      "now": 1800000000
+    },
+    {
+      "bundle": {
+        "dispute_open": false,
+        "event": {
+          "attachments_root": {
+            "$bytes": "2a54ed6d94382802e126607d5c323c25f2c7c60185a4f44a1f256edc454abfaf"
+          },
+          "claims": {
+            "currency": "USD",
+            "invoice_total_minor": 12500
+          },
+          "event_id": {
+            "$bytes": "6565656565656565656565656565656565656565656565656565656565656565"
+          },
+          "event_type": "invoice.approved/v1",
+          "evidence": [
+            {
+              "digest": {
+                "$bytes": "0a19ab4e6fa035d7270e0de95d44d85d58192ba555e5a7454f3b473e89f98d51"
+              },
+              "media_type": "application/pdf",
+              "source": "example-seller-erp"
+            },
+            {
+              "digest": {
+                "$bytes": "1ee25b0071cb031cf0762d7e29a54c581efefd448760457c1da21be3df8abf1a"
+              },
+              "media_type": "text/plain",
+              "source": "example-carrier-pod"
+            }
+          ],
+          "expires_at": 1800000600,
+          "issued_at": 1799999940,
+          "network": {
+            "genesis_hash": {
+              "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+            },
+            "network": "excal-testnet"
+          },
+          "nonce": {
+            "$bytes": "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+          },
+          "policy_id": "invoice-approval-v1",
+          "predecessors": [
+            {
+              "digest": {
+                "$bytes": "6464646464646464646464646464646464646464646464646464646464646464"
+              },
+              "event_id": {
+                "$bytes": "7070707070707070707070707070707070707070707070707070707070707070"
+              }
+            }
+          ],
+          "protocol": "excal.pcbe",
+          "signatures": [
+            {
+              "key_id": "seller-key-1",
+              "policy_version": 1,
+              "role": "seller",
+              "signature": {
+                "$bytes": "e484091008c0e67bdbe7b4de6e14e5b23f840160f8abe99947757ccaec00412bba5bb9df83ad93627d5e1e7a40bfa196b8d755efc291060cafbe31d4bae20900"
+              }
+            }
+          ],
+          "subject_commitment": {
+            "$bytes": "7373737373737373737373737373737373737373737373737373737373737373"
+          },
+          "version": 1
+        },
+        "expected_network": {
+          "genesis_hash": {
+            "$bytes": "6767676767676767676767676767676767676767676767676767676767676767"
+          },
+          "network": "excal-testnet"
+        },
+        "format": "excal-pcbe-bundle-v1",
+        "policy": {
+          "max_revocation_age": 3600,
+          "max_ttl": 3600,
+          "policy_id": "invoice-approval-v1",
+          "required_roles": [
+            "seller"
+          ],
+          "version": 1
+        },
+        "predecessor_digests": {
+          "7070707070707070707070707070707070707070707070707070707070707070": {
+            "$bytes": "7878787878787878787878787878787878787878787878787878787878787878"
+          }
+        },
+        "replay_seen": [],
+        "revocation_updated_at": 1800000000,
+        "trust": {
+          "seller-key-1": {
+            "expires_at": 1800001000,
+            "not_before": 1799999900,
+            "org_id": "seller-inc",
+            "public_key": {
+              "$bytes": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
+            },
+            "revoked": false,
+            "roles": [
+              "seller"
+            ]
+          }
+        }
+      },
+      "expected_outcome": "INVALID",
+      "name": "predecessor-mismatch",
+      "now": 1800000000
+    }
+  ]
+}
