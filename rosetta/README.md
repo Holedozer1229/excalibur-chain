@@ -14,7 +14,7 @@ lock:<scriptPubKey hex>. It does not translate the legacy GSF implementation.
   KNOT. Activation gates and exact consensus validation are enforced.
 - Trifold payloads use the explicit EXCAL extension signature type trifold;
   KNOT uses excal_knot. They are not mislabeled as ECDSA or Ed25519.
-- Local Trifold wallet bridge: rosetta/trifold_signer.py accepts an already
+- Local Trifold wallet bridge: rosetta/trifold_signer.py and rosetta/knot_signer.py provide native witness helpers. The Trifold helper accepts an already
   unlocked EXCAL Wallet object and returns the native PQH/QHTLC witness while
   preserving the durable leaf counter and spent-leaf registry.
 - Broadcast is enabled only when embedded with the live Node object. Submit
