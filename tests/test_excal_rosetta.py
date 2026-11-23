@@ -126,8 +126,8 @@ class RosettaDataTests(unittest.TestCase):
 
     def test_grandfathered_p2pk_spend_survives_qlock_activation(self):
         pub = secp.compress(secp.priv_to_pub(1))
-        p2pk = b"\\x21" + pub + b"\\xac"
-        pkh = b"\\x00" + b"\\x77" * 20
+        p2pk = b"\x21" + pub + b"\xac"
+        pkh = b"\x00" + b"\x77" * 20
         prev = bytes.fromhex("ab" * 32)
         coin = prev[::-1].hex() + ":0"
         height = qlock_activation()
@@ -146,8 +146,8 @@ class RosettaDataTests(unittest.TestCase):
 
     def test_new_p2pk_output_is_rejected_after_qlock_activation(self):
         pub = secp.compress(secp.priv_to_pub(1))
-        p2pk = b"\\x21" + pub + b"\\xac"
-        pkh = b"\\x00" + b"\\x77" * 20
+        p2pk = b"\x21" + pub + b"\xac"
+        pkh = b"\x00" + b"\x77" * 20
         prev = bytes.fromhex("ac" * 32)
         coin = prev[::-1].hex() + ":0"
         height = qlock_activation()
@@ -218,7 +218,7 @@ class RosettaDataTests(unittest.TestCase):
             "version": 1,
             "vin": [{"prev": bytes.fromhex("11" * 32), "idx": 0,
                      "script": b"", "seq": 0xffffffff}],
-            "vout": [{"value": 1, "script": b"\\xff"}],
+            "vout": [{"value": 1, "script": b"\xff"}],
             "locktime": 0})
         calls = []
         pool = SimpleNamespace(add=lambda tx, utxo, height: (
@@ -237,7 +237,7 @@ class RosettaDataTests(unittest.TestCase):
             "version": 1,
             "vin": [{"prev": bytes.fromhex("22" * 32), "idx": 0,
                      "script": b"", "seq": 0xffffffff}],
-            "vout": [{"value": 1, "script": b"\\xff"}],
+            "vout": [{"value": 1, "script": b"\xff"}],
             "locktime": 0})
         pool = SimpleNamespace(add=lambda *_args: (False, "missing input"))
         cs = SimpleNamespace(utxo={}, tip=lambda: {"height": 10, "hash": bytes(32)})
