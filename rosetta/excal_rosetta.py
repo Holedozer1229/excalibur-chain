@@ -30,7 +30,7 @@ ERRORS = [
     {"code": 2, "message": "block not found", "retriable": False},
     {"code": 3, "message": "transaction not found", "retriable": False},
     {"code": 4, "message": "invalid account identifier", "retriable": False},
-    {"code": 5, "message": "historical balance lookup unsupported", "retriable": False},
+    {"code": 5, "message": "historical UTXO state lookup unavailable", "retriable": False},
     {"code": 6, "message": "construction or consensus validation failed", "retriable": False},
     {"code": 7, "message": "invalid request", "retriable": False},
 ]
@@ -264,7 +264,7 @@ class ExcalRosetta:
                 "allow": {"operation_statuses": [{"status": "success", "successful": True},
                                                   {"status": "failure", "successful": False}],
                           "operation_types": ["coinbase", "transfer", "input", "output", "fee"],
-                          "errors": ERRORS, "historical_balance_lookup": False,
+                          "errors": ERRORS, "historical_balance_lookup": True,
                           "call_methods": [], "balance_exemptions": []},
                 "metadata": {"excal_extensions": {
                     "trifold_signature_type": "trifold",
@@ -339,21 +339,37 @@ class ExcalRosetta:
             if not script:
                 return 500, self._error(4, "empty locking script")
             with self.lock:
-                height, block_hash = self._tip()
-                requested = body.get("block_identifier")
-                if requested:
-                    if requested.get("index", height) != height:
+                tip_height, _tip_hash = self._tip()
+                requested = body.get("block_identifier") or {}
+                height = requested.get("index")
+                if height is None and requested.get("hash"):
+                    wanted = requested["hash"].lower()
+                    height = next((h for h, rec in self.cs.by_height.items()
+                                   if _display_hash(rec["hash"]) == wanted), None)
+                if height is None:
+                    height = tip_height
+                height = int(height)
+                rec = self._record(height)
+                if rec is None:
+                    return 500, self._error(2, "requested balance block not found")
+                block_hash = rec["hash"]
+                if requested.get("hash") and _display_hash(block_hash) != requested["hash"].lower():
+                    return 500, self._error(2, "block index/hash mismatch")
+                if height == tip_height:
+                    utxo = self.cs.utxo
+                else:
+                    historical = getattr(self.cs, "_fork_utxo", None)
+                    if not callable(historical):
                         return 500, self._error(5)
-                    if requested.get("hash") and requested["hash"].lower() != _display_hash(block_hash):
-                        return 500, self._error(5)
+                    utxo = historical(block_hash)
                 total = 0
                 count = 0
-                finder = getattr(self.cs.utxo, "find_by_spk", None)
+                finder = getattr(utxo, "find_by_spk", None)
                 if callable(finder):
                     matches = finder(script)
                 else:
                     matches = []
-                    for key, entries in self.cs.utxo.items():
+                    for key, entries in utxo.items():
                         if isinstance(entries, tuple):
                             entries = [entries]
                         for entry in entries:
