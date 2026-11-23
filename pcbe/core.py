@@ -126,7 +126,8 @@ def event_payload(event: Mapping[str, Any]) -> dict[str, Any]:
         missing = sorted(EVENT_FIELDS - set(payload))
         extra = sorted(set(payload) - EVENT_FIELDS)
         raise PCBEError(f"event fields mismatch; missing={missing}, extra={extra}")
-    if payload["protocol"] != PROTOCOL or payload["version"] != VERSION:
+    if (payload["protocol"] != PROTOCOL or not isinstance(payload["version"], int)
+            or isinstance(payload["version"], bool) or payload["version"] != VERSION):
         raise PCBEError("unsupported PCBE protocol or version")
     network = payload["network"]
     if not isinstance(network, dict) or not isinstance(network.get("network"), str):
@@ -223,9 +224,13 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
         payload = event_payload(event)
         checked.extend(["schema", "deterministic_cbor", "attachments_root"])
         digest = hashlib.sha256(EVENT_DOMAIN + canonical_cbor(payload)).digest()
+        if replay is None:
+            outcome, reason = "UNVERIFIABLE", "replay registry is unavailable"
+            raise _StopVerification()
         if policy.get("policy_id") != payload["policy_id"]:
             raise PCBEError("policy identifier mismatch")
-        if not isinstance(policy.get("version"), int):
+        if (not isinstance(policy.get("version"), int)
+                or isinstance(policy.get("version"), bool)):
             raise PCBEError("policy version unavailable")
         if timestamp < payload["issued_at"]:
             raise PCBEError("event is not yet valid")
@@ -249,7 +254,7 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
             outcome, reason = "UNVERIFIABLE", "cryptography Ed25519 support is unavailable"
             raise _StopVerification()
         valid_roles: set[str] = set()
-        valid_orgs: dict[str, str] = {}
+        valid_orgs_by_role: dict[str, set[str]] = {}
         seen_keys: set[str] = set()
         revoked_seen = False
         for item in signatures:
@@ -271,7 +276,12 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
                 continue
             if timestamp < int(trust.get("not_before", 0)) or timestamp >= int(trust.get("expires_at", 2**63 - 1)):
                 raise PCBEError("signing key outside validity interval")
-            if role not in set(trust.get("roles", [])):
+            authorized_roles = trust.get("roles")
+            if not isinstance(authorized_roles, (list, tuple, set)) or any(
+                    not isinstance(r, str) for r in authorized_roles):
+                outcome, reason = "UNVERIFIABLE", "trust entry role data is malformed"
+                raise _StopVerification()
+            if role not in set(authorized_roles):
                 raise PCBEError("signer is not authorized for declared role")
             if item["policy_version"] != policy["version"]:
                 raise PCBEError("signature policy version mismatch")
@@ -288,7 +298,8 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
             except InvalidSignature:
                 raise PCBEError("invalid Ed25519 signature")
             valid_roles.add(role)
-            valid_orgs[key_id] = str(trust.get("org_id", key_id))
+            valid_orgs_by_role.setdefault(role, set()).add(
+                str(trust.get("org_id", key_id)))
             signature_results.append({"key_id": key_id, "role": role, "valid": True})
         checked.extend(["issuer_authority", "ed25519_signatures"])
         missing = sorted(set(required) - valid_roles)
@@ -299,12 +310,11 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
         elif policy.get("distinct_organizations", False):
             role_orgs = []
             for role in required:
-                matching = [valid_orgs[k] for k in valid_orgs
-                            if role in set(trust_store[k].get("roles", []))]
+                matching = valid_orgs_by_role.get(role, set())
                 if not matching:
                     outcome, reason = "INCOMPLETE", f"no organization attested role {role}"
                     raise _StopVerification()
-                role_orgs.append(matching[0])
+                role_orgs.append(next(iter(matching)))
             if len(set(role_orgs)) != len(role_orgs):
                 raise PCBEError("required roles are not held by distinct organizations")
             outcome, reason = "VALID", "all required roles and distinct-organization policy checks passed"
@@ -312,6 +322,8 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
             outcome, reason = "VALID", "all required role signatures and policy checks passed"
         if revocation_updated_at is None:
             outcome, reason = "UNVERIFIABLE", "revocation snapshot freshness is unknown"
+        elif int(revocation_updated_at) > timestamp:
+            outcome, reason = "UNVERIFIABLE", "revocation snapshot timestamp is in the future"
         elif timestamp - int(revocation_updated_at) > int(policy.get("max_revocation_age", 86400)):
             outcome, reason = "UNVERIFIABLE", "revocation snapshot is stale"
         if dispute_open:
