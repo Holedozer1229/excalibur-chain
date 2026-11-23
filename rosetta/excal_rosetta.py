@@ -108,12 +108,15 @@ class ExcalRosetta:
         txid = txid_internal(raw)[::-1].hex()
         ops = []
         input_refs = []
+        total_in = 0
+        total_out = sum(int(out["value"]) for out in tx["vout"])
         for vin in tx["vin"]:
             key = (vin["prev"], int(vin["idx"]))
             rows = self.cs.utxo.get(key)
             if not rows:
                 raise ValueError("mempool input prevout unavailable")
             value, lock, _cb, _cbh = rows[0]
+            total_in += int(value)
             idx = len(ops)
             input_refs.append({"index": idx})
             ops.append({
@@ -128,17 +131,21 @@ class ExcalRosetta:
             idx = len(ops)
             ops.append({
                 "operation_identifier": {"index": idx},
-                "type": "TRANSFER", "status": "SUCCESS",
+                "type": "transfer", "status": "success",
                 "account": {"address": _script_account(out["script"])},
                 "amount": {"value": str(int(out["value"])), "currency": self.currency},
                 "related_operations": input_refs,
                 "coin_change": {"coin_identifier": {"identifier": txid + ":" + str(n)},
                                 "coin_action": "coin_created"},
             })
+        fee = total_in - total_out
+        if fee < 0:
+            raise ValueError("mempool outputs exceed resolved input value")
         return {"transaction_identifier": {"hash": txid}, "operations": ops,
                 "metadata": {"raw_transaction": raw.hex(),
                              "input_count": len(tx["vin"]),
-                             "output_count": len(tx["vout"])}}
+                             "output_count": len(tx["vout"]),
+                             "fee": str(fee)}}
 
     def _error(self, code, message=None):
         e = dict(ERROR_BY_CODE[code])
