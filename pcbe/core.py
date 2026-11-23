@@ -118,6 +118,177 @@ def attachments_merkle_root(digests: list[bytes]) -> bytes | None:
     return level[0]
 
 
+def merkle_proof(digests: list[bytes], index: int) -> list[dict[str, Any]]:
+    """Inclusion proof for leaf ``index`` under :func:`attachments_merkle_root`.
+
+    Each step is ``{"sibling": <32 bytes>, "sibling_is_left": <bool>}``.
+    A level where the tracked node is the unpaired final node contributes no
+    step (the node is promoted unchanged, not duplicated).
+    """
+    if not digests:
+        raise PCBEError("cannot prove inclusion in an empty digest list")
+    if any(not isinstance(d, bytes) or len(d) != 32 for d in digests):
+        raise PCBEError("each evidence digest must be exactly 32 bytes")
+    if not isinstance(index, int) or isinstance(index, bool):
+        raise PCBEError("merkle proof index must be an integer")
+    if index < 0 or index >= len(digests):
+        raise PCBEError("merkle proof index out of range")
+    level = [hashlib.sha256(b"\x00" + d).digest() for d in digests]
+    proof: list[dict[str, Any]] = []
+    pos = index
+    while len(level) > 1:
+        if pos % 2 == 1:
+            proof.append({"sibling": level[pos - 1], "sibling_is_left": True})
+        elif pos + 1 < len(level):
+            proof.append({"sibling": level[pos + 1], "sibling_is_left": False})
+        nxt = []
+        for i in range(0, len(level), 2):
+            if i + 1 == len(level):
+                nxt.append(level[i])
+            else:
+                nxt.append(hashlib.sha256(b"\x01" + level[i] + level[i + 1]).digest())
+        level = nxt
+        pos //= 2
+    return proof
+
+
+def verify_merkle_proof(leaf_digest: bytes, proof: list[dict[str, Any]],
+                        root: bytes) -> bool:
+    """Verify an inclusion proof produced by :func:`merkle_proof`.
+
+    Returns False on a mismatch; raises PCBEError on malformed inputs.
+    """
+    if not isinstance(leaf_digest, bytes) or len(leaf_digest) != 32:
+        raise PCBEError("merkle leaf digest must be exactly 32 bytes")
+    if not isinstance(root, bytes) or len(root) != 32:
+        raise PCBEError("merkle root must be exactly 32 bytes")
+    if not isinstance(proof, list):
+        raise PCBEError("merkle proof must be a list")
+    current = hashlib.sha256(b"\x00" + leaf_digest).digest()
+    for step in proof:
+        if not isinstance(step, dict) or set(step) != {"sibling", "sibling_is_left"}:
+            raise PCBEError("malformed merkle proof step")
+        sibling = step["sibling"]
+        if not isinstance(sibling, bytes) or len(sibling) != 32:
+            raise PCBEError("merkle proof sibling must be exactly 32 bytes")
+        if not isinstance(step["sibling_is_left"], bool):
+            raise PCBEError("merkle proof sibling_is_left must be a boolean")
+        if step["sibling_is_left"]:
+            current = hashlib.sha256(b"\x01" + sibling + current).digest()
+        else:
+            current = hashlib.sha256(b"\x01" + current + sibling).digest()
+    return current == root
+
+
+def _read_cbor_head(data: bytes, pos: int) -> tuple[int, int, int]:
+    """Read a CBOR head at ``pos``; return (major_type, value, next_pos).
+
+    Enforces shortest-form integer encoding and rejects indefinite lengths
+    (additional information 31) and reserved values (28-30).
+    """
+    if pos >= len(data):
+        raise PCBEError("truncated CBOR input")
+    first = data[pos]
+    major = first >> 5
+    info = first & 0x1F
+    if info < 24:
+        return major, info, pos + 1
+    if info == 24:
+        if pos + 1 >= len(data):
+            raise PCBEError("truncated CBOR integer")
+        value = data[pos + 1]
+        if value < 24:
+            raise PCBEError("non-shortest CBOR integer encoding")
+        return major, value, pos + 2
+    if info == 25:
+        if pos + 2 >= len(data):
+            raise PCBEError("truncated CBOR integer")
+        value = int.from_bytes(data[pos + 1:pos + 3], "big")
+        if value <= 0xFF:
+            raise PCBEError("non-shortest CBOR integer encoding")
+        return major, value, pos + 3
+    if info == 26:
+        if pos + 4 >= len(data):
+            raise PCBEError("truncated CBOR integer")
+        value = int.from_bytes(data[pos + 1:pos + 5], "big")
+        if value <= 0xFFFF:
+            raise PCBEError("non-shortest CBOR integer encoding")
+        return major, value, pos + 5
+    if info == 27:
+        if pos + 8 >= len(data):
+            raise PCBEError("truncated CBOR integer")
+        value = int.from_bytes(data[pos + 1:pos + 9], "big")
+        if value <= 0xFFFFFFFF:
+            raise PCBEError("non-shortest CBOR integer encoding")
+        return major, value, pos + 9
+    raise PCBEError("indefinite-length or reserved CBOR encoding")
+
+
+def _decode_cbor_item(data: bytes, pos: int, depth: int) -> tuple[Any, int]:
+    if depth > 100:
+        raise PCBEError("CBOR nesting too deep")
+    major, value, pos = _read_cbor_head(data, pos)
+    if major == 0:
+        return value, pos
+    if major == 1:
+        return -1 - value, pos
+    if major == 2:
+        if pos + value > len(data):
+            raise PCBEError("truncated CBOR byte string")
+        return data[pos:pos + value], pos + value
+    if major == 3:
+        if pos + value > len(data):
+            raise PCBEError("truncated CBOR text string")
+        try:
+            return data[pos:pos + value].decode("utf-8", "strict"), pos + value
+        except UnicodeDecodeError:
+            raise PCBEError("invalid UTF-8 in CBOR text string")
+    if major == 4:
+        items = []
+        for _ in range(value):
+            item, pos = _decode_cbor_item(data, pos, depth + 1)
+            items.append(item)
+        return items, pos
+    if major == 5:
+        result = {}
+        previous_key: bytes | None = None
+        for _ in range(value):
+            key, pos = _decode_cbor_item(data, pos, depth + 1)
+            if not isinstance(key, str):
+                raise PCBEError("CBOR map keys must be text strings")
+            encoded_key = canonical_cbor(key)
+            order = (len(encoded_key), encoded_key)
+            if previous_key is not None and order <= previous_key:
+                raise PCBEError("CBOR map keys are not in deterministic order")
+            previous_key = order
+            item, pos = _decode_cbor_item(data, pos, depth + 1)
+            result[key] = item
+        return result, pos
+    if major == 7:
+        if value == 20:
+            return False, pos
+        if value == 21:
+            return True, pos
+        if value == 22:
+            return None, pos
+        raise PCBEError("unsupported CBOR simple value or float")
+    raise PCBEError("unsupported CBOR major type (tags are not supported)")
+
+
+def decode_canonical_cbor(data: bytes) -> Any:
+    """Decode CBOR produced by :func:`canonical_cbor`, rejecting anything else.
+
+    Rejects trailing bytes, indefinite lengths, tags, floats, non-text map
+    keys, duplicate keys, unsorted keys and non-shortest integer encodings.
+    """
+    if not isinstance(data, (bytes, bytearray)):
+        raise PCBEError("CBOR input must be bytes")
+    value, end = _decode_cbor_item(bytes(data), 0, 0)
+    if end != len(data):
+        raise PCBEError("trailing bytes after CBOR value")
+    return value
+
+
 def event_payload(event: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(event, Mapping):
         raise PCBEError("event must be a map")
@@ -203,6 +374,30 @@ class ReplayRegistry:
         self.seen.add((genesis_hash, nonce))
 
 
+def _build_report(outcome: str, reason: str, digest: bytes | None,
+                  policy: Any, checked: list[str],
+                  signature_results: list[dict[str, Any]]) -> dict[str, Any]:
+    report = {
+        "protocol": PROTOCOL,
+        "version": VERSION,
+        "outcome": outcome,
+        "reason": reason,
+        "event_digest": digest.hex() if digest is not None else None,
+        "policy_id": (policy.get("policy_id") if isinstance(policy, Mapping)
+                      and isinstance(policy.get("policy_id"), str) else None),
+        "policy_version": (policy.get("version") if isinstance(policy, Mapping)
+                           and isinstance(policy.get("version"), int)
+                           and not isinstance(policy.get("version"), bool) else None),
+        "verifier": "excal-pcbe-python-reference/1",
+        "checked": checked,
+        "signature_results": signature_results,
+    }
+    report["report_digest"] = hashlib.sha256(
+        REPORT_DOMAIN + canonical_cbor(report)
+    ).hexdigest()
+    return report
+
+
 def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
                  trust_store: Mapping[str, Mapping[str, Any]],
                  replay: ReplayRegistry | None = None,
@@ -213,11 +408,24 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
 
     Trust entries contain public_key (32 raw bytes), roles (iterable), org_id,
     not_before, expires_at and revoked. Policy contains policy_id, version,
-    required_roles, optional max_ttl and distinct_organizations.
+    network, genesis_hash, required_roles, optional max_ttl,
+    max_revocation_age and distinct_organizations. The policy pins the
+    network name and 32-byte genesis hash; an event from any other network
+    is INVALID. A non-empty predecessor list is UNVERIFIABLE until a
+    predecessor resolver is configured; no predecessor relationship is
+    silently assumed valid.
+
+    Outcome precedence: INVALID (cryptographic/encoding/policy failure) and
+    EXPIRED/REVOKED stand over DISPUTED; a dispute only overrides VALID or
+    INCOMPLETE. UNVERIFIABLE means the verifier lacks data or capability
+    (unknown trust key, missing replay registry, stale revocation snapshot,
+    unresolvable predecessor, malformed policy/trust data).
     """
     checked: list[str] = []
     signature_results: list[dict[str, Any]] = []
-    outcome = "UNVERIFIABLE"
+    # None until an outcome is decided; the report defaults it to UNVERIFIABLE.
+    # (A plain "UNVERIFIABLE" default here would mask later INVALID failures.)
+    outcome: str | None = None
     reason = "verification not completed"
     try:
         timestamp = int(time.time()) if now is None else int(now)
@@ -237,15 +445,20 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
             raise PCBEError("event network or genesis does not match pinned policy")
         if (not isinstance(policy.get("version"), int)
                 or isinstance(policy.get("version"), bool)):
-            raise PCBEError("policy version unavailable")
+            outcome, reason = "UNVERIFIABLE", "policy version unavailable"
+            raise _StopVerification()
         if timestamp < payload["issued_at"]:
             raise PCBEError("event is not yet valid")
         if timestamp >= payload["expires_at"]:
             outcome, reason = "EXPIRED", "event validity interval has ended"
             raise _StopVerification()
         max_ttl = policy.get("max_ttl")
-        if max_ttl is not None and payload["expires_at"] - payload["issued_at"] > int(max_ttl):
-            raise PCBEError("event validity interval exceeds policy maximum")
+        if max_ttl is not None:
+            if not isinstance(max_ttl, int) or isinstance(max_ttl, bool):
+                outcome, reason = "UNVERIFIABLE", "policy max_ttl is malformed"
+                raise _StopVerification()
+            if payload["expires_at"] - payload["issued_at"] > max_ttl:
+                raise PCBEError("event validity interval exceeds policy maximum")
         checked.extend(["network", "event_validity", "policy"])
         genesis = payload["network"]["genesis_hash"]
         if replay is not None and replay.contains(genesis, payload["nonce"]):
@@ -289,7 +502,13 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
                 revoked_seen = True
                 signature_results.append({"key_id": key_id, "role": role, "valid": False, "reason": "revoked"})
                 continue
-            if timestamp < int(trust.get("not_before", 0)) or timestamp >= int(trust.get("expires_at", 2**63 - 1)):
+            not_before = trust.get("not_before", 0)
+            key_expires = trust.get("expires_at", 2**63 - 1)
+            if (not isinstance(not_before, int) or isinstance(not_before, bool)
+                    or not isinstance(key_expires, int) or isinstance(key_expires, bool)):
+                outcome, reason = "UNVERIFIABLE", "trust entry validity data is malformed"
+                raise _StopVerification()
+            if timestamp < not_before or timestamp >= key_expires:
                 raise PCBEError("signing key outside validity interval")
             authorized_roles = trust.get("roles")
             if not isinstance(authorized_roles, (list, tuple, set)) or any(
@@ -337,13 +556,19 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
             outcome, reason = "VALID", "all required roles and distinct-organization policy checks passed"
         else:
             outcome, reason = "VALID", "all required role signatures and policy checks passed"
+        max_revocation_age = policy.get("max_revocation_age", 86400)
         if revocation_updated_at is None:
             outcome, reason = "UNVERIFIABLE", "revocation snapshot freshness is unknown"
-        elif int(revocation_updated_at) > timestamp:
+        elif (not isinstance(revocation_updated_at, int)
+                or isinstance(revocation_updated_at, bool)
+                or not isinstance(max_revocation_age, int)
+                or isinstance(max_revocation_age, bool)):
+            outcome, reason = "UNVERIFIABLE", "revocation snapshot data is malformed"
+        elif revocation_updated_at > timestamp:
             outcome, reason = "UNVERIFIABLE", "revocation snapshot timestamp is in the future"
-        elif timestamp - int(revocation_updated_at) > int(policy.get("max_revocation_age", 86400)):
+        elif timestamp - revocation_updated_at > max_revocation_age:
             outcome, reason = "UNVERIFIABLE", "revocation snapshot is stale"
-        if dispute_open:
+        if dispute_open and outcome in ("VALID", "INCOMPLETE"):
             outcome, reason = "DISPUTED", "an open dispute is registered for this event"
         if outcome == "VALID" and replay is not None:
             replay.record(genesis, payload["nonce"])
@@ -351,30 +576,17 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
     except _StopVerification:
         pass
     except PCBEError as exc:
-        if outcome not in ("EXPIRED", "REVOKED", "UNVERIFIABLE"):
-            outcome = "INVALID"
-        reason = str(exc)
+        # Only a failure raised before any outcome was decided is INVALID.
+        # An outcome already decided (EXPIRED / REVOKED / UNVERIFIABLE) stands.
+        if outcome is None:
+            outcome, reason = "INVALID", str(exc)
     except (TypeError, ValueError, KeyError, AttributeError, OverflowError, UnicodeError) as exc:
         outcome, reason = "UNVERIFIABLE", "malformed verifier input: " + type(exc).__name__
-    report = {
-        "protocol": PROTOCOL,
-        "version": VERSION,
-        "outcome": outcome,
-        "reason": reason,
-        "event_digest": (digest.hex() if "digest" in locals() else None),
-        "policy_id": (policy.get("policy_id") if isinstance(policy, Mapping)
-                      and isinstance(policy.get("policy_id"), str) else None),
-        "policy_version": (policy.get("version") if isinstance(policy, Mapping)
-                           and isinstance(policy.get("version"), int)
-                           and not isinstance(policy.get("version"), bool) else None),
-        "verifier": "excal-pcbe-python-reference/1",
-        "checked": checked,
-        "signature_results": signature_results,
-    }
-    report["report_digest"] = hashlib.sha256(
-        REPORT_DOMAIN + canonical_cbor(report)
-    ).hexdigest()
-    return report
+    return _build_report(
+        outcome if outcome is not None else "UNVERIFIABLE",
+        reason,
+        digest if "digest" in locals() else None,
+        policy, checked, signature_results)
 
 
 class _StopVerification(Exception):
