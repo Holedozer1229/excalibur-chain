@@ -245,7 +245,10 @@ class Construction:
                     tx["vin"][i]["script"] = bytes([65])+sig+bytes([SIGHASH_ALL])
                 else: raise ValueError("unsupported input lock " + str(lt))
             raw = ser_tx(tx)
-            spent = set(self.mempool.chain_spent_pairs) if self.mempool and self.mempool.chain_spent_pairs is not None else set()
+            chain_pairs = getattr(self.cs, "spent_pqh_pairs", None)
+            if self.mempool is not None and self.mempool.chain_spent_pairs is not None:
+                chain_pairs = self.mempool.chain_spent_pairs
+            spent = set(chain_pairs) if chain_pairs is not None else set()
             ok, reason, fee = validate_tx(raw, self.cs.utxo, height, spent_pairs=spent)
             if not ok: raise ValueError("EXCAL consensus rejected tx: " + reason)
             return {"signed_transaction": raw.hex(),
