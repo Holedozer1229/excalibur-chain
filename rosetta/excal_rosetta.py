@@ -162,11 +162,21 @@ class ExcalRosetta:
         tip = self.cs.tip()
         return int(tip["height"]), tip["hash"]
 
+    def _canonical_records(self):
+        tip_hash = self.cs.tip()["hash"]
+        if isinstance(tip_hash, str):
+            tip_hash = bytes.fromhex(tip_hash)
+        if getattr(self, "_records_tip_hash", None) != tip_hash:
+            path_fn = getattr(self.cs, "_path_to", None)
+            if not callable(path_fn):
+                raise ValueError("ChainState lacks canonical path traversal")
+            path = path_fn(tip_hash)
+            self._records_by_height = {int(rec["height"]): rec for rec in path}
+            self._records_tip_hash = tip_hash
+        return self._records_by_height
+
     def _record(self, height):
-        rec = self.cs.by_height.get(int(height))
-        if rec is None:
-            return None
-        return rec
+        return self._canonical_records().get(int(height))
 
     def _record_identifier(self, rec):
         return {"index": int(rec["height"]), "hash": _display_hash(rec["hash"])}
@@ -176,12 +186,17 @@ class ExcalRosetta:
         if rec is None:
             return None
         prev = self._record(height - 1) if int(height) > 0 else None
-        parent = (self._record_identifier(prev) if prev is not None
-                  else self._record_identifier(rec))
+        parent = self._record_identifier(prev) if prev is not None else self._record_identifier(rec)
         raws = rec.get("txs", [])
-        # Index canonical outputs once and incrementally as the chain grows.
-        self._ensure_output_index()
-        outputs = self._output_index
+        if prev is None:
+            view = {}
+        else:
+            replay = getattr(self.cs, "_fork_utxo", None)
+            if not callable(replay):
+                raise ValueError("ChainState lacks historical UTXO replay")
+            view = replay(prev["hash"])
+            if callable(getattr(view, "copy", None)):
+                view = view.copy()
         transactions = []
         for raw in raws:
             t = parse_tx(raw)
@@ -191,55 +206,50 @@ class ExcalRosetta:
             total_in = 0
             total_out = sum(int(out["value"]) for out in t["vout"])
             fee = 0
-            if _coinbase(t):
-                for n, out in enumerate(t["vout"]):
-                    ops.append({
-                        "operation_identifier": {"index": len(ops)},
-                        "type": "coinbase", "status": "success",
-                        "account": {"address": _script_account(out["script"])},
-                        "amount": {"value": str(int(out["value"])), "currency": self.currency},
-                        "coin_change": {"coin_identifier": {"identifier": tx_hash + ":" + str(n)},
-                                        "coin_action": "coin_created"},
-                    })
-            else:
+            is_coinbase = _coinbase(t)
+            if not is_coinbase:
                 for vin in t["vin"]:
-                    prevout = outputs.get((vin["prev"], int(vin["idx"])))
-                    if prevout is None:
-                        # A missing historical prevout must never be disguised
-                        # as a known account or silently assigned to a user.
-                        raise ValueError("canonical input prevout unavailable at height " + str(height))
-                    total_in += int(prevout["value"])
-                    n = len(ops)
+                    key = (vin["prev"], int(vin["idx"]))
+                    rows = view.get(key)
+                    if not rows:
+                        raise ValueError("input prevout unavailable in pre-block UTXO view at height " + str(height))
+                    value, lock, _cb, _cbh = rows[0]
+                    value, lock = int(value), bytes(lock)
+                    total_in += value
+                    idx = len(ops)
                     ops.append({
-                        "operation_identifier": {"index": n},
+                        "operation_identifier": {"index": idx},
                         "type": "transfer", "status": "success",
-                        "account": {"address": _script_account(prevout["script"])},
-                        "amount": {"value": str(-int(prevout["value"])), "currency": self.currency},
+                        "account": {"address": _script_account(lock)},
+                        "amount": {"value": str(-value), "currency": self.currency},
                         "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
                                         "coin_action": "coin_spent"},
                     })
+                    del view[key]
                 fee = total_in - total_out
                 if fee < 0:
                     raise ValueError("transaction outputs exceed resolved input value")
-                input_indices = [{"index": i} for i in range(len(ops))]
-                for n, out in enumerate(t["vout"]):
-                    idx = len(ops)
-                    op = {
-                        "operation_identifier": {"index": idx},
-                        "type": "transfer", "status": "success",
-                        "account": {"address": _script_account(out["script"])},
-                        "amount": {"value": str(int(out["value"])), "currency": self.currency},
-                        "coin_change": {"coin_identifier": {"identifier": tx_hash + ":" + str(n)},
-                                        "coin_action": "coin_created"},
-                    }
-                    if input_indices:
-                        op["related_operations"] = input_indices
-                    ops.append(op)
+            for n, out in enumerate(t["vout"]):
+                lock = bytes(out["script"])
+                value = int(out["value"])
+                idx = len(ops)
+                op = {
+                    "operation_identifier": {"index": idx},
+                    "type": "coinbase" if is_coinbase else "transfer",
+                    "status": "success",
+                    "account": {"address": _script_account(lock)},
+                    "amount": {"value": str(value), "currency": self.currency},
+                    "coin_change": {"coin_identifier": {"identifier": tx_hash + ":" + str(n)},
+                                    "coin_action": "coin_created"},
+                }
+                if ops and not is_coinbase:
+                    op["related_operations"] = [{"index": i} for i in range(sum(1 for x in ops if x.get("amount", {}).get("value", "0").startswith("-")))]
+                ops.append(op)
+                view.setdefault((tid, n), [(value, lock, is_coinbase, int(height) if is_coinbase else 0)])
             transactions.append({
                 "transaction_identifier": {"hash": tx_hash},
                 "operations": ops,
-                "metadata": {"lock_time": int(t["locktime"]), "version": int(t["version"]),
-                             "fee": str(fee)},
+                "metadata": {"lock_time": int(t["locktime"]), "version": int(t["version"]), "fee": str(fee)},
             })
         timestamp = int(rec.get("time", 0)) * 1000
         return {
@@ -250,7 +260,6 @@ class ExcalRosetta:
             "metadata": {"bits": int(rec.get("bits", 0)), "nonce": int(rec.get("nonce", 0)),
                          "version": int(rec.get("version", 0))},
         }
-
     def handle(self, path, body):
         if path == "/network/list":
             return 200, {"network_identifiers": [self.network_id]}
