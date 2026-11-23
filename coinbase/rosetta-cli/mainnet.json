@@ -96,7 +96,7 @@
       },
       {
         "code": 5,
-        "message": "historical balance lookup unsupported"
+        "message": "historical UTXO state lookup unavailable"
       },
       {
         "code": 6,
