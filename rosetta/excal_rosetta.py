@@ -211,7 +211,7 @@ class ExcalRosetta:
                     n = len(ops)
                     ops.append({
                         "operation_identifier": {"index": n},
-                        "type": "TRANSFER", "status": "SUCCESS",
+                        "type": "transfer", "status": "success",
                         "account": {"address": _script_account(prevout["script"])},
                         "amount": {"value": str(-int(prevout["value"])), "currency": self.currency},
                         "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
@@ -225,7 +225,7 @@ class ExcalRosetta:
                     idx = len(ops)
                     op = {
                         "operation_identifier": {"index": idx},
-                        "type": "TRANSFER", "status": "SUCCESS",
+                        "type": "transfer", "status": "success",
                         "account": {"address": _script_account(out["script"])},
                         "amount": {"value": str(int(out["value"])), "currency": self.currency},
                         "coin_change": {"coin_identifier": {"identifier": tx_hash + ":" + str(n)},
