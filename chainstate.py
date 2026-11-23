@@ -9,7 +9,6 @@ Block hashes are internal byte order throughout.
 """
 import json
 import os
-import time
 
 from genesis_fork import (GENESIS, genesis_for, genesis_txs,
                           genesis_hash_for,
@@ -71,6 +70,11 @@ def activation_commitment(height, data_dir):
         return bytes.fromhex(act["snapshot_hash"])
     except (ValueError, TypeError):
         return None
+
+
+def _candidate_has_more_work(candidate_work, active_work):
+    """Fork choice is determined only by cumulative chainwork."""
+    return int(candidate_work) > int(active_work)
 
 
 def _block_work(bits):
@@ -480,13 +484,13 @@ class ChainState:
             return {"accepted": False, "event": None, "reason": bad}
         rec = dict(norm, height=height, hash=hh, txs=txs)
         # Compute candidate work and branch paths without indexing or
-        # persisting the candidate. A rejected deep reorg must leave no
-        # durable record that could become the best tip after restart.
+        # persisting the candidate. Validity is independent of local uptime
+        # and wall-clock time; chain selection uses cumulative work only.
         new_work = prev.get("work", 0) + _block_work(rec["bits"])
         old_path = None
         removed = []
         added = []
-        if new_work > self._active_work:
+        if _candidate_has_more_work(new_work, self._active_work):
             old_path = self._path_to(self._tip_hash)
             new_path = self._path_to(prev_hash) + [rec]
             fork = 0
@@ -495,19 +499,11 @@ class ChainState:
                 fork += 1
             removed = old_path[fork:]
             added = new_path[fork:]
-            # Deep-reorg guard (small-chain 51% protection): refuse to unwind
-            # more than max_reorg_depth blocks for a heavier branch — unless
-            # our own tip is stale, in which case we are catching up after
-            # downtime, not under attack.
-            max_depth = self.params.get("max_reorg_depth", 0)
-            if max_depth and len(removed) > max_depth:
-                spacing = self.params.get("daa_spacing",
-                                          self.params["target_spacing"])
-                tip_time = old_path[-1]["time"] if old_path else 0
-                stale = tip_time < time.time() - 2 * max_depth * spacing
-                if not stale:
-                    return {"accepted": False, "event": None,
-                            "reason": "reorg too deep"}
+            # Do not use a node-local depth/time exception here. It makes
+            # block acceptance depend on when a node last ran, so two honest
+            # nodes can disagree about the same valid higher-work branch.
+            # A deep reorg is a chain-security event to surface to operators,
+            # not a different consensus rule on each machine.
         # Persist and index only after every acceptance guard has passed.
         with open(self.chain_path, "a") as f:
             f.write(json.dumps(_enc_rec(rec)) + "\n")
