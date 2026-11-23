@@ -142,3 +142,61 @@ The ternary kernel `{-1, 0, 1, 3}` is not used as a cryptographic primitive. If 
 ## Standards alignment
 
 Use established standards where they fit: deterministic CBOR (RFC 8949), W3C Verifiable Credentials Data Model 2.0 and Data Integrity 1.0 where credential exchange is needed, and mature signature/hash suites. This design is a proposed EXCAL application protocol, not a claim of standards certification or a novel cryptographic primitive.
+
+
+## Cross-domain expansion: EXCAL Verified Infrastructure
+
+PCBE is a common evidence and verification substrate with separately versioned domain profiles. Each profile defines event schemas, trusted issuer roles, evidence requirements, validation procedures, retention rules, and dispute handling. Domain-specific checks must not be confused with the base cryptographic envelope.
+
+### Shared architecture
+
+1. Producers: spacecraft, ground stations, quantum processors, AI pipelines, enterprises, and authorized people create signed event bundles.
+2. Evidence adapters normalize source records while preserving original bytes, source identity, timestamps, calibration/configuration context, and provenance.
+3. PCBE envelope commits to the event, evidence, network/domain, policy version, nonce, and role-bound attestations.
+4. Independent verifiers validate signatures, issuer authority, schema, replay protection, evidence commitments, and domain-specific rules.
+5. Optional EXCAL anchor records a minimal commitment after privacy and fee review. The anchor does not certify the underlying fact.
+6. Evidence remains encrypted/off-chain; access is granted to authorized reviewers, with selective disclosure where supported.
+
+Profiles are independent modules. A failure or upgrade in one domain must not silently alter another profile or EXCAL consensus.
+
+### Space operations profile
+
+Suggested event types: spacecraft.component_registered, launch.readiness_attested, mission.telemetry_window, orbit.maneuver_executed, docking.contact_confirmed, cargo.custody_transferred, maintenance.performed, and mission.milestone_reached.
+
+Required context may include spacecraft and component identifiers (preferably pairwise or pseudonymous where possible), mission ID, event time plus clock source/uncertainty, telemetry interval commitment, sensor identity, calibration record, software/firmware build, operator role, and ground-station receipt. High-consequence events should require independent attestations from distinct organizations or systems, not merely multiple keys controlled by one operator.
+
+Validation limits: signatures prove which key attested to a telemetry record, not that the sensor was correctly installed or physically accurate. Profiles must define clock drift, packet loss, sensor calibration, fault tolerance, ground-station corroboration, and emergency override procedures. EXCAL is not a flight-control system and must never sit in a real-time safety-critical control loop. Mission commands and safety decisions remain with certified mission systems and accountable operators.
+
+### Quantum computing profile
+
+Suggested event types: quantum.job_submitted, quantum.circuit_committed, quantum.device_calibrated, quantum.job_executed, quantum.result_attested, and quantum.error_correction_reported.
+
+Commit to the circuit/program representation, compiler and transpiler versions, backend/device identity, calibration snapshot, job parameters, shot count, timestamps, software/container digest, and result artifact. Where appropriate, include randomized benchmarking or calibration evidence, error rates, confidence intervals, and reproducibility metadata. Keep proprietary circuits and raw results off-chain unless the owner explicitly authorizes disclosure.
+
+Validation limits: a signed result establishes provenance and integrity, not computational correctness. Verification may require rerunning circuits, comparing independent devices, checking known-answer circuits, analyzing statistical uncertainty, and accounting for noise and calibration drift. A quantum job output must not be treated as a cryptographic proof merely because it came from quantum hardware. Quantum-resistant cryptography is a separate migration track: inventory algorithms, define crypto-agility, and adopt standardized post-quantum algorithms only after interoperability and security review. Do not invent a quantum signature or claim quantum advantage.
+
+### AI data and model lifecycle profile
+
+Suggested event types: ai.dataset_registered, ai.consent_recorded, ai.preprocessing_run, ai.training_run, ai.model_evaluated, ai.model_released, ai.inference_attested, and ai.model_revoked.
+
+Commit to dataset manifests and versioned lineage, collection/consent/licensing basis, transformation code and parameters, training configuration, model weights/artifact digest, evaluation datasets and metrics, safety review, deployment build, and inference context. Record model and tool versions and distinguish human-authored, model-generated, and externally sourced content. For inference attestations, state the limits of the execution environment and whether hardware-backed attestation was actually verified.
+
+Privacy and governance: do not publish raw prompts, personal data, training examples, model weights, secrets, or customer payloads by default. A hash does not make personal data anonymous if the source can be linked or guessed. Support deletion/retention obligations for off-chain content while retaining only lawful, minimal commitments. Consent, licensing, provenance, and copyright status require evidence and legal policy; a signature alone does not establish that training was lawful.
+
+Validation limits: provenance does not prove that a dataset is representative, unbiased, licensed, or factually correct. Model evaluation must be task-specific, reproducible where possible, and independently reviewable. AI-generated summaries and Aetherion anomaly scores remain advisory; they cannot self-certify their own correctness or authorize funds.
+
+### Profile governance and interoperability
+
+- Publish a registry of profile identifiers, schema versions, required roles, evidence types, and verifier conformance vectors.
+- Use explicit version negotiation; unknown profile versions fail closed as UNVERIFIABLE.
+- Require domain experts and independent security reviewers to approve profile changes.
+- Preserve original source artifacts and cryptographic provenance; normalized data must never replace the source record.
+- Define trusted timestamp sources and uncertainty for each profile. Do not assume all clocks are synchronized.
+- Separate proof of integrity, proof of origin, proof of authority, proof of execution, and proof of a real-world outcome. Each is a distinct claim with distinct evidence.
+- Never let a domain profile change EXCAL consensus, issuance, existing spend signatures, or wallet authorization.
+
+### Commercial deployment path
+
+Start with a low-risk, auditable pilot: AI dataset/model lineage or supply-chain component provenance. Then add space and quantum profiles using synthetic or non-safety-critical test data, independent verifier implementations, and domain-expert review. Only after measured conformance, threat modeling, privacy review, and operational audits should any profile be used for high-value commercial settlement or mission-critical records.
+
+These profiles define a scalable architecture and candidate use cases. They are not yet implemented, certified, flight-qualified, quantum-verified, or production-ready.
