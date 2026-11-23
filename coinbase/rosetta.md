@@ -28,7 +28,7 @@ into an unrelated ECDSA address format.
 - POST /network/status
 - POST /block
 - POST /block/transaction
-- POST /account/balance (tip only; historical lookup is explicitly unsupported)
+- POST /account/balance (current and historical balances via ChainState replay)
 - POST /mempool
 - POST /mempool/transaction
 
