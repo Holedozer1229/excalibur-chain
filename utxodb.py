@@ -272,8 +272,8 @@ class UtxoSet:
         return r
 
     def __setitem__(self, key, entries):
-        if self._snapshot_contains_any(key) and key not in self.spent:
-            raise AssertionError("overwriting an existing snapshot outpoint")
+        if self._snapshot_contains_any(key):
+            raise AssertionError("re-creating an existing snapshot outpoint")
         if key in self.overlay:
             raise AssertionError("overwriting an existing overlay outpoint")
         self.overlay[key] = list(entries)
