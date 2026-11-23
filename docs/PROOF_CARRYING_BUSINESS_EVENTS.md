@@ -1,7 +1,7 @@
 # EXCAL Proof-Carrying Business Events (PCBE)
 ## Design proposal — off-consensus, independently verifiable business evidence
 
-**Status:** proposal / implementation boundary  
+**Status:** application-layer reference implementation added; production use remains blocked pending tests, independent verifier agreement, durable replay storage, trust-root governance, privacy review, and external security review.  
 **Target:** EXCAL application layer; no consensus or wallet-rule changes  
 **Branch:** `feat/proof-carrying-business-events`
 
@@ -129,6 +129,22 @@ The ternary kernel `{-1, 0, 1, 3}` is not used as a cryptographic primitive. If 
 7. Add a read-only HTTP API for verification reports.
 8. Run two independent implementations against the same vectors before considering EXCAL anchoring.
 9. Obtain an external cryptographic and privacy review before production or handling funds.
+
+
+## Reference implementation profile (initial, non-production)
+
+The first Python implementation lives in `pcbe/core.py`; focused adversarial tests live in `tests/test_pcbe.py`. It intentionally implements a restricted deterministic-CBOR data model (null, booleans, signed integers, byte/text strings, arrays, and text-keyed maps; no floats, tags, indefinite lengths, or non-text keys).
+
+The implementation fixes these v1 details:
+
+- Evidence digest: `SHA-256("EXCAL-PCBE-EVIDENCE-v1" || deterministic_cbor([media_type, exact_bytes]))`.
+- Merkle leaf: `SHA-256(0x00 || evidence_digest)`; node: `SHA-256(0x01 || left || right)`; an unpaired final node is promoted unchanged. Evidence order is significant.
+- Event digest: `SHA-256("EXCAL-PCBE-EVENT-v1" || deterministic_cbor(event_without_signatures))`.
+- Ed25519 attestation message: domain-separated deterministic-CBOR array containing event digest, role, key ID, policy version, and fixed context string.
+- Replay registry is an in-memory reference implementation only. A production verifier must provide durable, atomic, network-scoped replay storage.
+- Verification requires an explicit fresh revocation snapshot; missing or stale trust/revocation data returns `UNVERIFIABLE`.
+
+The implementation is not yet a complete PCBE deployment: it does not provide a production trust-root distribution mechanism, durable replay database, predecessor-chain resolver, evidence-byte retrieval service, HTTP API, CLI, or independent second implementation. Its local Ed25519 profile must be reviewed against the issuer ecosystem before interoperability claims. The test workflow is not evidence of passing until GitHub Actions actually executes the test steps successfully.
 
 ## Acceptance criteria
 
