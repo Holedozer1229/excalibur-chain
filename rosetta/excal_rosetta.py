@@ -78,9 +78,11 @@ class ExcalRosetta:
     def _ensure_output_index(self):
         """Incrementally index canonical outputs; rebuild after a reorg."""
         tip_height, tip_hash = self._tip()
-        if self._indexed_tip_hash is not None and tip_hash != self._indexed_tip_hash:
-            self._output_index.clear()
-            self._indexed_height = -1
+        if self._indexed_height >= 0:
+            indexed_record = self._record(self._indexed_height)
+            if indexed_record is None or indexed_record["hash"] != self._indexed_tip_hash:
+                self._output_index.clear()
+                self._indexed_height = -1
         for height in range(self._indexed_height + 1, tip_height + 1):
             rec = self._record(height)
             if rec is None:
@@ -203,7 +205,10 @@ class ExcalRosetta:
                                                   {"status": "FAILURE", "successful": False}],
                           "operation_types": ["MINING", "TRANSFER"],
                           "errors": ERRORS, "historical_balance_lookup": False,
-                          "call_methods": [], "balance_exemptions": []},
+                          "call_methods": [], "balance_exemptions": [],
+                          "excal_extensions": {"trifold_signature_type": "trifold",
+                                               "knot_signature_type": "excal_knot",
+                                               "witness_encoding": "native scriptSig hex"}} ,
             }
         err = self._check_network(body)
         if err:
