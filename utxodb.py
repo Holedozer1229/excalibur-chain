@@ -65,7 +65,8 @@ class SnapshotDB:
 
     def stats(self):
         n, total = self._db.execute(
-            "SELECT COUNT(*), COALESCE(SUM(value),0) FROM utxo").fetchone()
+            "SELECT COUNT(*), COALESCE(SUM(value),0) FROM utxo "
+            "WHERE spendable=1").fetchone()
         return n, total
 
     def count_spendable(self):
