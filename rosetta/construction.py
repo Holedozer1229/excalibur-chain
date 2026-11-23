@@ -333,17 +333,28 @@ class Construction:
             raw=bytes.fromhex(body["signed_transaction"]); parse_tx(raw)
             return {"transaction_identifier":{"hash":txid_internal(raw)[::-1].hex()}}
         if path == "/construction/submit":
-            raw=bytes.fromhex(body["signed_transaction"]); parse_tx(raw)
-            if self.node is None: raise ValueError("broadcast requires embedded live Node")
-            node_txid = self.node.dispatch("sendrawtransaction", [raw.hex()])
-            expected_internal = txid_internal(raw).hex()
-            if str(node_txid).lower() != expected_internal:
-                raise ValueError("node returned a transaction id that does not match submitted bytes")
-            peer_mgr = getattr(self.node, "peermgr", None)
-            peer_count = len(getattr(peer_mgr, "peers", [])) if peer_mgr is not None else 0
-            return {"transaction_identifier":{"hash":txid_internal(raw)[::-1].hex()},
-                    "metadata":{"node_txid_internal":node_txid,
-                                "mempool_accepted":True,
-                                "relay_attempted":peer_mgr is not None,
-                                "connected_peers":peer_count}}
+            raw = bytes.fromhex(body["signed_transaction"])
+            parse_tx(raw)
+            display_hash = txid_internal(raw)[::-1].hex()
+            if self.node is not None:
+                node_txid = self.node.dispatch("sendrawtransaction", [raw.hex()])
+                expected_internal = txid_internal(raw).hex()
+                if str(node_txid).lower() != expected_internal:
+                    raise ValueError("node returned a transaction id that does not match submitted bytes")
+                peer_mgr = getattr(self.node, "peermgr", None)
+                peer_count = len(getattr(peer_mgr, "peers", [])) if peer_mgr is not None else 0
+                return {"transaction_identifier": {"hash": display_hash},
+                        "metadata": {"node_txid_internal": node_txid,
+                                     "mempool_accepted": True,
+                                     "relay_attempted": peer_mgr is not None,
+                                     "connected_peers": peer_count}}
+            if self.mempool is None:
+                raise ValueError("submit requires an embedded live Node or Mempool")
+            ok, reason = self.mempool.add(raw, self.cs.utxo, height)
+            if not ok:
+                raise ValueError("EXCAL mempool rejected transaction: " + str(reason))
+            return {"transaction_identifier": {"hash": display_hash},
+                    "metadata": {"mempool_accepted": True,
+                                 "relay_attempted": False,
+                                 "connected_peers": 0}}
         raise KeyError("unknown construction endpoint")
