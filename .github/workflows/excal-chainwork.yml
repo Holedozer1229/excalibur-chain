@@ -1,0 +1,31 @@
+name: EXCAL deterministic chainwork
+
+on:
+  pull_request:
+    paths:
+      - "chainstate.py"
+      - "genesis_fork.py"
+      - "tests/test_chainwork_fork_choice.py"
+      - ".github/workflows/excal-chainwork.yml"
+  push:
+    branches:
+      - "fix/deterministic-chainwork-reorg-v1"
+    paths:
+      - "chainstate.py"
+      - "genesis_fork.py"
+      - "tests/test_chainwork_fork_choice.py"
+      - ".github/workflows/excal-chainwork.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  chainwork-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test deterministic fork choice
+        run: python -m unittest discover -s tests -p "test_chainwork_fork_choice.py" -v
