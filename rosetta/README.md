@@ -1,62 +1,55 @@
 # EXCAL native Rosetta adapter
 
-This package is the new Rosetta adapter for **Aetherion-Excalibur (EXCAL)**.
-It reads the repository's actual `ChainState` and UTXO set; it does not
-translate the older Genesis Fork / GSF Rosetta implementation.
+Native EXCAL Rosetta Data and Construction adapter. It reads the actual
+ChainState/UTXO view and preserves every native scriptPubKey as
+lock:<scriptPubKey hex>. It does not translate the legacy GSF implementation.
 
-## Important scope boundary
+## Implemented scope
 
-The Data API is implemented for the native EXCAL chain. Account identifiers
-are lossless: `lock:<scriptPubKey hex>`. This preserves the exact native lock
-for PKH, PQH, HTLC, QHTLC, BRIDGE and future script types.
+- Data API: network list/options/status, block, block transaction, tip balance,
+  live mempool list and transaction operations.
+- Construction API: derive, preprocess, metadata, payloads, combine, parse,
+  hash and submit.
+- Lock handling: PKH, BRIDGE, legacy P2PK, OPEN/OP_TRUE, PQH, HTLC, QHTLC and
+  KNOT. Activation gates and exact consensus validation are enforced.
+- Trifold payloads use the explicit EXCAL extension signature type trifold;
+  KNOT uses excal_knot. They are not mislabeled as ECDSA or Ed25519.
+- Local Trifold wallet bridge: rosetta/trifold_signer.py accepts an already
+  unlocked EXCAL Wallet object and returns the native PQH/QHTLC witness while
+  preserving the durable leaf counter and spent-leaf registry.
+- Broadcast is enabled only when embedded with the live Node object. Submit
+  delegates to Node.dispatch("sendrawtransaction"), which validates through
+  the real mempool and broadcasts through the node peer manager.
 
-The Construction API is deliberately fail-closed (HTTP 501) in this first
-version. The previous Rosetta implementation assumes ECDSA/secp256k1 and a
-single P2PK-style address model. Reusing it for EXCAL's hash-based Trifold
-locks would misrepresent signing support and could create unsafe transactions.
-Native construction support must be implemented against EXCAL's transaction
-serializer, lock interpreter and signing vectors before being enabled.
+See LOCK_SUPPORT.md for the complete lock matrix, wallet boundary, extension
+limitations and release gates.
 
-## Start
+## Start (read-only / no broadcast)
 
-From the repository root, with a synchronized EXCAL node data directory:
+From the repository root, with a synchronized node data directory:
 
-```sh
-python3 rosetta/excal_rosetta.py --data-dir ./chaindata --host 127.0.0.1 --port 8070 --network fork
-```
+    python3 rosetta/excal_rosetta.py --data-dir ./chaindata --host 127.0.0.1 --port 8070 --network fork
 
-Keep the service private behind an authenticated/TLS reverse proxy if exposed.
-Do not expose the node RPC or wallet secrets. For production, prefer embedding
-`serve(cs, ...)` in the node process so Rosetta reads the same live ChainState
-object and cannot drift from the node.
+Standalone mode cannot broadcast because it does not own the live Node.
+Production embedding must call serve(node.cs, ..., mempool=node.mempool,
+node=node) inside the node process. Keep RPC private and place any externally
+reachable Rosetta endpoint behind authenticated TLS.
 
-## Endpoints
+## Important URUU distinction
 
-- `POST /network/list`
-- `POST /network/options`
-- `POST /network/status`
-- `POST /block`
-- `POST /block/transaction`
-- `POST /account/balance` (tip only)
-- `POST /mempool` (currently reports empty; mempool adapter not yet wired)
-- `POST /construction/*` (explicitly disabled pending native lock-aware construction)
-
-## Account identifier
-
-For a locking script `0014...`, query:
-
-```json
-{
-  "network_identifier": {"blockchain": "EXCAL", "network": "fork"},
-  "account_identifier": {"address": "lock:0014..."}
-}
-```
-
-Amounts are integer swords, with 8 decimal places per EXCAL.
+The separate Uruu-Secure-Recovery app is currently a recovery dashboard/API
+with mock verifier signatures and synthetic proof verification. It is not a
+production Trifold signer or guardian quorum. The actual EXCAL Trifold
+primitive is in trifold_lockbox.py / txpq.py and the unlocked EXCAL wallet.
+The separate Frostgate FROST vault signs its own Taproot key, not EXCAL lock
+spends. No mock URUU approval is accepted as transaction authorization.
 
 ## Validation status
 
-This is an initial implementation, not a Coinbase-certified Rosetta service.
-Before calling it complete, run Rosetta CLI data checks against a real node,
-verify operation reconciliation over representative blocks containing every
-active lock type, test reorg behavior, and implement/test native construction.
+Code and tests are committed on the feature branch, but tests have not yet
+been executed here. This is not Coinbase certification. Before production,
+run the full Python suite, Rosetta CLI checks, all lock witness vectors,
+activation/timeout/replay tests, two-node relay/reorg tests, and verify that
+the target Rosetta client accepts EXCAL's custom Trifold/KNOT extension types.
+The Trifold source itself documents that it is a custom scheme without a
+formal security proof; this adapter does not claim otherwise.
