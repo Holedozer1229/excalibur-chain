@@ -17,7 +17,8 @@ from genesis_fork import (GENESIS, genesis_for, genesis_txs,
                           ser_header, sha256d, txid, merkle_root,
                           bits_to_target, required_bits, subsidy,
                           check_coinbase_lineage, validate_block,
-                          validate_auxpow, _parse_pushes)
+                          validate_auxpow, _parse_pushes,
+                          FORK_BTC_HEIGHT, FORK_BTC_HASH)
 from txscript import (validate_block_txs, apply_block_txs, build_utxo,
                       utxo_stats, txid_internal, parse_tx)
 from spent_leaf_registry import (SpentLeafRegistry, extract_pairs,
@@ -285,14 +286,26 @@ class ChainState:
             return None
         with open(meta_path) as f:
             meta = json.load(f)
+        # The Bitcoin fork anchor is consensus data, not a local hint.
+        if int(meta.get("height", -1)) != FORK_BTC_HEIGHT:
+            raise RuntimeError(
+                f"Bitcoin snapshot height must be {FORK_BTC_HEIGHT}")
+        if meta.get("block_hash", "").lower() != FORK_BTC_HASH.lower():
+            raise RuntimeError(
+                "Bitcoin snapshot metadata does not name the pinned fork block")
+        if not meta.get("sha256d"):
+            raise RuntimeError("Bitcoin snapshot metadata is missing sha256d")
         if not os.path.exists(p["db"]):
             build_snapshot_db(p["dat"], p["db"], meta["sha256d"],
                               meta["height"], log=print)
         db = SnapshotDB(p["db"])
-        if db.get_meta("snapshot_hash") != meta["sha256d"]:
+        if (db.get_meta("snapshot_hash") != meta["sha256d"]
+                or db.get_meta("height") != str(FORK_BTC_HEIGHT)
+                or db.get_meta("format") != "fork-snapshot-v2"):
             db.close()
-            raise RuntimeError("snapshot DB hash mismatch: delete utxo.db "
-                               "and rebuild")
+            raise RuntimeError(
+                "snapshot DB is not the pinned v2 snapshot; delete utxo.db "
+                "and rebuild from a verified v2 source file")
         # Activation gating: snapshot activates at a future fork height,
         # committed in that block's coinbase. Before that height the node
         # runs on fork blocks alone (preserving existing history).
