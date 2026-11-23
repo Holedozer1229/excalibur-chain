@@ -208,6 +208,7 @@ class ExcalRosetta:
                         # A missing historical prevout must never be disguised
                         # as a known account or silently assigned to a user.
                         raise ValueError("canonical input prevout unavailable at height " + str(height))
+                    total_in += int(prevout["value"])
                     n = len(ops)
                     ops.append({
                         "operation_identifier": {"index": n},
