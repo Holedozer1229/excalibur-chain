@@ -41,8 +41,9 @@ class ExcalClient:
 
     def __init__(self, rpc_url: str = "http://127.0.0.1:9432", timeout: float = 5.0):
         parsed = urlsplit(rpc_url)
-        if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
-            raise ValueError("EXCAL RPC must be local HTTP loopback only")
+        if (parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}
+                or parsed.username is not None or parsed.password is not None):
+            raise ValueError("EXCAL RPC must be local HTTP loopback only, without URL credentials")
         if parsed.path not in ("", "/") or parsed.query or parsed.fragment:
             raise ValueError("RPC URL must not contain path, query, or fragment")
         if timeout <= 0 or timeout > 30:
