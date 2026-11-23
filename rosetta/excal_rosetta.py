@@ -62,6 +62,27 @@ class ExcalRosetta:
         self.network = network
         self.network_id = {"blockchain": BLOCKCHAIN, "network": network}
         self.lock = threading.RLock()
+        self._output_index = {}
+        self._indexed_height = -1
+        self._indexed_tip_hash = None
+
+    def _ensure_output_index(self):
+        """Incrementally index canonical outputs; rebuild after a reorg."""
+        tip_height, tip_hash = self._tip()
+        if self._indexed_tip_hash is not None and tip_hash != self._indexed_tip_hash:
+            self._output_index.clear()
+            self._indexed_height = -1
+        for height in range(self._indexed_height + 1, tip_height + 1):
+            rec = self._record(height)
+            if rec is None:
+                raise ValueError("missing canonical block while indexing height " + str(height))
+            for raw in rec.get("txs", []):
+                tx = parse_tx(raw)
+                txid = txid_internal(raw)
+                for n, out in enumerate(tx["vout"]):
+                    self._output_index[(txid, n)] = out
+        self._indexed_height = tip_height
+        self._indexed_tip_hash = tip_hash
 
     def _error(self, code, message=None):
         e = dict(ERROR_BY_CODE[code])
@@ -95,21 +116,9 @@ class ExcalRosetta:
         parent = (self._record_identifier(prev) if prev is not None
                   else self._record_identifier(rec))
         raws = rec.get("txs", [])
-        # Resolve spent output scripts from the chain's historical output index.
-        # The index is rebuilt from accepted canonical blocks, never from caller data.
-        outputs = {}
-        for h in range(int(height) + 1):
-            prior = self._record(h)
-            if prior is None:
-                continue
-            for raw in prior.get("txs", []):
-                try:
-                    t = parse_tx(raw)
-                    tid = txid_internal(raw)
-                    for n, out in enumerate(t["vout"]):
-                        outputs[(tid, n)] = out
-                except (ValueError, KeyError, TypeError):
-                    continue
+        # Index canonical outputs once and incrementally as the chain grows.
+        self._ensure_output_index()
+        outputs = self._output_index
         transactions = []
         for raw in raws:
             t = parse_tx(raw)
@@ -270,9 +279,10 @@ class ExcalRosetta:
                     "balances": [{"value": str(total), "currency": CURRENCY}],
                     "metadata": {"utxo_count": count},
                 }
-        if path in ("/mempool", "/mempool/transaction"):
-            # The chainstate adapter intentionally has no mempool reference.
-            return 200, {"transaction_identifiers": []} if path == "/mempool" else (500, self._error(3))
+        if path == "/mempool":
+            return 200, {"transaction_identifiers": []}
+        if path == "/mempool/transaction":
+            return 500, self._error(3, "mempool adapter is not connected")
         if path.startswith("/construction/"):
             return 501, self._error(6, "Construction endpoints are intentionally disabled until native PKH/PQH/HTLC/QHTLC/BRIDGE signing and parse vectors are implemented and audited.")
         return 404, self._error(7, "unknown endpoint")
