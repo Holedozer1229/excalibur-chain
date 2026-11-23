@@ -9,7 +9,9 @@ set. The network identifier is blockchain "excal", network "mainnet" (or
 and tEXCAL / 8 decimals on testnet.
 
 This is an implementation under validation, not a statement of Coinbase
-approval or Rosetta certification.
+approval or Rosetta certification. The production Bitcoin-anchored EXCAL
+chain uses ChainState consensus network "fork"; the Rosetta network identifier
+presented to Coinbase remains "mainnet". These are separate settings.
 
 ## Account identifiers
 
