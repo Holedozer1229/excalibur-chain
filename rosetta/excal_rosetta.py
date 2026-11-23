@@ -125,7 +125,7 @@ class ExcalRosetta:
                 "operation_identifier": {"index": idx},
                 "type": "TRANSFER", "status": "SUCCESS",
                 "account": {"address": _script_account(out["script"])},
-                "amount": {"value": str(int(out["value"])), "currency": CURRENCY},
+                "amount": {"value": str(int(out["value"])), "currency": self.currency},
                 "related_operations": input_refs,
                 "coin_change": {"coin_identifier": {"identifier": txid + ":" + str(n)},
                                 "coin_action": "coin_created"},
@@ -182,7 +182,7 @@ class ExcalRosetta:
                         "operation_identifier": {"index": len(ops)},
                         "type": "coinbase", "status": "success",
                         "account": {"address": _script_account(out["script"])},
-                        "amount": {"value": str(int(out["value"])), "currency": CURRENCY},
+                        "amount": {"value": str(int(out["value"])), "currency": self.currency},
                         "coin_change": {"coin_identifier": {"identifier": tx_hash + ":" + str(n)},
                                         "coin_action": "coin_created"},
                     })
@@ -198,7 +198,7 @@ class ExcalRosetta:
                         "operation_identifier": {"index": n},
                         "type": "TRANSFER", "status": "SUCCESS",
                         "account": {"address": _script_account(prevout["script"])},
-                        "amount": {"value": str(-int(prevout["value"])), "currency": CURRENCY},
+                        "amount": {"value": str(-int(prevout["value"])), "currency": self.currency},
                         "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
                                         "coin_action": "coin_spent"},
                     })
@@ -209,7 +209,7 @@ class ExcalRosetta:
                         "operation_identifier": {"index": idx},
                         "type": "TRANSFER", "status": "SUCCESS",
                         "account": {"address": _script_account(out["script"])},
-                        "amount": {"value": str(int(out["value"])), "currency": CURRENCY},
+                        "amount": {"value": str(int(out["value"])), "currency": self.currency},
                         "coin_change": {"coin_identifier": {"identifier": tx_hash + ":" + str(n)},
                                         "coin_action": "coin_created"},
                     }
@@ -341,7 +341,7 @@ class ExcalRosetta:
                     count += 1
                 return 200, {
                     "block_identifier": {"index": height, "hash": _display_hash(block_hash)},
-                    "balances": [{"value": str(total), "currency": CURRENCY}],
+                    "balances": [{"value": str(total), "currency": self.currency}],
                     "metadata": {"utxo_count": count},
                 }
         if path == "/mempool":
