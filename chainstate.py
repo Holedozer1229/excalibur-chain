@@ -285,14 +285,34 @@ class ChainState:
             return None
         with open(meta_path) as f:
             meta = json.load(f)
+        # This fork is anchored to Bitcoin block 968698. Never accept a
+        # snapshot manifest for a different height as the inherited base.
+        try:
+            declared_height = int(meta["height"])
+            declared_hash = str(meta["sha256d"]).lower()
+        except (KeyError, TypeError, ValueError) as exc:
+            raise RuntimeError("snapshot manifest missing valid height/sha256d") from exc
+        if declared_height != 968698:
+            raise RuntimeError(
+                f"snapshot manifest height {declared_height} != fork anchor 968698")
+        if len(declared_hash) != 64 or any(c not in "0123456789abcdef" for c in declared_hash):
+            raise RuntimeError("snapshot manifest sha256d must be 32-byte hex")
         if not os.path.exists(p["db"]):
-            build_snapshot_db(p["dat"], p["db"], meta["sha256d"],
-                              meta["height"], log=print)
+            build_snapshot_db(p["dat"], p["db"], declared_hash,
+                              declared_height, log=print)
         db = SnapshotDB(p["db"])
-        if db.get_meta("snapshot_hash") != meta["sha256d"]:
+        db_meta = {
+            "snapshot_hash": db.get_meta("snapshot_hash"),
+            "height": db.get_meta("height"),
+            "format": db.get_meta("format"),
+        }
+        if (db_meta["snapshot_hash"] != declared_hash
+                or db_meta["height"] != str(declared_height)
+                or db_meta["format"] != "fork-snapshot-v2"):
             db.close()
-            raise RuntimeError("snapshot DB hash mismatch: delete utxo.db "
-                               "and rebuild")
+            raise RuntimeError(
+                "snapshot DB metadata mismatch or obsolete format; "
+                "delete utxo.db and rebuild from a verified v2 snapshot")
         # Activation gating: snapshot activates at a future fork height,
         # committed in that block's coinbase. Before that height the node
         # runs on fork blocks alone (preserving existing history).
