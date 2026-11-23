@@ -71,12 +71,6 @@ NETWORKS = {
         # from the same height in validate_block; live history already
         # contains MTP violations, so retroactive MTP would break it.
         "daa_boundary_activation": 29700,
-        # Deep-reorg guard: a competing branch that would unwind more than
-        # this many blocks is rejected — the classic small-chain 51% kill
-        # shot. Escape hatch: if our own tip is stale (older than twice the
-        # depth in expected block time) we are catching up, not being
-        # attacked, and the reorg is allowed.
-        "max_reorg_depth": 100,
         # AuxPoW (merged mining): from this height the fork also accepts
         # blocks whose proof of work is supplied by a parent block (see
         # validate_auxpow). Normal self-mined blocks are unaffected at
