@@ -12,6 +12,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from txscript import parse_tx, txid_internal
+from rosetta.construction import Construction
 
 BLOCKCHAIN = "EXCAL"
 CURRENCY = {"symbol": "EXCAL", "decimals": 8}
@@ -57,8 +58,10 @@ def _outpoint(txid_wire, vout):
 class ExcalRosetta:
     """Rosetta Data API backed by a live ChainState instance."""
 
-    def __init__(self, chainstate, network=NETWORK):
+    def __init__(self, chainstate, network=NETWORK, mempool=None):
         self.cs = chainstate
+        self.mempool = mempool
+        self.construction = Construction(chainstate, mempool)
         self.network = network
         self.network_id = {"blockchain": BLOCKCHAIN, "network": network}
         self.lock = threading.RLock()
@@ -265,26 +268,47 @@ class ExcalRosetta:
                     return 500, self._error(5)
                 total = 0
                 count = 0
-                for _key, entries in self.cs.utxo.items():
-                    # UtxoSet implementations may expose one tuple or a list of tuples.
-                    if isinstance(entries, tuple):
-                        entries = [entries]
-                    for entry in entries:
-                        value, spk = int(entry[0]), bytes(entry[1])
-                        if spk == script:
-                            total += value
-                            count += 1
+                finder = getattr(self.cs.utxo, "find_by_spk", None)
+                if not callable(finder):
+                    return 500, self._error(7, "UTXO backend lacks indexed script lookup")
+                for _key, entry in finder(script):
+                    total += int(entry[0])
+                    count += 1
                 return 200, {
                     "block_identifier": {"index": height, "hash": _display_hash(block_hash)},
                     "balances": [{"value": str(total), "currency": CURRENCY}],
                     "metadata": {"utxo_count": count},
                 }
         if path == "/mempool":
-            return 200, {"transaction_identifiers": []}
+            if self.mempool is None:
+                return 500, self._error(7, "live mempool is not connected")
+            with self.lock:
+                ids = [{"hash": txid_internal(raw)[::-1].hex()}
+                       for raw in self.mempool.txs.values()]
+            return 200, {"transaction_identifiers": ids}
         if path == "/mempool/transaction":
-            return 500, self._error(3, "mempool adapter is not connected")
+            if self.mempool is None:
+                return 500, self._error(7, "live mempool is not connected")
+            wanted = (body.get("transaction_identifier") or {}).get("hash", "").lower()
+            with self.lock:
+                raw = next((raw for raw in self.mempool.txs.values()
+                            if txid_internal(raw)[::-1].hex() == wanted), None)
+                if raw is None:
+                    return 500, self._error(3)
+                tx = parse_tx(raw)
+                return 200, {"transaction": {
+                    "transaction_identifier": {"hash": wanted},
+                    "operations": [],
+                    "metadata": {"raw_transaction": raw.hex(),
+                                 "input_count": len(tx["vin"]),
+                                 "output_count": len(tx["vout"])}}}
         if path.startswith("/construction/"):
-            return 501, self._error(6, "Construction endpoints are intentionally disabled until native PKH/PQH/HTLC/QHTLC/BRIDGE signing and parse vectors are implemented and audited.")
+            try:
+                return 200, self.construction.handle(path, body)
+            except KeyError as exc:
+                return 404, self._error(7, str(exc))
+            except Exception as exc:
+                return 500, self._error(6, str(exc))
         return 404, self._error(7, "unknown endpoint")
 
 
@@ -329,8 +353,8 @@ def make_handler(app):
     return Handler
 
 
-def serve(chainstate, host="127.0.0.1", port=8070, network=NETWORK):
-    app = ExcalRosetta(chainstate, network=network)
+def serve(chainstate, host="127.0.0.1", port=8070, network=NETWORK, mempool=None):
+    app = ExcalRosetta(chainstate, network=network, mempool=mempool)
     server = ThreadingHTTPServer((host, int(port)), make_handler(app))
     server.serve_forever()
 
