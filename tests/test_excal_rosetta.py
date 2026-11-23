@@ -2,6 +2,9 @@ import unittest
 from types import SimpleNamespace
 
 from rosetta.excal_rosetta import ExcalRosetta, CURRENCY, _display_hash
+from rosetta.construction import Construction
+from txscript import lock_type
+import secp256k1 as secp
 
 
 class RosettaDataTests(unittest.TestCase):
@@ -69,10 +72,38 @@ class RosettaDataTests(unittest.TestCase):
         self.assertEqual(status, 500)
         self.assertEqual(body["code"], 5)
 
-    def test_construction_is_not_falsely_advertised(self):
-        status, body = self.app.handle("/construction/payloads", self.net)
-        self.assertEqual(status, 501)
-        self.assertEqual(body["code"], 6)
+    def test_construction_payload_types_cover_all_native_locks(self):
+        pub = secp.compress(secp.priv_to_pub(1))
+        locks = {
+            "pkh": b"\\x00" + b"\\x11" * 20,
+            "open": b"\\xff",
+            "pqh": b"\\x02" + b"\\x22" * 20,
+            "htlc": b"\\x03" + b"\\x33" * 20,
+            "qhtlc": b"\\x04" + b"\\x44" * 20,
+            "bridge": b"\\x05" + b"\\x55" * 32,
+            "knot": b"\\x06" + b"\\x66" * 20,
+            "p2pk": b"\\x21" + pub + b"\\xac",
+            "anyone": b"\\x51",
+        }
+        expected = {"pkh": "ecdsa", "open": None, "pqh": "trifold",
+                    "htlc": "ecdsa", "qhtlc": "trifold", "bridge": "ecdsa",
+                    "knot": "excal_knot", "p2pk": "ecdsa", "anyone": None}
+        for i, (name, lock) in enumerate(locks.items(), 1):
+            self.assertEqual(lock_type(lock), name)
+            prev = bytes([i]) * 32
+            coin = prev[::-1].hex() + ":0"
+            cs = SimpleNamespace(
+                utxo={(prev, 0): [(10000, lock, False, 0)]},
+                tip=lambda: {"height": 100000, "hash": bytes(32)})
+            builder = Construction(cs)
+            result = builder.handle("/construction/payloads", {
+                "metadata": {
+                    "inputs": [{"coin": coin, "value": 10000,
+                                "lock": lock.hex(), "lock_type": name}],
+                    "outputs": [{"value": 9000,
+                                 "lock": (b"\\x00" + b"\\xaa" * 20).hex()}]}})
+            types = [p["signature_type"] for p in result["payloads"]]
+            self.assertEqual(types, [] if expected[name] is None else [expected[name]])
 
     def test_hash_format_is_display_order(self):
         raw = bytes(range(32))
