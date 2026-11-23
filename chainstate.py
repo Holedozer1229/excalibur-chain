@@ -514,6 +514,9 @@ class ChainState:
         self._index_record(rec)
         # fork_utxo is already a private UtxoSet (tip copy or fresh
         # side-branch replay): apply the block onto it directly.
+        # Only the new best chain advances the tip; side branches are
+        # persisted/indexed above but leave tip and UTXO set untouched.
+        if new_work > self._active_work:
             apply_block_txs(txs, fork_utxo, height)
             self.utxo = fork_utxo
             self._tip_hash = hh
