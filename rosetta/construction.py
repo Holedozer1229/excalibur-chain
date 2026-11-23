@@ -293,6 +293,7 @@ class Construction:
             tx = parse_tx(bytes.fromhex(body["transaction"]))
             ops = []
             signers = []
+            total_in = 0
             for vin in tx["vin"]:
                 outpoint = (vin["prev"], int(vin["idx"]))
                 coin = vin["prev"][::-1].hex()+":"+str(vin["idx"])
@@ -306,6 +307,7 @@ class Construction:
                     value, lock = int(prevout["value"]), bytes(prevout["script"])
                 else:
                     raise ValueError("spent input requires historical output lookup")
+                total_in += value
                 lt = lock_type(lock)
                 ops.append({"operation_identifier":{"index":len(ops)},"type":"input",
                     "account":{"address":"lock:"+lock.hex()},
@@ -316,13 +318,17 @@ class Construction:
                     signer = {"address": "lock:" + lock.hex()}
                     if signer not in signers:
                         signers.append(signer)
+            total_out = 0
             for out in tx["vout"]:
                 lock=bytes(out["script"])
+                total_out += int(out["value"])
                 ops.append({"operation_identifier":{"index":len(ops)},"type":"output",
                     "account":{"address":"lock:"+lock.hex()},
                     "amount":{"value":str(int(out["value"])),"currency":self.currency},
                     "metadata":{"lock_type":lock_type(lock)}})
-            return {"operations":ops,"account_identifier_signers":signers}
+            return {"operations":ops,"account_identifier_signers":signers,
+                    "metadata":{"version":tx["version"],"lock_time":tx["locktime"],
+                                "fee":str(total_in-total_out)}}
         if path == "/construction/hash":
             raw=bytes.fromhex(body["signed_transaction"]); parse_tx(raw)
             return {"transaction_identifier":{"hash":txid_internal(raw)[::-1].hex()}}
