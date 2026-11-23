@@ -72,6 +72,19 @@ class RosettaDataTests(unittest.TestCase):
         self.assertEqual(status, 500)
         self.assertEqual(body["code"], 5)
 
+    def test_historical_balance_uses_chainstate_replay(self):
+        script = bytes([0]) + bytes.fromhex("ab" * 20)
+        key = (bytes.fromhex("33" * 32), 0)
+        self.cs._fork_utxo = lambda block_hash: {key: [(777, script, False, 0)]}
+        app = ExcalRosetta(self.cs, network="fork")
+        req = dict(self.net,
+                   account_identifier={"address": "lock:" + script.hex()},
+                   block_identifier={"index": 0})
+        status, body = app.handle("/account/balance", req)
+        self.assertEqual(status, 200)
+        self.assertEqual(body["balances"][0]["value"], "777")
+        self.assertEqual(body["block_identifier"]["index"], 0)
+
     def test_construction_payload_types_cover_all_native_locks(self):
         pub = secp.compress(secp.priv_to_pub(1))
         locks = {
