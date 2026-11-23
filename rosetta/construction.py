@@ -164,9 +164,7 @@ class Construction:
                 if lt in ("open", "anyone"): continue
                 st = TRIFOLD if lt in ("pqh", "qhtlc") else KNOT if lt == "knot" else "ecdsa"
                 payloads.append({"account_identifier": {"address": "lock:" + lock.hex()},
-                    "hex_bytes": sighash_all(tx, i, lock).hex(), "signature_type": st,
-                    "metadata": {"input_index": i, "lock_type": lt, "lock_hex": lock.hex(),
-                                 "coin_identifier": x["coin"]}})
+                    "hex_bytes": sighash_all(tx, i, lock).hex(), "signature_type": st})
             return {"unsigned_transaction": ser_tx(tx).hex(), "payloads": payloads}
 
         if path == "/construction/combine":
