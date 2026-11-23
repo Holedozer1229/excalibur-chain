@@ -254,7 +254,9 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
         if not isinstance(signatures, list):
             raise PCBEError("signatures must be an array")
         required = policy.get("required_roles")
-        if not isinstance(required, list) or not required or any(not isinstance(x, str) for x in required):
+        if (not isinstance(required, list) or not required
+                or any(not isinstance(x, str) or not x for x in required)
+                or len(set(required)) != len(required)):
             outcome, reason = "UNVERIFIABLE", "policy required_roles is unavailable"
             raise _StopVerification()
         if payload["predecessors"]:
@@ -296,7 +298,9 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
                 raise _StopVerification()
             if role not in set(authorized_roles):
                 raise PCBEError("signer is not authorized for declared role")
-            if item["policy_version"] != policy["version"]:
+            if (not isinstance(item["policy_version"], int)
+                    or isinstance(item["policy_version"], bool)
+                    or item["policy_version"] != policy["version"]):
                 raise PCBEError("signature policy version mismatch")
             sig = item["signature"]
             if not isinstance(sig, bytes) or len(sig) != 64:
@@ -327,7 +331,7 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
                 if not matching:
                     outcome, reason = "INCOMPLETE", f"no organization attested role {role}"
                     raise _StopVerification()
-                role_orgs.append(next(iter(matching)))
+                role_orgs.append(sorted(matching)[0])
             if len(set(role_orgs)) != len(role_orgs):
                 raise PCBEError("required roles are not held by distinct organizations")
             outcome, reason = "VALID", "all required roles and distinct-organization policy checks passed"
@@ -350,7 +354,7 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
         if outcome not in ("EXPIRED", "REVOKED", "UNVERIFIABLE"):
             outcome = "INVALID"
         reason = str(exc)
-    except (TypeError, KeyError, AttributeError, OverflowError, UnicodeError) as exc:
+    except (TypeError, ValueError, KeyError, AttributeError, OverflowError, UnicodeError) as exc:
         outcome, reason = "UNVERIFIABLE", "malformed verifier input: " + type(exc).__name__
     report = {
         "protocol": PROTOCOL,
