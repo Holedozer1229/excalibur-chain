@@ -6,7 +6,7 @@ lock:<scriptPubKey hex>. It does not translate the legacy GSF implementation.
 
 ## Implemented scope
 
-- Data API: network list/options/status, block, block transaction, tip balance,
+- Data API: network list/options/status, block, block transaction, historical UTXO-backed balance,
   live mempool list and transaction operations.
 - Construction API: derive, preprocess, metadata, payloads, combine, parse,
   hash and submit.
