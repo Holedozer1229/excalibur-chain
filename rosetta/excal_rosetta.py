@@ -361,7 +361,10 @@ class ExcalRosetta:
                     historical = getattr(self.cs, "_fork_utxo", None)
                     if not callable(historical):
                         return 500, self._error(5)
-                    utxo = historical(block_hash)
+                    try:
+                        utxo = historical(block_hash)
+                    except Exception as exc:
+                        return 500, self._error(5, "historical UTXO replay failed: " + str(exc))
                 total = 0
                 count = 0
                 finder = getattr(utxo, "find_by_spk", None)
