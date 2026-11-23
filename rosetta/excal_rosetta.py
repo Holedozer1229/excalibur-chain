@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from txscript import parse_tx, txid_internal
 from rosetta.construction import Construction
 
-BLOCKCHAIN = "EXCAL"
+BLOCKCHAIN = "excal"
 CURRENCY = {"symbol": "EXCAL", "decimals": 8}
 NETWORK = "mainnet"
 NETWORK_ID = {"blockchain": BLOCKCHAIN, "network": NETWORK}
@@ -110,7 +110,7 @@ class ExcalRosetta:
             input_refs.append({"index": idx})
             ops.append({
                 "operation_identifier": {"index": idx},
-                "type": "TRANSFER", "status": "SUCCESS",
+                "type": "transfer", "status": "success",
                 "account": {"address": _script_account(lock)},
                 "amount": {"value": str(-int(value)), "currency": CURRENCY},
                 "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
@@ -177,7 +177,7 @@ class ExcalRosetta:
                 for n, out in enumerate(t["vout"]):
                     ops.append({
                         "operation_identifier": {"index": len(ops)},
-                        "type": "MINING", "status": "SUCCESS",
+                        "type": "coinbase", "status": "success",
                         "account": {"address": _script_account(out["script"])},
                         "amount": {"value": str(int(out["value"])), "currency": CURRENCY},
                         "coin_change": {"coin_identifier": {"identifier": tx_hash + ":" + str(n)},
@@ -238,9 +238,9 @@ class ExcalRosetta:
             return 200, {
                 "version": {"rosetta_version": "1.4.13", "node_version": "EXCAL-native",
                             "middleware_version": "excal-rosetta/1.0.0"},
-                "allow": {"operation_statuses": [{"status": "SUCCESS", "successful": True},
-                                                  {"status": "FAILURE", "successful": False}],
-                          "operation_types": ["MINING", "TRANSFER", "INPUT", "OUTPUT", "FEE"],
+                "allow": {"operation_statuses": [{"status": "success", "successful": True},
+                                                  {"status": "failure", "successful": False}],
+                          "operation_types": ["coinbase", "transfer", "input", "output", "fee"],
                           "errors": ERRORS, "historical_balance_lookup": False,
                           "call_methods": [], "balance_exemptions": []},
                 "metadata": {"excal_extensions": {
