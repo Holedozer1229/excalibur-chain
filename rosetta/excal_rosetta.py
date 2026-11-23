@@ -22,7 +22,7 @@ from rosetta.construction import Construction
 BLOCKCHAIN = "excal"
 CURRENCY = {"symbol": "EXCAL", "decimals": 8}
 CURRENCIES = {"mainnet": CURRENCY, "fork": CURRENCY,
-              "testnet": {"symbol": "TEXCAL", "decimals": 8}}
+              "testnet": {"symbol": "tEXCAL", "decimals": 8}}
 NETWORK = "mainnet"
 NETWORK_ID = {"blockchain": BLOCKCHAIN, "network": NETWORK}
 ERRORS = [
