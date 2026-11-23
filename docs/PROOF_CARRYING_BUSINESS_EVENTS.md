@@ -141,8 +141,10 @@ The implementation fixes these v1 details:
 - Merkle leaf: `SHA-256(0x00 || evidence_digest)`; node: `SHA-256(0x01 || left || right)`; an unpaired final node is promoted unchanged. Evidence order is significant.
 - Event digest: `SHA-256("EXCAL-PCBE-EVENT-v1" || deterministic_cbor(event_without_signatures))`.
 - Ed25519 attestation message: domain-separated deterministic-CBOR array containing event digest, role, key ID, policy version, and fixed context string.
+- The verification policy must pin both network name and 32-byte genesis hash; a mismatch is rejected.
+- Non-empty predecessor lists return `UNVERIFIABLE` until a predecessor resolver is configured. No predecessor relationship is silently assumed valid.
 - Replay registry is an in-memory reference implementation only. A production verifier must provide durable, atomic, network-scoped replay storage.
-- Verification requires an explicit fresh revocation snapshot; missing or stale trust/revocation data returns `UNVERIFIABLE`.
+- Verification requires an explicit fresh revocation snapshot; missing, future-dated, or stale trust/revocation data returns `UNVERIFIABLE`.
 
 The implementation is not yet a complete PCBE deployment: it does not provide a production trust-root distribution mechanism, durable replay database, predecessor-chain resolver, evidence-byte retrieval service, HTTP API, CLI, or independent second implementation. Its local Ed25519 profile must be reviewed against the issuer ecosystem before interoperability claims. The test workflow is not evidence of passing until GitHub Actions actually executes the test steps successfully.
 
