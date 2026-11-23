@@ -65,7 +65,7 @@ class RosettaDataTests(unittest.TestCase):
         self.assertEqual(status, 500)
         self.assertEqual(body["code"], 4)
 
-    def test_historical_balance_explicitly_unsupported(self):
+    def test_historical_balance_fails_closed_without_replay_backend(self):
         req = dict(self.net, account_identifier={"address": "lock:00aa"},
                    block_identifier={"index": 0})
         status, body = self.app.handle("/account/balance", req)
