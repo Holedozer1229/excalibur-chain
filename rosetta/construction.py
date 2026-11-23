@@ -209,12 +209,24 @@ class Construction:
                 pub = bytes.fromhex(s["public_key"]["hex_bytes"]) if s.get("public_key") else b""
                 if len(sig) != 64: raise ValueError("ECDSA signature must be 64-byte compact")
                 if lt in ("pkh", "bridge"):
-                    if len(pub) == 65 and pub[0] == 4: pub = bytes([2 | (pub[64]&1)]) + pub[1:33]
-                    if len(pub) != 33 or pub[0] not in (2,3): raise ValueError("invalid public key")
-                    if lt == "pkh" and hash160(pub) != lock[1:]: raise ValueError("PKH key mismatch")
-                    if lt == "bridge" and pub[1:] != lock[1:]: raise ValueError("BRIDGE x mismatch")
-                    if not secp.verify(pub, sig, bytes.fromhex(digest)): raise ValueError("ECDSA invalid")
-                    tx["vin"][i]["script"] = pub + sig + bytes([SIGHASH_ALL])
+                    pub_wire = pub
+                    if len(pub_wire) == 65 and pub_wire[0] == 4:
+                        pub_verify = bytes([2 | (pub_wire[64] & 1)]) + pub_wire[1:33]
+                        point = secp.decompress(pub_verify)
+                        supplied = (int.from_bytes(pub_wire[1:33], "big"),
+                                    int.from_bytes(pub_wire[33:65], "big"))
+                        if point != supplied: raise ValueError("invalid uncompressed public key point")
+                    elif len(pub_wire) == 33 and pub_wire[0] in (2,3):
+                        pub_verify = pub_wire
+                    else:
+                        raise ValueError("invalid secp256k1 public key")
+                    if lt == "pkh" and hash160(pub_wire) != lock[1:]:
+                        raise ValueError("PKH key mismatch")
+                    if lt == "bridge" and pub_wire[1:33] != lock[1:]:
+                        raise ValueError("BRIDGE x mismatch")
+                    if not secp.verify(pub_verify, sig, bytes.fromhex(digest)):
+                        raise ValueError("ECDSA invalid")
+                    tx["vin"][i]["script"] = pub_wire + sig + bytes([SIGHASH_ALL])
                 elif lt == "htlc":
                     m = s.get("metadata") or {}
                     desc = bytes.fromhex(m["descriptor"])
