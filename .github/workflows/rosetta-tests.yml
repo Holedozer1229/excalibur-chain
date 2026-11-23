@@ -1,0 +1,32 @@
+name: EXCAL Rosetta tests
+
+on:
+  pull_request:
+    paths:
+      - "rosetta/**"
+      - "tests/test_excal_rosetta.py"
+      - "txscript.py"
+      - "txpq.py"
+      - "trifold_lockbox.py"
+      - "spent_leaf_registry.py"
+      - ".github/workflows/rosetta-tests.yml"
+  push:
+    branches: [master]
+    paths:
+      - "rosetta/**"
+      - "tests/test_excal_rosetta.py"
+      - "txscript.py"
+      - "txpq.py"
+      - "trifold_lockbox.py"
+      - "spent_leaf_registry.py"
+
+jobs:
+  rosetta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run Rosetta unit tests
+        run: python -m unittest discover -s tests -p "test_excal_rosetta.py" -v
