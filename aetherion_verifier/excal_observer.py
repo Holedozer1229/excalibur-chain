@@ -8,6 +8,7 @@ proof that the node is honest.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import ipaddress
 import json
@@ -36,8 +37,8 @@ def _loopback_url(url: str) -> str:
     else:
         if not addr.is_loopback:
             raise ObserverError("RPC endpoint must be loopback-only")
-    if parsed.username or parsed.password:
-        raise ObserverError("credentials in RPC URL are forbidden")
+    if parsed.username or parsed.password or parsed.path not in ("", "/") or parsed.query or parsed.fragment:
+        raise ObserverError("RPC URL must not contain credentials, path, query, or fragment")
     return url.rstrip("/")
 
 
@@ -110,3 +111,20 @@ def observe_tip(url: str) -> dict[str, Any]:
     if not consistent:
         raise ObserverError("node tip RPCs disagree; observation: " + json.dumps(observation, sort_keys=True))
     return observation
+
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Read-only EXCAL tip consistency observer")
+    parser.add_argument("--url", default="http://127.0.0.1:9432",
+                        help="loopback node RPC URL (default: %(default)s)")
+    args = parser.parse_args()
+    try:
+        print(json.dumps(observe_tip(args.url), sort_keys=True, indent=2))
+    except ObserverError as exc:
+        parser.exit(2, f"observer error: {exc}\\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
