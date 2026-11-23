@@ -95,6 +95,43 @@ class ExcalRosetta:
         self._indexed_height = tip_height
         self._indexed_tip_hash = tip_hash
 
+    def _mempool_transaction(self, raw):
+        tx = parse_tx(raw)
+        txid = txid_internal(raw)[::-1].hex()
+        ops = []
+        input_refs = []
+        for vin in tx["vin"]:
+            key = (vin["prev"], int(vin["idx"]))
+            rows = self.cs.utxo.get(key)
+            if not rows:
+                raise ValueError("mempool input prevout unavailable")
+            value, lock, _cb, _cbh = rows[0]
+            idx = len(ops)
+            input_refs.append({"index": idx})
+            ops.append({
+                "operation_identifier": {"index": idx},
+                "type": "TRANSFER", "status": "SUCCESS",
+                "account": {"address": _script_account(lock)},
+                "amount": {"value": str(-int(value)), "currency": CURRENCY},
+                "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
+                                "coin_action": "coin_spent"},
+            })
+        for n, out in enumerate(tx["vout"]):
+            idx = len(ops)
+            ops.append({
+                "operation_identifier": {"index": idx},
+                "type": "TRANSFER", "status": "SUCCESS",
+                "account": {"address": _script_account(out["script"])},
+                "amount": {"value": str(int(out["value"])), "currency": CURRENCY},
+                "related_operations": input_refs,
+                "coin_change": {"coin_identifier": {"identifier": txid + ":" + str(n)},
+                                "coin_action": "coin_created"},
+            })
+        return {"transaction_identifier": {"hash": txid}, "operations": ops,
+                "metadata": {"raw_transaction": raw.hex(),
+                             "input_count": len(tx["vin"]),
+                             "output_count": len(tx["vout"])}}
+
     def _error(self, code, message=None):
         e = dict(ERROR_BY_CODE[code])
         if message:
@@ -315,13 +352,7 @@ class ExcalRosetta:
                             if txid_internal(raw)[::-1].hex() == wanted), None)
                 if raw is None:
                     return 500, self._error(3)
-                tx = parse_tx(raw)
-                return 200, {"transaction": {
-                    "transaction_identifier": {"hash": wanted},
-                    "operations": [],
-                    "metadata": {"raw_transaction": raw.hex(),
-                                 "input_count": len(tx["vin"]),
-                                 "output_count": len(tx["vout"])}}}
+                return 200, {"transaction": self._mempool_transaction(raw)}
         if path.startswith("/construction/"):
             try:
                 return 200, self.construction.handle(path, body)
