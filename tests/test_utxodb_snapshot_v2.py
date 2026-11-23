@@ -1,5 +1,4 @@
 """Regression tests for strict Bitcoin snapshot v2 import."""
-import hashlib
 import os
 import struct
 import tempfile
@@ -15,17 +14,17 @@ def varint(n):
     if n < 0xfd:
         return bytes([n])
     if n <= 0xffff:
-        return b"\\xfd" + struct.pack("<H", n)
+        return b"\xfd" + struct.pack("<H", n)
     if n <= 0xffffffff:
-        return b"\\xfe" + struct.pack("<I", n)
-    return b"\\xff" + struct.pack("<Q", n)
+        return b"\xfe" + struct.pack("<I", n)
+    return b"\xff" + struct.pack("<Q", n)
 
 
 def snapshot_bytes(height=968698, version=2, trailing=b""):
     # Spendable coinbase output, followed by an unspendable ordinary output.
     rows = [
-        (b"\\x11" * 32, 0, 5_000_000_000, b"\\x51", 1, 1, 900000),
-        (b"\\x22" * 32, 1, 1234, b"\\x6a", 0, 0, 0),
+        (b"\x11" * 32, 0, 5_000_000_000, b"\x51", 1, 1, 900000),
+        (b"\x22" * 32, 1, 1234, b"\x6a", 0, 0, 0),
     ]
     out = bytearray(struct.pack("<IIIQ", MAGIC, version, height, len(rows)))
     for txid, vout, value, script, spendable, is_cb, cb_h in rows:
@@ -61,11 +60,11 @@ class SnapshotV2Tests(unittest.TestCase):
             spendable_count, spendable_total = snap.stats()
             self.assertEqual((spendable_count, spendable_total),
                              (1, 5_000_000_000))
-            key = (b"\\x11" * 32, 0)
-            self.assertEqual(snap.get(key), [(5_000_000_000, b"\\x51", 1, 900000)])
-            self.assertIsNone(snap.get((b"\\x22" * 32, 1)))
-            self.assertEqual(len(snap.find_by_spk(b"\\x51")), 1)
-            self.assertEqual(snap.find_by_spk(b"\\x6a"), [])
+            key = (b"\x11" * 32, 0)
+            self.assertEqual(snap.get(key), [(5_000_000_000, b"\x51", 1, 900000)])
+            self.assertIsNone(snap.get((b"\x22" * 32, 1)))
+            self.assertEqual(len(snap.find_by_spk(b"\x51")), 1)
+            self.assertEqual(snap.find_by_spk(b"\x6a"), [])
             self.assertEqual(len(list(UtxoSet(snapshot=snap).items())), 1)
         finally:
             snap.close()
