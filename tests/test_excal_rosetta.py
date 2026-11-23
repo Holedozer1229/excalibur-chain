@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from rosetta.excal_rosetta import ExcalRosetta, CURRENCY, _display_hash
 from rosetta.construction import Construction
-from txscript import lock_type
+from txscript import lock_type, ser_tx
 import secp256k1 as secp
 
 
@@ -109,6 +109,29 @@ class RosettaDataTests(unittest.TestCase):
                     "fee": 1000}})
             types = [p["signature_type"] for p in result["payloads"]]
             self.assertEqual(types, [] if expected[name] is None else [expected[name]])
+
+    def test_testnet_uses_canonical_ticker(self):
+        app = ExcalRosetta(self.cs, network="testnet")
+        self.assertEqual(app.currency, {"symbol": "tEXCAL", "decimals": 8})
+
+    def test_construction_parse_resolves_historical_spent_prevout(self):
+        prev = bytes.fromhex("44" * 32)
+        lock = bytes([0]) + bytes([0x55]) * 20
+        dest = bytes([0]) + bytes([0x66]) * 20
+        tx = {"version": 1,
+              "vin": [{"prev": prev, "idx": 2, "script": b"", "seq": 0xffffffff}],
+              "vout": [{"value": 9000, "script": dest}],
+              "locktime": 0}
+        raw = ser_tx(tx)
+        cs = SimpleNamespace(
+            utxo={},
+            tip=lambda: {"height": 12, "hash": bytes(32)})
+        lookup = lambda key: {"value": 10000, "script": lock} if key == (prev, 2) else None
+        builder = Construction(cs, output_lookup=lookup)
+        parsed = builder.handle("/construction/parse", {"transaction": raw.hex()})
+        self.assertEqual(parsed["operations"][0]["amount"]["value"], "-10000")
+        self.assertEqual(parsed["account_identifier_signers"][0]["address"],
+                         "lock:" + lock.hex())
 
     def test_hash_format_is_display_order(self):
         raw = bytes(range(32))
