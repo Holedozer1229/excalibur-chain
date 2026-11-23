@@ -1,3 +1,13 @@
+---
+title: EXCAL Rosetta API
+emoji: ⚔️
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Aetherion-Excalibur
 
 ![Excalibur — the sword in the stone](docs/assets/hero.webp)
