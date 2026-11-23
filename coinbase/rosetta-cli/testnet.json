@@ -35,7 +35,7 @@
     ],
     "currencies": [
       {
-        "symbol": "TEXCAL",
+        "symbol": "tEXCAL",
         "decimals": 8
       }
     ],
