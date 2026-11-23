@@ -219,8 +219,8 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
     signature_results: list[dict[str, Any]] = []
     outcome = "UNVERIFIABLE"
     reason = "verification not completed"
-    timestamp = int(time.time()) if now is None else int(now)
     try:
+        timestamp = int(time.time()) if now is None else int(now)
         payload = event_payload(event)
         checked.extend(["schema", "deterministic_cbor", "attachments_root"])
         digest = hashlib.sha256(EVENT_DOMAIN + canonical_cbor(payload)).digest()
@@ -362,8 +362,11 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
         "outcome": outcome,
         "reason": reason,
         "event_digest": (digest.hex() if "digest" in locals() else None),
-        "policy_id": policy.get("policy_id") if isinstance(policy, Mapping) else None,
-        "policy_version": policy.get("version") if isinstance(policy, Mapping) else None,
+        "policy_id": (policy.get("policy_id") if isinstance(policy, Mapping)
+                      and isinstance(policy.get("policy_id"), str) else None),
+        "policy_version": (policy.get("version") if isinstance(policy, Mapping)
+                           and isinstance(policy.get("version"), int)
+                           and not isinstance(policy.get("version"), bool) else None),
         "verifier": "excal-pcbe-python-reference/1",
         "checked": checked,
         "signature_results": signature_results,
