@@ -64,12 +64,26 @@ authorization.
 
 ## Validation status
 
-The focused GitHub Actions workflow is configured, but no successful test
-execution has been confirmed. A prior run failed before exposing job steps;
-treat the tests as unverified until a runner completes them. This is not
-Coinbase certification. Before production, run the complete Python suite,
-Rosetta CLI checks, all lock witness vectors, activation/timeout/replay tests,
-two-node relay/reorg tests, and verify that the target Rosetta client accepts
-EXCAL's custom Trifold/KNOT extension types. The Trifold source describes a
-custom scheme without a formal security proof; this adapter does not claim
-otherwise.
+The focused GitHub Actions workflow is configured, but CI has never
+completed a run: every invocation fails in 4–8s before any job step
+executes (GitHub billing-lock pattern, same as the other repos). VM runs
+are the only real signal and they are green: the full Python suite
+(52 tests, 1 graceful skip for the missing prometheus-client) passes,
+including the Rosetta Data + Construction tests and the ChainState
+submit-block regression tests.
+
+Official `rosetta-cli` (mesh-cli v0.10.4) conformance was run against the
+live 50k-block fork chain: `check:data` over blocks 49900–49999 with
+reconciliation enabled (configs in `coinbase/rosetta-cli/`) **passed**:
+100 blocks / 100 transactions / 100 operations, 100 active
+reconciliations, 0 failed, 100% coverage — Request/Response, Response
+Assertion, Block Syncing, Balance Tracking and Reconciliation all PASSED.
+A full 0–49999 sync has not been run: the first render per height still
+replays the chain (~5–15s at tip), so a full-chain CLI sync remains slow
+even with the view cache. This is not Coinbase certification. Before
+production, run the complete Python suite, a full Rosetta CLI sync (after
+a persistent UTXO index removes the per-height replay cost), all lock
+witness vectors, activation/timeout/replay tests, two-node relay/reorg
+tests, and verify that the target Rosetta client accepts EXCAL's custom
+Trifold/KNOT extension types. The Trifold source describes a custom scheme
+without a formal security proof; this adapter does not claim otherwise.

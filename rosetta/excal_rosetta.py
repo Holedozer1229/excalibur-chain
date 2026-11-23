@@ -65,19 +65,36 @@ def _outpoint(txid_wire, vout):
 class ExcalRosetta:
     """Rosetta Data API backed by a live ChainState instance."""
 
-    def __init__(self, chainstate, network=NETWORK, mempool=None, node=None):
+    def __init__(self, chainstate, network=NETWORK, mempool=None, node=None,
+                 chain_network=None):
         self.cs = chainstate
         self.mempool = mempool
         self.node = node
         self.currency = CURRENCIES.get(network, CURRENCY)
+        # Consensus network whose activation gates the Construction API
+        # enforces. The Rosetta network label ("mainnet") is separate from
+        # the node consensus network ("fork" for the live Bitcoin-anchored
+        # chain); gates must follow the chain, not the label. Defaults to
+        # the label for standalone/test fixtures with no chain attached.
+        self.chain_network = chain_network or network
         self.construction = Construction(chainstate, mempool, node, self.currency,
-                                         self._historical_output)
+                                         self._historical_output,
+                                         network=self.chain_network)
         self.network = network
         self.network_id = {"blockchain": BLOCKCHAIN, "network": network}
         self.lock = threading.RLock()
         self._output_index = {}
         self._indexed_height = -1
         self._indexed_tip_hash = None
+        # Pre/post-block UTXO views, keyed by (height, block hash bytes).
+        # _utxo_before replays the whole canonical path through the
+        # ChainState hook, so an uncached /block or /network/status at the
+        # 50k tip costs seconds per call; the cache makes repeat and
+        # sequential (check:data-style) renders O(view copy) instead.
+        # Keys carry the block hash, so a reorg naturally misses and
+        # recomputes; entries are bounded to a small rolling window.
+        self._pre_views = {}
+        self._post_views = {}
 
     def _ensure_output_index(self):
         """Incrementally index canonical outputs; rebuild after a reorg."""
@@ -186,35 +203,64 @@ class ExcalRosetta:
     def _record_identifier(self, rec):
         return {"index": int(rec["height"]), "hash": _display_hash(rec["hash"])}
 
+    @staticmethod
+    def _hash_bytes(value):
+        if isinstance(value, bytes):
+            return value
+        return bytes.fromhex(str(value))
+
+    def _cache_view(self, cache, key, view):
+        # Views are ~50k entries at the live tip; keep a small rolling
+        # window (8 heights) so sequential renders stay cheap without
+        # unbounded memory growth.
+        cache[key] = dict(view)
+        while len(cache) > 8:
+            del cache[min(cache)]
+
     def _utxo_before(self, height):
         if int(height) <= 0:
             return {}
         previous = self._record(int(height) - 1)
         if previous is None:
             raise ValueError("missing previous canonical block")
+        prev_hash = self._hash_bytes(previous["hash"])
+        key = (int(height), prev_hash)
+        cached = self._pre_views.get(key)
+        if cached is not None:
+            return dict(cached)
+        # The post-view of the previous block is exactly this pre-view.
+        post = self._post_views.get((int(height) - 1, prev_hash))
+        if post is not None:
+            self._cache_view(self._pre_views, key, post)
+            return dict(post)
         replay = getattr(self.cs, "_fork_utxo", None)
         if callable(replay):
             view = replay(previous["hash"])
-            return view.copy() if callable(getattr(view, "copy", None)) else view
-        # Deterministic fallback for lightweight tests, not used by live ChainState.
-        view = {}
-        for h in range(int(height)):
-            rec = self._record(h)
-            if rec is None:
-                raise ValueError("missing canonical block during UTXO replay")
-            for raw in rec.get("txs", []):
-                tx = parse_tx(raw)
-                coinbase = _coinbase(tx)
-                if not coinbase:
-                    for vin in tx["vin"]:
-                        key = (vin["prev"], int(vin["idx"]))
-                        if key not in view:
-                            raise ValueError("historical replay encountered missing input")
-                        del view[key]
-                tid = txid_internal(raw)
-                for n, out in enumerate(tx["vout"]):
-                    view[(tid, n)] = [(int(out["value"]), bytes(out["script"]),
-                                       coinbase, h if coinbase else 0)]
+            view = view.copy() if callable(getattr(view, "copy", None)) else view
+        else:
+            # Deterministic fallback for lightweight tests, not used by live ChainState.
+            view = {}
+            for h in range(int(height)):
+                rec = self._record(h)
+                if rec is None:
+                    raise ValueError("missing canonical block during UTXO replay")
+                for raw in rec.get("txs", []):
+                    tx = parse_tx(raw)
+                    coinbase = _coinbase(tx)
+                    if not coinbase:
+                        for vin in tx["vin"]:
+                            key2 = (vin["prev"], int(vin["idx"]))
+                            if key2 not in view:
+                                raise ValueError("historical replay encountered missing input")
+                            del view[key2]
+                    tid = txid_internal(raw)
+                    for n, out in enumerate(tx["vout"]):
+                        view[(tid, n)] = [(int(out["value"]), bytes(out["script"]),
+                                           coinbase, h if coinbase else 0)]
+        # The caller mutates the returned view into the block's post-view,
+        # so cache a separate copy. Values are read-only rows; only the
+        # dict itself is mutated, so a shallow copy is sufficient.
+        self._cache_view(self._pre_views, key, view)
         return view
 
     def _block(self, height):
@@ -286,6 +332,9 @@ class ExcalRosetta:
                 "operations": ops,
                 "metadata": {"lock_time": int(t["locktime"]), "version": int(t["version"]), "fee": str(fee)},
             })
+        # `view` is now the block's post-view: cache it so the next
+        # height's pre-view is a copy, not another full-chain replay.
+        self._cache_view(self._post_views, (int(height), self._hash_bytes(rec["hash"])), view)
         timestamp = int(rec.get("time", 0)) * 1000
         return {
             "block_identifier": self._record_identifier(rec),
@@ -308,7 +357,7 @@ class ExcalRosetta:
                 "allow": {"operation_statuses": [{"status": "success", "successful": True},
                                                   {"status": "failure", "successful": False}],
                           "operation_types": ["coinbase", "transfer", "input", "output", "fee"],
-                          "errors": ERRORS, "historical_balance_lookup": False,
+                          "errors": ERRORS, "historical_balance_lookup": True,
                           "call_methods": [], "balance_exemptions": []},
                 "metadata": {"excal_extensions": {
                     "trifold_signature_type": "trifold",
@@ -406,7 +455,11 @@ class ExcalRosetta:
                     if not callable(historical):
                         return 500, self._error(5)
                     try:
-                        utxo = historical(block_hash)
+                        # UTXO set as of `height` is the pre-view of the
+                        # next block, so this reuses the cached views that
+                        # _block builds (a direct _fork_utxo call here
+                        # replayed the whole chain on every lookup).
+                        utxo = self._utxo_before(height + 1)
                     except Exception as exc:
                         return 500, self._error(5, "historical UTXO replay failed: " + str(exc))
                 total = 0
@@ -477,7 +530,8 @@ def make_handler(app):
             try:
                 length = int(self.headers.get("Content-Length", "0"))
                 if length <= 0 or length > 2_000_000:
-                    raise ValueError("invalid Content-Length")                body = json.loads(self.rfile.read(length).decode("utf-8"))
+                    raise ValueError("invalid Content-Length")
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
                 if not isinstance(body, dict):
                     raise ValueError("request body must be a JSON object")
                 status, result = app.handle(self.path, body)
@@ -497,8 +551,10 @@ def make_handler(app):
     return Handler
 
 
-def serve(chainstate, host="127.0.0.1", port=8070, network=NETWORK, mempool=None, node=None):
-    app = ExcalRosetta(chainstate, network=network, mempool=mempool, node=node)
+def serve(chainstate, host="127.0.0.1", port=8070, network=NETWORK, mempool=None, node=None,
+          chain_network=None):
+    app = ExcalRosetta(chainstate, network=network, mempool=mempool, node=node,
+                       chain_network=chain_network)
     server = ThreadingHTTPServer((host, int(port)), make_handler(app))
     server.serve_forever()
 
@@ -516,7 +572,7 @@ def main():
     args = parser.parse_args()
     from chainstate import ChainState
     cs = ChainState(args.data_dir, net=args.chain_network).load()
-    serve(cs, args.host, args.port, args.network)
+    serve(cs, args.host, args.port, args.network, chain_network=args.chain_network)
 
 
 if __name__ == "__main__":

@@ -4,12 +4,19 @@ from types import SimpleNamespace
 from rosetta.excal_rosetta import ExcalRosetta, CURRENCY, _display_hash
 from rosetta.construction import Construction
 from txscript import lock_type, ser_tx, txid_internal
+import genesis_fork
 from genesis_fork import qlock_activation
 import secp256k1 as secp
 
 
 class RosettaDataTests(unittest.TestCase):
     def setUp(self):
+        # Pin the process-global network selection: importing fork_node
+        # (or constructing a ChainStore, as the atomic-swap tests do)
+        # flips genesis_fork's global to "fork" (qlock_activation 0).
+        # These tests assume the import-time default (testnet, qlock 102);
+        # without the pin they pass alone and fail in the full suite.
+        genesis_fork.use_network("testnet")
         # Minimal canonical chainstate-shaped fixture. Hashes are wire-order.
         ghash = bytes.fromhex("11" * 32)
         b1hash = bytes.fromhex("22" * 32)
@@ -47,7 +54,12 @@ class RosettaDataTests(unittest.TestCase):
         status, body = self.app.handle("/network/options", self.net)
         self.assertEqual(status, 200)
         self.assertIn("coinbase", body["allow"]["operation_types"])
-        self.assertFalse(body["allow"]["historical_balance_lookup"])
+        # Historical lookup is a real capability: /account/balance with a
+        # block identifier replays the canonical chain via ChainState
+        # _fork_utxo (verified live at heights 100/1000/25000/42899/49899
+        # against the 50k fork chain, exact to the sword). When a backend
+        # cannot replay, the endpoint fails closed (code 5) instead.
+        self.assertTrue(body["allow"]["historical_balance_lookup"])
 
     def test_network_status_uses_tip(self):
         status, body = self.app.handle("/network/status", self.net)
@@ -256,6 +268,154 @@ class RosettaDataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "mempool rejected"):
             builder.handle("/construction/submit", {
                 "signed_transaction": raw.hex()})
+
+
+class RosettaNetworkIsolationTests(unittest.TestCase):
+    """Regression: Construction gates must not follow the process-global
+    network selection. Importing fork_node / constructing a ChainStore
+    flips genesis_fork's global to "fork" (qlock_activation 0); a
+    mainnet Construction must still allow legacy outputs at height 0,
+    and a fork Construction must retire them there."""
+
+    def setUp(self):
+        genesis_fork.use_network("fork")
+        self.addCleanup(genesis_fork.use_network, "testnet")
+        self.assertEqual(qlock_activation(), 0)
+        prev = bytes.fromhex("55" * 32)
+        self.coin = prev[::-1].hex() + ":0"
+        self.cs = SimpleNamespace(
+            utxo={(prev, 0): [(10000, b"\x51", False, 0)]},
+            tip=lambda: {"height": -1, "hash": bytes(32)})
+        self.body = {"metadata": {
+            "inputs": [{"coin": self.coin, "value": 10000,
+                        "lock": "51", "lock_type": "anyone"}],
+            "outputs": [{"value": 9000, "lock": "51",
+                         "lock_type": "anyone"}],
+            "fee": 1000}}
+
+    def test_mainnet_construction_ignores_fork_global(self):
+        builder = Construction(self.cs, network="mainnet")
+        result = builder.handle("/construction/payloads", self.body)
+        self.assertEqual(result["payloads"], [])
+
+    def test_fork_construction_retires_legacy_outputs_at_height_zero(self):
+        builder = Construction(self.cs, network="fork")
+        with self.assertRaisesRegex(ValueError, "legacy anyone outputs are retired"):
+            builder.handle("/construction/payloads", self.body)
+
+    def test_unpinned_construction_still_follows_global(self):
+        # Documents the remaining legacy behaviour: without a network the
+        # global selection applies (and is what the full-suite failure was).
+        builder = Construction(self.cs)
+        with self.assertRaisesRegex(ValueError, "legacy anyone outputs are retired"):
+            builder.handle("/construction/payloads", self.body)
+
+    def test_app_gates_follow_chain_network_not_label(self):
+        # Production mapping: Rosetta label "mainnet" served over the live
+        # fork chain must enforce fork gates (qlock 0), not label gates.
+        app = ExcalRosetta(self.cs, network="mainnet", chain_network="fork")
+        self.assertEqual(app.construction.network, "fork")
+        with self.assertRaisesRegex(ValueError, "legacy anyone outputs are retired"):
+            app.construction.handle("/construction/payloads", self.body)
+
+    def test_app_gates_default_to_label_without_chain_network(self):
+        app = ExcalRosetta(self.cs, network="mainnet")
+        self.assertEqual(app.construction.network, "mainnet")
+        self.assertEqual(app.construction.handle("/construction/payloads", self.body)["payloads"], [])
+
+
+class RosettaBlockCacheTests(unittest.TestCase):
+    """Regression: _utxo_before replayed the whole canonical path through
+    ChainState._fork_utxo on every /block and /network/status call
+    (~14s at the 50k tip), so the official CLI timed out. Pre/post-block
+    UTXO views are now cached per (height, block hash)."""
+
+    def setUp(self):
+        genesis_fork.use_network("testnet")
+        self.lock1 = bytes([0]) + bytes.fromhex("11" * 20)
+        self.lock2 = bytes([0]) + bytes.fromhex("22" * 20)
+        self.cb1 = ser_tx({
+            "version": 1,
+            "vin": [{"prev": bytes(32), "idx": 0xffffffff,
+                     "script": b"", "seq": 0xffffffff}],
+            "vout": [{"value": 50000, "script": self.lock1}],
+            "locktime": 0})
+        self.cb1_txid = txid_internal(self.cb1)
+        self.spend = ser_tx({
+            "version": 1,
+            "vin": [{"prev": self.cb1_txid, "idx": 0,
+                     "script": b"", "seq": 0xffffffff}],
+            "vout": [{"value": 49000, "script": self.lock2}],
+            "locktime": 0})
+        ghash = bytes.fromhex("11" * 32)
+        b1hash = bytes.fromhex("22" * 32)
+        b2hash = bytes.fromhex("33" * 32)
+        self.genesis = {"height": 0, "hash": ghash, "time": 100,
+                        "version": 1, "bits": 0x1f000100, "nonce": 0, "txs": []}
+        self.block1 = {"height": 1, "hash": b1hash, "prev": ghash,
+                       "time": 160, "version": 1, "bits": 0x1f000100,
+                       "nonce": 1, "txs": [self.cb1]}
+        self.block2 = {"height": 2, "hash": b2hash, "prev": b1hash,
+                       "time": 220, "version": 1, "bits": 0x1f000100,
+                       "nonce": 2, "txs": [self.spend]}
+        self.by_height = {0: self.genesis, 1: self.block1, 2: self.block2}
+        self.tip_hash = b2hash
+        self.calls = []
+        cs = SimpleNamespace(
+            by_height=self.by_height, utxo={},
+            tip=lambda: {"height": 2, "hash": self.tip_hash})
+        cs._fork_utxo = self._fork_utxo
+        self.cs = cs
+        self.app = ExcalRosetta(cs, network="mainnet")
+
+    def _fork_utxo(self, prev_hash):
+        self.calls.append(bytes(prev_hash))
+        if prev_hash == self.genesis["hash"]:
+            return {}
+        if prev_hash == self.block1["hash"]:
+            return {(self.cb1_txid, 0): [(50000, self.lock1, True, 1)]}
+        raise ValueError("unexpected replay for " + bytes(prev_hash).hex())
+
+    def test_repeat_block_render_replays_once(self):
+        self.app._block(1)
+        self.app._block(1)
+        self.assertEqual(len(self.calls), 1)
+
+    def test_sequential_blocks_reuse_post_view(self):
+        self.app._block(1)
+        block2 = self.app._block(2)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(block2["transactions"][0]["metadata"]["fee"], "1000")
+
+    def test_reorged_block_renders_new_transactions(self):
+        self.app._block(1)
+        cb_new = ser_tx({
+            "version": 1,
+            "vin": [{"prev": bytes(32), "idx": 0xffffffff,
+                     "script": b"", "seq": 0xffffffff}],
+            "vout": [{"value": 60000, "script": self.lock1}],
+            "locktime": 0})
+        b1hash2 = bytes.fromhex("44" * 32)
+        self.by_height[1] = {"height": 1, "hash": b1hash2,
+                             "prev": self.genesis["hash"], "time": 160,
+                             "version": 1, "bits": 0x1f000100, "nonce": 9,
+                             "txs": [cb_new]}
+        self.tip_hash = b1hash2
+        block = self.app._block(1)
+        self.assertEqual(
+            block["transactions"][0]["operations"][0]["amount"]["value"], "60000")
+
+    def test_historical_balance_replays_once(self):
+        net = {"network_identifier": {"blockchain": "excal", "network": "mainnet"}}
+        req = dict(net, account_identifier={"address": "lock:" + self.lock1.hex()},
+                   block_identifier={"index": 1})
+        status, body = self.app.handle("/account/balance", req)
+        self.assertEqual(status, 200)
+        self.assertEqual(body["balances"][0]["value"], "50000")
+        status, body = self.app.handle("/account/balance", req)
+        self.assertEqual(status, 200)
+        self.assertEqual(body["balances"][0]["value"], "50000")
+        self.assertEqual(len(self.calls), 1)
 
 
 if __name__ == "__main__":

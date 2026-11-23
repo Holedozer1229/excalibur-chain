@@ -1,116 +1,47 @@
 {
-  "network": "testnet",
-  "version": "2.1.0",
-  "allow_incomplete_blocks": false,
-  "retries": 3,
-  "timeout": 30,
-  "service": "data",
+  "network": {
+    "blockchain": "excal",
+    "network": "testnet"
+  },
+  "online_url": "http://127.0.0.1:8070",
+  "data_directory": "./rosetta-cli/testnet",
+  "http_timeout": 30,
+  "max_retries": 5,
+  "retry_elapsed_time": 0,
+  "max_online_connections": 120,
+  "max_sync_concurrency": 1,
+  "tip_delay": 300,
+  "max_reorg_depth": 100,
+  "log_configuration": false,
+  "compression_disabled": false,
+  "l0_in_memory_enabled": false,
+  "all_in_memory_enabled": false,
+  "error_stack_trace_disabled": false,
+  "coin_supported": false,
+  "construction": null,
   "data": {
-    "network": {
-      "blockchain": "excal",
-      "network": "testnet"
-    },
-    "genesis_block_identifier": {
-      "index": 0
-    },
-    "genesis_block_timestamp": 1700000000000,
-    "block_identifier_palettes": [],
-    "account_identifier_palettes": [],
-    "operation_statuses": [
-      {
-        "status": "success",
-        "successful": true
-      },
-      {
-        "status": "failure",
-        "successful": false
-      }
-    ],
-    "operation_types": [
-      "coinbase",
-      "transfer",
-      "input",
-      "output",
-      "fee"
-    ],
-    "currencies": [
-      {
-        "symbol": "tEXCAL",
-        "decimals": 8
-      }
-    ],
-    "fungible_operations": [
-      "coinbase",
-      "transfer",
-      "input",
-      "output",
-      "fee"
-    ],
-    "related_operations": [
-      {
-        "operation_type": "coinbase",
-        "related_operation_types": []
-      },
-      {
-        "operation_type": "input",
-        "related_operation_types": [
-          "output"
-        ]
-      },
-      {
-        "operation_type": "output",
-        "related_operation_types": [
-          "input"
-        ]
-      },
-      {
-        "operation_type": "transfer",
-        "related_operation_types": [
-          "input",
-          "output"
-        ]
-      },
-      {
-        "operation_type": "fee",
-        "related_operation_types": [
-          "input"
-        ]
-      }
-    ],
-    "errors": [
-      {
-        "code": 1,
-        "message": "invalid network identifier"
-      },
-      {
-        "code": 2,
-        "message": "block not found"
-      },
-      {
-        "code": 3,
-        "message": "transaction not found"
-      },
-      {
-        "code": 4,
-        "message": "invalid account identifier"
-      },
-      {
-        "code": 5,
-        "message": "historical UTXO state lookup unavailable"
-      },
-      {
-        "code": 6,
-        "message": "construction or consensus validation failed"
-      },
-      {
-        "code": 7,
-        "message": "invalid request"
-      }
-    ],
-    "middleware": {
-      "indexer": {
-        "config": {}
-      }
-    }
-  }
+    "active_reconciliation_concurrency": 16,
+    "inactive_reconciliation_concurrency": 4,
+    "inactive_reconciliation_frequency": 250,
+    "log_blocks": false,
+    "log_transactions": false,
+    "log_balance_changes": false,
+    "log_reconciliations": false,
+    "ignore_reconciliation_error": false,
+    "exempt_accounts": "",
+    "bootstrap_balances": "",
+    "interesting_accounts": "",
+    "reconciliation_disabled": false,
+    "reconciliation_drain_disabled": false,
+    "inactive_discrepancy_search_disabled": false,
+    "balance_tracking_disabled": false,
+    "coin_tracking_disabled": false,
+    "status_port": 9090,
+    "results_output_file": "",
+    "pruning_block_disabled": false,
+    "pruning_balance_disabled": false,
+    "initial_balance_fetch_disabled": false
+  },
+  "perf": null,
+  "sign": null
 }

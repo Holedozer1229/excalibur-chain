@@ -11,9 +11,10 @@ This directory contains the complete [Coinbase Rosetta](https://www.coinbase.com
 | File | Purpose |
 |---|---|
 | `rosetta-config.json` | Main Rosetta API configuration |
-| `rosetta-cli/config.json` | Rosetta CLI network configuration |
-| `rosetta-cli/mainnet.json` | Mainnet network definition |
-| `rosetta-cli/testnet.json` | Testnet network definition |
+| `rosetta-cli/mainnet.json` | Rosetta CLI (mesh-cli v0.10.4) syncer configuration for mainnet |
+| `rosetta-cli/testnet.json` | Rosetta CLI (mesh-cli v0.10.4) syncer configuration for testnet |
+| `rosetta-cli/mainnet-asserter.json` | Asserter configuration generated from the live mainnet server |
+| `rosetta-cli/testnet-asserter.json` | Asserter configuration for testnet (same shape, testnet genesis) |
 | `rosetta-cli/bootstrap_tx.json` | Genesis bootstrap transaction |
 | `rosetta.md` | Detailed Rosetta API documentation |
 | `listing-proposal.md` | Exchange listing proposal |
@@ -24,22 +25,45 @@ This directory contains the complete [Coinbase Rosetta](https://www.coinbase.com
 ### 1. Install Rosetta CLI
 
 ```bash
-# Download from https://github.com/coinbase/rosetta-cli/releases
+# mesh-cli v0.10.4 (the rosetta-cli repo was renamed to mesh-cli)
+curl -sL -o rosetta-cli.tar.gz \
+  https://github.com/coinbase/mesh-cli/releases/download/v0.10.4/rosetta-cli-0.10.4-linux-amd64.tar.gz
+tar xzf rosetta-cli.tar.gz
+./rosetta-cli-0.10.4-linux-amd64 version  # v0.10.4
 ```
 
-### 2. Validate Configuration
+### 2. Start the Rosetta server (serves the live fork chain as `mainnet`)
+
+```bash
+python3 rosetta/excal_rosetta.py --data-dir ./chaindata_fork \
+  --host 127.0.0.1 --port 8070 --network mainnet --chain-network fork
+```
+
+### 3. Validate with the official CLI (bounded range; full sync is slow)
 
 ```bash
 rosetta-cli check:data \
-  --configuration-file coinbase/rosetta-cli/config.json \
-  --network mainnet
+  --configuration-file coinbase/rosetta-cli/mainnet.json \
+  --asserter-configuration-file coinbase/rosetta-cli/mainnet-asserter.json \
+  --data-dir /tmp/rosetta-check \
+  --start-block 49900
+# End condition (49999) lives in the scratch copy used for the run, not
+# in the repo config, so the check follows the live tip by default.
 ```
 
-### 3. Deploy Rosetta Server
+Notes:
 
-```bash
-rosetta-server --config coinbase/rosetta-config.json
-```
+- The syncer configs set `max_sync_concurrency: 1` and `http_timeout: 30`:
+  this server is single-process Python, so concurrent block fetches
+  serialize on the GIL and cold renders replay the chain (~5–15s at the
+  50k tip). First call per height pays the replay; sequential renders
+  reuse the cached UTXO views.
+- `rosetta-cli/config.json` targets a pre-rename CLI format and is
+  superseded by `mainnet.json` / `testnet.json`; it is left in place for
+  reference only.
+- The asserter files were generated from the live server with
+  `rosetta-cli utils:asserter-configuration`. Regenerate them after any
+  `/network/options` change.
 
 ## Network Summary
 

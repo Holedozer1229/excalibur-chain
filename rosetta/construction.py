@@ -15,13 +15,43 @@ from txscript import (
     lock_htlc_for_descriptor, lock_qhtlc_for_descriptor,
     lock_knot_for_descriptor, lock_pqh_for_root, sign_knot_input,
 )
-from genesis_fork import (qlock_activation, qday_activation, htlc_activation,
-                          qhtlc_activation, bridge_activation, knot_activation)
+from genesis_fork import (NETWORKS, QLOCK_ACTIVATION, QDAY_ACTIVATION,
+                          HTLC_ACTIVATION, QHTLC_ACTIVATION, BRIDGE_ACTIVATION,
+                          KNOT_ACTIVATION, qlock_activation, qday_activation,
+                          htlc_activation, qhtlc_activation, bridge_activation,
+                          knot_activation)
 
 CURRENCY = {"symbol": "EXCAL", "decimals": 8}
 TRIFOLD = "trifold"
 KNOT = "excal_knot"
 LOCKS = {"pkh", "open", "pqh", "htlc", "qhtlc", "bridge", "knot", "p2pk", "anyone"}
+
+# Activation heights keyed by NETWORKS entry, falling back to the
+# module-level defaults for keys a network dict does not spell out.
+# A named network's gates never depend on genesis_fork's process-global
+# selected network: importing fork_node (or constructing a ChainStore)
+# flips that global to "fork" (qlock_activation 0), which used to make
+# this module retire legacy outputs at height 0 for every caller.
+_GATE_DEFAULTS = {"qlock": QLOCK_ACTIVATION, "qday": QDAY_ACTIVATION,
+                  "htlc": HTLC_ACTIVATION, "qhtlc": QHTLC_ACTIVATION,
+                  "bridge": BRIDGE_ACTIVATION, "knot": KNOT_ACTIVATION}
+
+
+def _gates(network=None):
+    """Activation heights for `network`, or the process-global ones."""
+    if network is not None and network in NETWORKS:
+        params = NETWORKS[network]
+        return {"pkh": params.get("qlock_activation", _GATE_DEFAULTS["qlock"]),
+                "open": params.get("qlock_activation", _GATE_DEFAULTS["qlock"]),
+                "pqh": params.get("qday_activation", _GATE_DEFAULTS["qday"]),
+                "htlc": params.get("htlc_activation", _GATE_DEFAULTS["htlc"]),
+                "qhtlc": params.get("qhtlc_activation", _GATE_DEFAULTS["qhtlc"]),
+                "bridge": params.get("bridge_activation", _GATE_DEFAULTS["bridge"]),
+                "knot": params.get("knot_activation", _GATE_DEFAULTS["knot"])}
+    return {"pkh": qlock_activation(), "open": qlock_activation(),
+            "pqh": qday_activation(), "htlc": htlc_activation(),
+            "qhtlc": qhtlc_activation(), "bridge": bridge_activation(),
+            "knot": knot_activation()}
 
 
 def coin_key(value):
@@ -51,25 +81,26 @@ def amount(op, currency=CURRENCY):
     return int(a["value"])
 
 
-def active(lt, height, output=False):
-    gates = {"pkh": qlock_activation(), "open": qlock_activation(),
-             "pqh": qday_activation(), "htlc": htlc_activation(),
-             "qhtlc": qhtlc_activation(), "bridge": bridge_activation(),
-             "knot": knot_activation()}
+def active(lt, height, output=False, network=None):
+    gates = _gates(network)
     if lt in gates and height < gates[lt]:
         raise ValueError(f"{lt} not active at height {height}")
     # Consensus preserves legacy P2PK/OP_TRUE spends after Q-Lock activation;
     # only creation of new outputs with these locks is retired.
-    if output and lt in ("p2pk", "anyone") and height >= qlock_activation():
+    if output and lt in ("p2pk", "anyone") and height >= gates["pkh"]:
         raise ValueError(f"legacy {lt} outputs are retired")
-    
+
 
 class Construction:
     def __init__(self, chainstate, mempool=None, node=None, currency=CURRENCY,
-                 output_lookup=None):
+                 output_lookup=None, network=None):
         self.cs, self.mempool, self.node = chainstate, mempool, node
         self.currency = currency
         self.output_lookup = output_lookup
+        # Named consensus network whose activation gates apply (e.g. "fork"
+        # for the live chain); None keeps the legacy process-global
+        # genesis_fork selection for direct callers.
+        self.network = network
 
     def _input(self, coin):
         key = coin_key(coin)
@@ -144,7 +175,7 @@ class Construction:
                     raise ValueError("UTXO changed after preprocess")
                 if live["coinbase"] and height - live["cb_height"] < COINBASE_MATURITY:
                     raise ValueError("coinbase input immature")
-                active(live["type"], height)
+                active(live["type"], height, network=self.network)
                 ins.append({**item, "lock_type": live["type"],
                             "coinbase": live["coinbase"], "cb_height": live["cb_height"]})
             outs = opts.get("outputs") or []
@@ -154,7 +185,7 @@ class Construction:
                 out_lock = bytes.fromhex(out["lock"])
                 out_type = lock_type(out_lock)
                 if out_type not in LOCKS: raise ValueError("unknown output lock")
-                active(out_type, height, output=True)
+                active(out_type, height, output=True, network=self.network)
             if sum(x["value"] for x in ins) - sum(int(x["value"]) for x in outs) != int(opts["fee"]):
                 raise ValueError("input/output/fee values do not reconcile")
             return {"metadata": {"inputs": ins, "outputs": outs,
@@ -177,7 +208,7 @@ class Construction:
                 if live["value"] != int(x["value"]): raise ValueError("UTXO value changed")
                 if live["coinbase"] and height - live["cb_height"] < COINBASE_MATURITY:
                     raise ValueError("coinbase input immature")
-                active(live["type"], height)
+                active(live["type"], height, network=self.network)
                 total_in += live["value"]
                 tx["vin"].append({"prev": live["key"][0], "idx": live["key"][1],
                                   "script": b"", "seq": 0xffffffff})
@@ -187,7 +218,7 @@ class Construction:
                 lt = lock_type(lock)
                 if lt not in LOCKS or lt != x.get("lock_type"):
                     raise ValueError("unknown output lock or lock type mismatch")
-                active(lt, height, output=True)
+                active(lt, height, output=True, network=self.network)
                 value = int(x["value"])
                 if value <= 0: raise ValueError("output value must be positive")
                 total_out += value
