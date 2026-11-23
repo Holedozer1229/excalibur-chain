@@ -95,3 +95,33 @@ authentication layer.
 - The observer cross-checks a single node's own RPC responses; it is not a
   substitute for `genealogy_verify.py`, full node validation, or independent
   peer comparison.
+
+## Verify an externally exported Aetherion/Caduceus envelope
+
+Aetherion's `exportCaduceusAvta()` produces the unsigned AVTA v1 payload,
+committed input JSON, and evidence JSON. An independently controlled signer
+must add the Ed25519 signature. Export the three JSON objects separately,
+then verify them on an EXCAL operator machine:
+
+```bash
+python -m aetherion_verifier.verify_cli \
+  --attestation signed-attestation.json \
+  --inputs inputs.json \
+  --evidence evidence.json \
+  --method-source caduceusVerifiableHarmonic.ts \
+  --trusted-issuers trusted-issuers.json
+```
+
+The trusted issuer file maps issuer IDs to lowercase hex-encoded raw 32-byte
+Ed25519 public keys:
+
+```json
+{"independent-auditor-01":"<64 lowercase hex characters>"}
+```
+
+The method source file must be the exact bytes whose SHA-256 is in
+`payload.method.sha256`; do not use a different checkout or edited copy.
+The CLI exits 0 only for `valid`, 1 for `invalid` or `inconclusive`, and 2
+for malformed local files. An untrusted issuer is inconclusive. This verifies
+envelope integrity and issuer authorization; independent reproduction of the
+Caduceus computation is still a separate check.
