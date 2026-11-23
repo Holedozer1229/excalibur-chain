@@ -465,10 +465,14 @@ def main():
     parser.add_argument("--data-dir", required=True, help="EXCAL ChainState data directory")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8070)
-    parser.add_argument("--network", default=NETWORK, choices=["mainnet", "testnet", "fork"])
+    parser.add_argument("--network", default=NETWORK, choices=["mainnet", "testnet"],
+                        help="Rosetta network identifier (separate from node consensus network)")
+    parser.add_argument("--chain-network", default="fork",
+                        choices=["mainnet", "testnet", "fork"],
+                        help="EXCAL node consensus network to load; production Bitcoin-anchored EXCAL uses fork")
     args = parser.parse_args()
     from chainstate import ChainState
-    cs = ChainState(args.data_dir).load()
+    cs = ChainState(args.data_dir, net=args.chain_network).load()
     serve(cs, args.host, args.port, args.network)
 
 
