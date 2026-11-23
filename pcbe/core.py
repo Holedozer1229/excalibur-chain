@@ -227,8 +227,14 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
         if replay is None:
             outcome, reason = "UNVERIFIABLE", "replay registry is unavailable"
             raise _StopVerification()
+        if not isinstance(policy, Mapping):
+            outcome, reason = "UNVERIFIABLE", "policy object is unavailable"
+            raise _StopVerification()
         if policy.get("policy_id") != payload["policy_id"]:
             raise PCBEError("policy identifier mismatch")
+        if (policy.get("network") != payload["network"]["network"]
+                or policy.get("genesis_hash") != payload["network"]["genesis_hash"]):
+            raise PCBEError("event network or genesis does not match pinned policy")
         if (not isinstance(policy.get("version"), int)
                 or isinstance(policy.get("version"), bool)):
             raise PCBEError("policy version unavailable")
@@ -249,7 +255,14 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
             raise PCBEError("signatures must be an array")
         required = policy.get("required_roles")
         if not isinstance(required, list) or not required or any(not isinstance(x, str) for x in required):
-            raise PCBEError("policy required_roles is unavailable")
+            outcome, reason = "UNVERIFIABLE", "policy required_roles is unavailable"
+            raise _StopVerification()
+        if payload["predecessors"]:
+            outcome, reason = "UNVERIFIABLE", "predecessor resolver is not configured"
+            raise _StopVerification()
+        if not isinstance(trust_store, Mapping):
+            outcome, reason = "UNVERIFIABLE", "trust store is unavailable"
+            raise _StopVerification()
         if Ed25519PublicKey is None:
             outcome, reason = "UNVERIFIABLE", "cryptography Ed25519 support is unavailable"
             raise _StopVerification()
@@ -337,6 +350,8 @@ def verify_event(event: Mapping[str, Any], policy: Mapping[str, Any],
         if outcome not in ("EXPIRED", "REVOKED", "UNVERIFIABLE"):
             outcome = "INVALID"
         reason = str(exc)
+    except (TypeError, KeyError, AttributeError, OverflowError, UnicodeError) as exc:
+        outcome, reason = "UNVERIFIABLE", "malformed verifier input: " + type(exc).__name__
     report = {
         "protocol": PROTOCOL,
         "version": VERSION,
