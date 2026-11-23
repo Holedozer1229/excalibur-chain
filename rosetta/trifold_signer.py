@@ -24,7 +24,7 @@ class ExcalTrifoldRosettaSigner:
 
     def sign_payload(self, unsigned_transaction, input_index, lock_hex,
                      signature_type, mode=None, descriptor_hex=None,
-                     secret_hex=None):
+                     secret_hex=None, spend_height=None):
         """Return a Rosetta Signature object for PQH or QHTLC.
 
         For QHTLC, mode is 'claim' or 'refund'; descriptor_hex is required,
@@ -55,10 +55,20 @@ class ExcalTrifoldRosettaSigner:
             if mode == "claim":
                 if not secret_hex:
                     raise TrifoldSignerError("QHTLC claim requires secret_hex")
+                secret = bytes.fromhex(secret_hex)
+                if len(secret) != 32:
+                    raise TrifoldSignerError("QHTLC claim secret must be 32 bytes")
+                import hashlib
+                if hashlib.sha256(secret).digest() != d["secret_hash"]:
+                    raise TrifoldSignerError("QHTLC claim secret does not match descriptor")
                 witness = sign_qhtlc_claim(
                     tx, i, lock, key, bytes.fromhex(secret_hex), desc,
                     registry=self.registry)
             elif mode == "refund":
+                if spend_height is None:
+                    raise TrifoldSignerError("QHTLC refund requires target spend_height")
+                if int(spend_height) < int(d["timeout"]):
+                    raise TrifoldSignerError("QHTLC refund timeout has not matured; refusing to burn a Trifold leaf")
                 witness = sign_qhtlc_refund(
                     tx, i, lock, key, desc, registry=self.registry)
             else:
