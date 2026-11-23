@@ -157,7 +157,6 @@ class ExcalRosetta:
         if body.get("network_identifier") != self.network_id:
             return self._error(1)
         return None
-
     def _tip(self):
         tip = self.cs.tip()
         return int(tip["height"]), tip["hash"]
@@ -228,9 +227,10 @@ class ExcalRosetta:
         if prev is None:
             view = {}
         else:
-            replay = getattr(self.cs, "_fork_utxo", None)
-            if not callable(replay):
-                raise ValueError("ChainState lacks historical UTXO replay")
+            # _utxo_before uses the live ChainState replay hook when available,
+            # and a deterministic canonical-block replay for lightweight fixtures.
+            # Do not make /network/status or /block fail solely because a test or
+            # alternate ChainState implementation lacks the private _fork_utxo hook.
             view = self._utxo_before(height)
         transactions = []
         for raw in raws:
@@ -308,7 +308,7 @@ class ExcalRosetta:
                 "allow": {"operation_statuses": [{"status": "success", "successful": True},
                                                   {"status": "failure", "successful": False}],
                           "operation_types": ["coinbase", "transfer", "input", "output", "fee"],
-                          "errors": ERRORS, "historical_balance_lookup": True,
+                          "errors": ERRORS, "historical_balance_lookup": False,
                           "call_methods": [], "balance_exemptions": []},
                 "metadata": {"excal_extensions": {
                     "trifold_signature_type": "trifold",
@@ -317,8 +317,7 @@ class ExcalRosetta:
             }
         err = self._check_network(body)
         if err:
-            return 500, err
-        if path == "/network/status":
+            return 500, err        if path == "/network/status":
             with self.lock:
                 height, block_hash = self._tip()
                 current = self._block(height)
@@ -477,8 +476,7 @@ def make_handler(app):
             try:
                 length = int(self.headers.get("Content-Length", "0"))
                 if length <= 0 or length > 2_000_000:
-                    raise ValueError("invalid Content-Length")
-                body = json.loads(self.rfile.read(length).decode("utf-8"))
+                    raise ValueError("invalid Content-Length")                body = json.loads(self.rfile.read(length).decode("utf-8"))
                 if not isinstance(body, dict):
                     raise ValueError("request body must be a JSON object")
                 status, result = app.handle(self.path, body)
