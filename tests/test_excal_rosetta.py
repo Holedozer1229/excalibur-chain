@@ -27,6 +27,17 @@ class RosettaDataTests(unittest.TestCase):
         self.app = ExcalRosetta(self.cs, network="mainnet")
         self.net = {"network_identifier": {"blockchain": "excal", "network": "mainnet" }}
 
+    def test_canonical_chain_path_does_not_require_by_height_map(self):
+        records = [self.genesis, self.block1]
+        cs = SimpleNamespace(
+            index={self.genesis["hash"]: self.genesis,
+                   self.block1["hash"]: self.block1},
+            tip=lambda: {"height": 1, "hash": self.block1["hash"].hex()},
+            _path_to=lambda tip_hash: records if tip_hash == self.block1["hash"] else [])
+        app = ExcalRosetta(cs, network="mainnet")
+        self.assertEqual(app._record(0)["hash"], self.genesis["hash"])
+        self.assertEqual(app._record(1)["hash"], self.block1["hash"])
+
     def test_network_list(self):
         status, body = self.app.handle("/network/list", {})
         self.assertEqual(status, 200)
