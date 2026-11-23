@@ -23,8 +23,8 @@ class RosettaDataTests(unittest.TestCase):
             utxo={},
             tip=lambda: {"height": 1, "hash": b1hash},
         )
-        self.app = ExcalRosetta(self.cs, network="fork")
-        self.net = {"network_identifier": {"blockchain": "excal", "network": "fork" }}
+        self.app = ExcalRosetta(self.cs, network="mainnet")
+        self.net = {"network_identifier": {"blockchain": "excal", "network": "mainnet" }}
 
     def test_network_list(self):
         status, body = self.app.handle("/network/list", {})
@@ -76,7 +76,7 @@ class RosettaDataTests(unittest.TestCase):
         script = bytes([0]) + bytes.fromhex("ab" * 20)
         key = (bytes.fromhex("33" * 32), 0)
         self.cs._fork_utxo = lambda block_hash: {key: [(777, script, False, 0)]}
-        app = ExcalRosetta(self.cs, network="fork")
+        app = ExcalRosetta(self.cs, network="mainnet")
         req = dict(self.net,
                    account_identifier={"address": "lock:" + script.hex()},
                    block_identifier={"index": 0})
@@ -140,7 +140,7 @@ class RosettaDataTests(unittest.TestCase):
             "locktime": 0})
         self.cs.by_height[0]["txs"] = [coinbase]
         self.cs.by_height[1]["txs"] = [spend]
-        app = ExcalRosetta(self.cs, network="fork")
+        app = ExcalRosetta(self.cs, network="mainnet")
         block = app._block(1)
         self.assertEqual(block["transactions"][0]["metadata"]["fee"], "1000")
         self.assertEqual(block["transactions"][0]["operations"][0]["amount"]["value"], "-50000")
