@@ -181,6 +181,9 @@ class ExcalRosetta:
             tid = txid_internal(raw)
             tx_hash = tid[::-1].hex()
             ops = []
+            total_in = 0
+            total_out = sum(int(out["value"]) for out in t["vout"])
+            fee = 0
             if _coinbase(t):
                 for n, out in enumerate(t["vout"]):
                     ops.append({
@@ -207,6 +210,9 @@ class ExcalRosetta:
                         "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
                                         "coin_action": "coin_spent"},
                     })
+                fee = total_in - total_out
+                if fee < 0:
+                    raise ValueError("transaction outputs exceed resolved input value")
                 input_indices = [{"index": i} for i in range(len(ops))]
                 for n, out in enumerate(t["vout"]):
                     idx = len(ops)
@@ -224,7 +230,8 @@ class ExcalRosetta:
             transactions.append({
                 "transaction_identifier": {"hash": tx_hash},
                 "operations": ops,
-                "metadata": {"lock_time": int(t["locktime"]), "version": int(t["version"])},
+                "metadata": {"lock_time": int(t["locktime"]), "version": int(t["version"]),
+                             "fee": str(fee)},
             })
         timestamp = int(rec.get("time", 0)) * 1000
         return {
