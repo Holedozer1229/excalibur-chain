@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from rosetta.excal_rosetta import ExcalRosetta, CURRENCY, _display_hash
 from rosetta.construction import Construction
-from txscript import lock_type, ser_tx
+from txscript import lock_type, ser_tx, txid_internal
 import secp256k1 as secp
 
 
@@ -122,6 +122,28 @@ class RosettaDataTests(unittest.TestCase):
                     "fee": 1000}})
             types = [p["signature_type"] for p in result["payloads"]]
             self.assertEqual(types, [] if expected[name] is None else [expected[name]])
+
+    def test_block_transaction_reports_fee_from_historical_prevout(self):
+        lock = bytes([0]) + bytes.fromhex("77" * 20)
+        coinbase = ser_tx({
+            "version": 1,
+            "vin": [{"prev": bytes(32), "idx": 0xffffffff,
+                     "script": b"", "seq": 0xffffffff}],
+            "vout": [{"value": 50000, "script": lock}],
+            "locktime": 0})
+        prev = txid_internal(coinbase)
+        spend = ser_tx({
+            "version": 1,
+            "vin": [{"prev": prev, "idx": 0,
+                     "script": b"", "seq": 0xffffffff}],
+            "vout": [{"value": 49000, "script": lock}],
+            "locktime": 0})
+        self.cs.by_height[0]["txs"] = [coinbase]
+        self.cs.by_height[1]["txs"] = [spend]
+        app = ExcalRosetta(self.cs, network="fork")
+        block = app._block(1)
+        self.assertEqual(block["transactions"][0]["metadata"]["fee"], "1000")
+        self.assertEqual(block["transactions"][0]["operations"][0]["amount"]["value"], "-50000")
 
     def test_testnet_uses_canonical_ticker(self):
         app = ExcalRosetta(self.cs, network="testnet")
