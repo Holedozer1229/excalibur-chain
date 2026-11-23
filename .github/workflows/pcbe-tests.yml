@@ -1,0 +1,41 @@
+name: EXCAL PCBE tests
+
+on:
+  pull_request:
+    paths:
+      - "pcbe/**"
+      - "tests/test_pcbe.py"
+      - ".github/workflows/pcbe-tests.yml"
+  push:
+    branches: [feat/proof-carrying-business-events]
+    paths:
+      - "pcbe/**"
+      - "tests/test_pcbe.py"
+      - ".github/workflows/pcbe-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: excal-pcbe-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pcbe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install verifier dependency
+        run: python -m pip install --upgrade pip cryptography
+      - name: Compile PCBE modules and tests
+        run: python -m compileall -q pcbe tests/test_pcbe.py
+      - name: Run PCBE tests
+        run: python -m unittest discover -s tests -p "test_pcbe.py" -v
