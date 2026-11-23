@@ -63,9 +63,11 @@ def active(lt, height):
     
 
 class Construction:
-    def __init__(self, chainstate, mempool=None, node=None, currency=CURRENCY):
+    def __init__(self, chainstate, mempool=None, node=None, currency=CURRENCY,
+                 output_lookup=None):
         self.cs, self.mempool, self.node = chainstate, mempool, node
         self.currency = currency
+        self.output_lookup = output_lookup
 
     def _input(self, coin):
         key = coin_key(coin)
@@ -290,20 +292,37 @@ class Construction:
         if path == "/construction/parse":
             tx = parse_tx(bytes.fromhex(body["transaction"]))
             ops = []
+            signers = []
             for vin in tx["vin"]:
-                live = self._input(vin["prev"][::-1].hex()+":"+str(vin["idx"]))
+                outpoint = (vin["prev"], int(vin["idx"]))
+                coin = vin["prev"][::-1].hex()+":"+str(vin["idx"])
+                rows = self.cs.utxo.get(outpoint)
+                if rows:
+                    value, lock = int(rows[0][0]), bytes(rows[0][1])
+                elif self.output_lookup is not None:
+                    prevout = self.output_lookup(outpoint)
+                    if prevout is None:
+                        raise ValueError("historical input prevout unavailable")
+                    value, lock = int(prevout["value"]), bytes(prevout["script"])
+                else:
+                    raise ValueError("spent input requires historical output lookup")
+                lt = lock_type(lock)
                 ops.append({"operation_identifier":{"index":len(ops)},"type":"input",
-                    "account":{"address":"lock:"+live["lock"].hex()},
-                    "amount":{"value":str(-live["value"]),"currency":self.currency},
-                    "coin_change":{"coin_identifier":{"identifier":live["coin"]},"coin_action":"coin_spent"},
-                    "metadata":{"lock_type":live["type"],"witness_hex":vin["script"].hex()}})
+                    "account":{"address":"lock:"+lock.hex()},
+                    "amount":{"value":str(-value),"currency":self.currency},
+                    "coin_change":{"coin_identifier":{"identifier":coin},"coin_action":"coin_spent"},
+                    "metadata":{"lock_type":lt,"witness_hex":vin["script"].hex()}})
+                if lt not in ("open", "anyone"):
+                    signer = {"address": "lock:" + lock.hex()}
+                    if signer not in signers:
+                        signers.append(signer)
             for out in tx["vout"]:
                 lock=bytes(out["script"])
                 ops.append({"operation_identifier":{"index":len(ops)},"type":"output",
                     "account":{"address":"lock:"+lock.hex()},
                     "amount":{"value":str(int(out["value"])),"currency":self.currency},
                     "metadata":{"lock_type":lock_type(lock)}})
-            return {"operations":ops,"account_identifier_signers":[]}
+            return {"operations":ops,"account_identifier_signers":signers}
         if path == "/construction/hash":
             raw=bytes.fromhex(body["signed_transaction"]); parse_tx(raw)
             return {"transaction_identifier":{"hash":txid_internal(raw)[::-1].hex()}}
