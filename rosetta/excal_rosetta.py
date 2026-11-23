@@ -317,7 +317,8 @@ class ExcalRosetta:
             }
         err = self._check_network(body)
         if err:
-            return 500, err        if path == "/network/status":
+            return 500, err
+        if path == "/network/status":
             with self.lock:
                 height, block_hash = self._tip()
                 current = self._block(height)
