@@ -39,6 +39,7 @@ from mempool import Mempool
 from chainstate import ChainState, activation_commitment
 from p2p import PeerManager, read_seed_file
 from node_rpc import Node, load_wallet_key
+from node_config import resolve_p2p_host
 
 CHAIN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "testnet_live.jsonl")
@@ -346,9 +347,9 @@ def main():
     ap.add_argument("--p2p-port", type=int, default=None,
                     help="P2P listen port (0 = disabled; "
                          "default: network's P2P port)")
-    ap.add_argument("--p2p-host", type=str, default="127.0.0.1",
-                    help="P2P listen address (default: 127.0.0.1; "
-                         "use 0.0.0.0 for a public launch)")
+    ap.add_argument("--p2p-host", type=str, default=None,
+                    help="P2P listen address (default: 0.0.0.0 on fork "
+                         "network, 127.0.0.1 otherwise)")
     ap.add_argument("--no-mine", action="store_true",
                     help="serve P2P/RPC without mining "
                          "(read-only node; safe alongside an external miner)")
@@ -374,6 +375,9 @@ def main():
     ticker = P["ticker"]
     rpc_port = P["rpc_port"] if args.rpc_port is None else args.rpc_port
     p2p_port = P["p2p_port"] if args.p2p_port is None else args.p2p_port
+    # A permissionless fork node must accept inbound P2P by default.
+    # RPC remains loopback-only unless an operator explicitly overrides it.
+    p2p_host = resolve_p2p_host(args.network, args.p2p_host)
     if args.pace is None:
         pace = 600.0 if args.network == "mainnet" else 1.0
     else:
@@ -429,11 +433,11 @@ def main():
 
     lock = threading.Lock()
     mgr = PeerManager(cs, mempool, lock, port=p2p_port, log=log,
-                      host=args.p2p_host)
+                      host=p2p_host)
     if p2p_port:
         mgr.start()
         mgr.start_redial()
-        log(f"P2P listening on {args.p2p_host}:{p2p_port} "
+        log(f"P2P listening on {p2p_host}:{p2p_port} "
             f"(magic {mgr.magic:#x})")
         def _dial(addr_str, kind):
             try:

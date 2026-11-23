@@ -1,0 +1,31 @@
+name: EXCAL community node config
+
+on:
+  pull_request:
+    paths:
+      - "node_config.py"
+      - "tests/test_node_config.py"
+      - "excalibur.py"
+      - ".github/workflows/excal-community-node.yml"
+  push:
+    branches:
+      - "release/community-node-p2p-default-v1"
+    paths:
+      - "node_config.py"
+      - "tests/test_node_config.py"
+      - "excalibur.py"
+      - ".github/workflows/excal-community-node.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  p2p-bind-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test network bind defaults
+        run: python -m unittest discover -s tests -p "test_node_config.py" -v
