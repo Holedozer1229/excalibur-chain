@@ -41,9 +41,9 @@ def lock_from_account(account):
     return lock
 
 
-def amount(op):
+def amount(op, currency=CURRENCY):
     a = op.get("amount") or {}
-    if a.get("currency") != CURRENCY:
+    if a.get("currency") != currency:
         raise ValueError("currency must be EXCAL (8 decimals)")
     return int(a["value"])
 
@@ -60,8 +60,9 @@ def active(lt, height):
     
 
 class Construction:
-    def __init__(self, chainstate, mempool=None, node=None):
+    def __init__(self, chainstate, mempool=None, node=None, currency=CURRENCY):
         self.cs, self.mempool, self.node = chainstate, mempool, node
+        self.currency = currency
 
     def _input(self, coin):
         key = coin_key(coin)
@@ -100,7 +101,7 @@ class Construction:
                     live = self._input(coin)
                     if lock_from_account(op.get("account")) != live["lock"]:
                         raise ValueError("input account does not match UTXO lock")
-                    if amount(op) != -live["value"]:
+                    if amount(op, self.currency) != -live["value"]:
                         raise ValueError("input amount must equal negative UTXO value")
                     ins.append({"coin": coin, "value": live["value"],
                                 "lock": live["lock"].hex(), "lock_type": live["type"]})
@@ -285,7 +286,7 @@ class Construction:
                 live = self._input(vin["prev"][::-1].hex()+":"+str(vin["idx"]))
                 ops.append({"operation_identifier":{"index":len(ops)},"type":"input",
                     "account":{"address":"lock:"+live["lock"].hex()},
-                    "amount":{"value":str(-live["value"]),"currency":CURRENCY},
+                    "amount":{"value":str(-live["value"]),"currency":self.currency},
                     "coin_change":{"coin_identifier":{"identifier":live["coin"]},"coin_action":"coin_spent"},
                     "metadata":{"lock_type":live["type"],"witness_hex":vin["script"].hex()}})
             for out in tx["vout"]:
