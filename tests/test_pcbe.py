@@ -21,6 +21,8 @@ class PCBETests(unittest.TestCase):
         self.policy = {
             "policy_id": "invoice-approval-v1",
             "version": 1,
+            "network": "excal-testnet",
+            "genesis_hash": b"g" * 32,
             "required_roles": ["seller"],
             "max_ttl": 3600,
             "max_revocation_age": 3600,
