@@ -77,7 +77,7 @@ class Construction:
         if path == "/construction/preprocess":
             operations = body.get("operations") or []
             inputs, outputs, required = [], [], []
-            total_in = total_out = 0
+            total_in = total_out = total_fee = 0
             for op in operations:
                 typ = op.get("type")
                 if typ == "INPUT":
@@ -107,16 +107,21 @@ class Construction:
                                     "value": value, "lock": lock.hex()})
                     total_out += value
                 elif typ == "FEE":
-                    if _amount(op) >= 0:
+                    fee_value = _amount(op)
+                    if fee_value >= 0:
                         raise ValueError("FEE amount must be negative")
+                    total_fee += -fee_value
                 else:
                     raise ValueError("unsupported operation type: " + str(typ))
             if not inputs or not outputs:
                 raise ValueError("at least one INPUT and one OUTPUT are required")
             if total_out >= total_in:
                 raise ValueError("outputs must be less than inputs; fee must be positive")
+            calculated_fee = total_in - total_out
+            if total_fee and total_fee != calculated_fee:
+                raise ValueError("FEE operation does not equal input minus output value")
             return {"options": {"inputs": inputs, "outputs": outputs,
-                                "fee": total_in - total_out},
+                                "fee": calculated_fee},
                     "required_public_keys": required}
 
         if path == "/construction/metadata":
@@ -187,9 +192,13 @@ class Construction:
             if any(v["script"] for v in tx["vin"]):
                 raise ValueError("unsigned transaction already contains scriptSigs")
             metadata = body.get("metadata") or {}
-            inputs = metadata.get("inputs") or []
-            if len(inputs) != len(tx["vin"]):
-                raise ValueError("metadata input count mismatch")
+            inputs = []
+            for vin in tx["vin"]:
+                entry = _entry(self.cs.utxo, (vin["prev"], vin["idx"]))
+                value, lock, is_cb, cb_h = entry
+                inputs.append({"value": int(value), "lock": bytes(lock).hex(),
+                               "lock_type": lock_type(bytes(lock)),
+                               "coin": vin["prev"][::-1].hex() + ":" + str(vin["idx"])})
             sigs = body.get("signatures") or []
             by_payload = {}
             for item in sigs:
