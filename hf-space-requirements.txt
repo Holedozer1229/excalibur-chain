@@ -1,0 +1,1 @@
+# Rosetta adapter currently uses Python standard library plus repository modules.
