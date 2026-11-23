@@ -75,15 +75,15 @@ class RosettaDataTests(unittest.TestCase):
     def test_construction_payload_types_cover_all_native_locks(self):
         pub = secp.compress(secp.priv_to_pub(1))
         locks = {
-            "pkh": b"\\x00" + b"\\x11" * 20,
-            "open": b"\\xff",
-            "pqh": b"\\x02" + b"\\x22" * 20,
-            "htlc": b"\\x03" + b"\\x33" * 20,
-            "qhtlc": b"\\x04" + b"\\x44" * 20,
-            "bridge": b"\\x05" + b"\\x55" * 32,
-            "knot": b"\\x06" + b"\\x66" * 20,
-            "p2pk": b"\\x21" + pub + b"\\xac",
-            "anyone": b"\\x51",
+            "pkh": b"\x00" + b"\x11" * 20,
+            "open": b"\xff",
+            "pqh": b"\x02" + b"\x22" * 20,
+            "htlc": b"\x03" + b"\x33" * 20,
+            "qhtlc": b"\x04" + b"\x44" * 20,
+            "bridge": b"\x05" + b"\x55" * 32,
+            "knot": b"\x06" + b"\x66" * 20,
+            "p2pk": b"\x21" + pub + b"\xac",
+            "anyone": b"\x51",
         }
         expected = {"pkh": "ecdsa", "open": None, "pqh": "trifold",
                     "htlc": "ecdsa", "qhtlc": "trifold", "bridge": "ecdsa",
@@ -101,7 +101,7 @@ class RosettaDataTests(unittest.TestCase):
                     "inputs": [{"coin": coin, "value": 10000,
                                 "lock": lock.hex(), "lock_type": name}],
                     "outputs": [{"value": 9000,
-                                 "lock": (b"\\x00" + b"\\xaa" * 20).hex()}]}})
+                                 "lock": (b"\x00" + b"\xaa" * 20).hex()}]}})
             types = [p["signature_type"] for p in result["payloads"]]
             self.assertEqual(types, [] if expected[name] is None else [expected[name]])
 
