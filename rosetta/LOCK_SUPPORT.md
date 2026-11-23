@@ -58,7 +58,7 @@ unrelated signatures are treated as EXCAL authorization here.
 
 ## Broadcast
 
-/ construction / submit (the actual endpoint path is /construction/submit)
+The /construction/submit endpoint
 is enabled only when the adapter is embedded with the live EXCAL Node object.
 It delegates to Node.dispatch("sendrawtransaction", [raw_hex]), which calls
 the normal mempool validation and P2P relay path. A standalone ChainState-only
