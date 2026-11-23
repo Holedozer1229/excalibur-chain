@@ -172,6 +172,39 @@ class RosettaDataTests(unittest.TestCase):
         raw = bytes(range(32))
         self.assertEqual(_display_hash(raw), raw[::-1].hex())
 
+    def test_submit_uses_live_mempool_without_claiming_p2p_relay(self):
+        raw = ser_tx({
+            "version": 1,
+            "vin": [{"prev": bytes.fromhex("11" * 32), "idx": 0,
+                     "script": b"", "seq": 0xffffffff}],
+            "vout": [{"value": 1, "script": b"\\xff"}],
+            "locktime": 0})
+        calls = []
+        pool = SimpleNamespace(add=lambda tx, utxo, height: (
+            calls.append((tx, utxo, height)) or (True, "ok")))
+        cs = SimpleNamespace(utxo={}, tip=lambda: {"height": 10, "hash": bytes(32)})
+        builder = Construction(cs, mempool=pool)
+        result = builder.handle("/construction/submit", {
+            "signed_transaction": raw.hex()})
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(result["metadata"]["mempool_accepted"])
+        self.assertFalse(result["metadata"]["relay_attempted"])
+        self.assertEqual(result["metadata"]["connected_peers"], 0)
+
+    def test_submit_reports_mempool_rejection(self):
+        raw = ser_tx({
+            "version": 1,
+            "vin": [{"prev": bytes.fromhex("22" * 32), "idx": 0,
+                     "script": b"", "seq": 0xffffffff}],
+            "vout": [{"value": 1, "script": b"\\xff"}],
+            "locktime": 0})
+        pool = SimpleNamespace(add=lambda *_args: (False, "missing input"))
+        cs = SimpleNamespace(utxo={}, tip=lambda: {"height": 10, "hash": bytes(32)})
+        builder = Construction(cs, mempool=pool)
+        with self.assertRaisesRegex(ValueError, "mempool rejected"):
+            builder.handle("/construction/submit", {
+                "signed_transaction": raw.hex()})
+
 
 if __name__ == "__main__":
     unittest.main()
