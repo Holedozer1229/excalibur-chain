@@ -140,7 +140,11 @@ class Construction:
                 ins.append({**item, "lock_type": live["type"],
                             "coinbase": live["coinbase"], "cb_height": live["cb_height"]})
             outs = opts.get("outputs") or []
-            for out in outs: active(lock_type(bytes.fromhex(out["lock"])), height)
+            for out in outs:
+                out_lock = bytes.fromhex(out["lock"])
+                out_type = lock_type(out_lock)
+                if out_type not in LOCKS: raise ValueError("unknown output lock")
+                active(out_type, height)
             if sum(x["value"] for x in ins) - sum(int(x["value"]) for x in outs) != int(opts["fee"]):
                 raise ValueError("input/output/fee values do not reconcile")
             return {"metadata": {"inputs": ins, "outputs": outs,
@@ -149,15 +153,34 @@ class Construction:
         if path == "/construction/payloads":
             md = body.get("metadata") or {}
             tx = {"version": 1, "vin": [], "vout": [], "locktime": 0}
-            for x in md.get("inputs", []):
+            inputs = md.get("inputs", [])
+            outputs = md.get("outputs", [])
+            if not inputs or not outputs: raise ValueError("metadata requires inputs and outputs")
+            total_in = 0
+            for x in inputs:
                 live = self._input(x["coin"])
-                if live["lock"].hex() != x["lock"]: raise ValueError("UTXO lock changed")
+                if live["lock"].hex() != x["lock"] or live["type"] != x["lock_type"]:
+                    raise ValueError("UTXO lock/type changed")
+                if live["value"] != int(x["value"]): raise ValueError("UTXO value changed")
+                if live["coinbase"] and height - live["cb_height"] < COINBASE_MATURITY:
+                    raise ValueError("coinbase input immature")
+                active(live["type"], height)
+                total_in += live["value"]
                 tx["vin"].append({"prev": live["key"][0], "idx": live["key"][1],
                                   "script": b"", "seq": 0xffffffff})
-            for x in md.get("outputs", []):
+            total_out = 0
+            for x in outputs:
                 lock = bytes.fromhex(x["lock"])
-                if lock_type(lock) not in LOCKS: raise ValueError("unknown output lock")
-                tx["vout"].append({"value": int(x["value"]), "script": lock})
+                lt = lock_type(lock)
+                if lt not in LOCKS or lt != x.get("lock_type"):
+                    raise ValueError("unknown output lock or lock type mismatch")
+                active(lt, height)
+                value = int(x["value"])
+                if value <= 0: raise ValueError("output value must be positive")
+                total_out += value
+                tx["vout"].append({"value": value, "script": lock})
+            if total_in - total_out != int(md.get("fee", -1)) or int(md.get("fee", 0)) <= 0:
+                raise ValueError("input/output/fee values do not reconcile")
             payloads = []
             for i, x in enumerate(md["inputs"]):
                 lock, lt = bytes.fromhex(x["lock"]), x["lock_type"]
