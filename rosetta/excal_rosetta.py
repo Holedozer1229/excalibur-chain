@@ -168,9 +168,15 @@ class ExcalRosetta:
             tip_hash = bytes.fromhex(tip_hash)
         if getattr(self, "_records_tip_hash", None) != tip_hash:
             path_fn = getattr(self.cs, "_path_to", None)
-            if not callable(path_fn):
-                raise ValueError("ChainState lacks canonical path traversal")
-            path = path_fn(tip_hash)
+            if callable(path_fn):
+                path = path_fn(tip_hash)
+            else:
+                # Small deterministic fixture fallback; production ChainState
+                # always uses _path_to so only its selected active chain is read.
+                fallback = getattr(self.cs, "by_height", None)
+                if not isinstance(fallback, dict):
+                    raise ValueError("ChainState lacks canonical path traversal")
+                path = [fallback[h] for h in sorted(fallback)]
             self._records_by_height = {int(rec["height"]): rec for rec in path}
             self._records_tip_hash = tip_hash
         return self._records_by_height
@@ -180,6 +186,37 @@ class ExcalRosetta:
 
     def _record_identifier(self, rec):
         return {"index": int(rec["height"]), "hash": _display_hash(rec["hash"])}
+
+    def _utxo_before(self, height):
+        if int(height) <= 0:
+            return {}
+        previous = self._record(int(height) - 1)
+        if previous is None:
+            raise ValueError("missing previous canonical block")
+        replay = getattr(self.cs, "_fork_utxo", None)
+        if callable(replay):
+            view = replay(previous["hash"])
+            return view.copy() if callable(getattr(view, "copy", None)) else view
+        # Deterministic fallback for lightweight tests, not used by live ChainState.
+        view = {}
+        for h in range(int(height)):
+            rec = self._record(h)
+            if rec is None:
+                raise ValueError("missing canonical block during UTXO replay")
+            for raw in rec.get("txs", []):
+                tx = parse_tx(raw)
+                coinbase = _coinbase(tx)
+                if not coinbase:
+                    for vin in tx["vin"]:
+                        key = (vin["prev"], int(vin["idx"]))
+                        if key not in view:
+                            raise ValueError("historical replay encountered missing input")
+                        del view[key]
+                tid = txid_internal(raw)
+                for n, out in enumerate(tx["vout"]):
+                    view[(tid, n)] = [(int(out["value"]), bytes(out["script"]),
+                                       coinbase, h if coinbase else 0)]
+        return view
 
     def _block(self, height):
         rec = self._record(height)
@@ -194,9 +231,7 @@ class ExcalRosetta:
             replay = getattr(self.cs, "_fork_utxo", None)
             if not callable(replay):
                 raise ValueError("ChainState lacks historical UTXO replay")
-            view = replay(prev["hash"])
-            if callable(getattr(view, "copy", None)):
-                view = view.copy()
+            view = self._utxo_before(height)
         transactions = []
         for raw in raws:
             t = parse_tx(raw)
@@ -307,7 +342,7 @@ class ExcalRosetta:
                 height = ident.get("index")
                 if height is None and ident.get("hash"):
                     wanted = ident["hash"].lower()
-                    height = next((h for h, r in self.cs.by_height.items()
+                    height = next((h for h, r in self._canonical_records().items()
                                    if _display_hash(r["hash"]) == wanted), None)
                 if height is None:
                     height = self._tip()[0]
@@ -353,7 +388,7 @@ class ExcalRosetta:
                 height = requested.get("index")
                 if height is None and requested.get("hash"):
                     wanted = requested["hash"].lower()
-                    height = next((h for h, rec in self.cs.by_height.items()
+                    height = next((h for h, rec in self._canonical_records().items()
                                    if _display_hash(rec["hash"]) == wanted), None)
                 if height is None:
                     height = tip_height
