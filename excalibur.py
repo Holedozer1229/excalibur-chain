@@ -39,6 +39,7 @@ from mempool import Mempool
 from chainstate import ChainState, activation_commitment
 from p2p import PeerManager, read_seed_file
 from node_rpc import Node, load_wallet_key
+from node_config import resolve_p2p_host
 
 CHAIN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "testnet_live.jsonl")
@@ -376,8 +377,7 @@ def main():
     p2p_port = P["p2p_port"] if args.p2p_port is None else args.p2p_port
     # A permissionless fork node must accept inbound P2P by default.
     # RPC remains loopback-only unless an operator explicitly overrides it.
-    p2p_host = args.p2p_host or (
-        "0.0.0.0" if args.network == "fork" else "127.0.0.1")
+    p2p_host = resolve_p2p_host(args.network, args.p2p_host)
     if args.pace is None:
         pace = 600.0 if args.network == "mainnet" else 1.0
     else:
