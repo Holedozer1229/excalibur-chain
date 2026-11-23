@@ -157,6 +157,46 @@ The implementation is not yet a complete PCBE deployment: it does not provide a 
 - The verifier can explain *why* an event is valid, invalid, incomplete, expired, revoked, disputed, or unverifiable.
 - Security review, privacy review, operational key controls, and production test evidence are published before any production claim.
 
+## Implementation status (2026-11-23, reference implementation)
+
+A Python reference implementation of the v1 envelope lives in `pcbe/`:
+
+- `pcbe/core.py` — deterministic CBOR encode/decode (RFC 8949 deterministic
+  profile, strict canonical-form rejection), domain-separated event /
+  evidence / attestation digests, evidence Merkle roots and inclusion
+  proofs, Ed25519 role-bound attestations, replay registry, and
+  `verify_event` with the explicit outcomes `VALID`, `INVALID`,
+  `INCOMPLETE`, `EXPIRED`, `REVOKED`, `DISPUTED` and `UNVERIFIABLE`.
+  Predecessor digests are checked against caller-supplied known digests
+  (unknown predecessor: `UNVERIFIABLE`; mismatch: `INVALID`), and an
+  optional expected network/genesis rejects events from any other network.
+  A dispute overrides only `VALID`/`INCOMPLETE`; cryptographic failure,
+  expiry and revocation stand over a dispute. Malformed policy, trust or
+  revocation data fails closed as `UNVERIFIABLE`, never by exception.
+- `pcbe/bundle.py` — the JSON diagnostic bundle form
+  (`excal-pcbe-bundle-v1`, bytes as `{"$bytes": hex}`).
+- `pcbe/cli.py` — offline verifier CLI: `python3 -m pcbe.cli verify
+  --bundle bundle.json [--now SECONDS]` (exit 0 = `VALID`, 1 = other
+  outcome, 2 = usage/bundle error); `python3 -m pcbe.cli example` writes
+  a deterministic example bundle.
+- `pcbe/test_vectors.json` — published vectors (regenerate with
+  `python3 -m pcbe.make_vectors`): CBOR encodings and rejected
+  non-canonical encodings, evidence digests, Merkle roots and proofs,
+  the example event digest and attestation, and ten verify cases.
+- `tests/test_pcbe.py`, `tests/test_pcbe_vectors.py`,
+  `tests/test_pcbe_cli.py` — 50 tests, all passing on this branch
+  (`python3 -m unittest tests.test_pcbe tests.test_pcbe_vectors
+  tests.test_pcbe_cli`).
+
+Still open (not claimed): a second independent verifier implementation
+against the same vectors, the read-only HTTP API, EXCAL anchoring (deferred
+pending privacy/fee/encoding review), domain profiles (space / quantum /
+AI), and external cryptographic and privacy review before any production
+or funds-handling claim. The `cryptography` package is required for
+Ed25519; without it verification fails closed as `UNVERIFIABLE`.
+A `VALID` outcome proves integrity, origin under a key and protocol
+conditions only — never that a real-world statement is true.
+
 ## Standards alignment
 
 Use established standards where they fit: deterministic CBOR (RFC 8949), W3C Verifiable Credentials Data Model 2.0 and Data Integrity 1.0 where credential exchange is needed, and mature signature/hash suites. This design is a proposed EXCAL application protocol, not a claim of standards certification or a novel cryptographic primitive.
