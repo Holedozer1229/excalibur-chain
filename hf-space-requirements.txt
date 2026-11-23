@@ -1,1 +1,3 @@
-# Rosetta adapter currently uses Python standard library plus repository modules.
+gradio>=5.0,<7
+fastapi>=0.110
+uvicorn>=0.27
