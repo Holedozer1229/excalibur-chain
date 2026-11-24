@@ -7,7 +7,7 @@ body{background:#0b0b0e;color:#e8e8ec;font-family:Georgia,serif;max-width:720px;
 h1{font-size:34px;margin:0 0 4px}.sub{color:#9a9aa5;font-size:15px;margin-bottom:28px}
 .prize{font-size:44px;color:#f2b705;margin:18px 0 4px}.prize small{font-size:18px;color:#e8e8ec}
 .bar{height:10px;background:#22222a;border-radius:5px;overflow:hidden;margin:14px 0 6px}
-.bar i{display:block;height:100%;background:#f2b705;width:5.80%}
+.bar i{display:block;height:100%;background:#f2b705;width:0.35%}
 table{width:100%;border-collapse:collapse;margin:18px 0}
 td{padding:7px 4px;border-bottom:1px solid #22222a;vertical-align:top}
 td:first-child{color:#9a9aa5;width:38%}
@@ -21,14 +21,14 @@ a{color:#f2b705}
 <div class="prize">3.125 BTC <small>to bc1qnfd75&hellip;</small></div>
 <div id="stale" style="display:none;border:1px solid #f2b705;border-radius:8px;padding:12px 14px;color:#f2b705;font-size:14px;margin-bottom:18px"></div>
 <div class="bar"><i id="barfill"></i></div>
-<div><span id="pct">5.80%</span> of the 2&sup3;&sup2; nonce space &middot; <span id="hashes">249M</span> hashes &middot; <span id="rate">1.05</span> MH/s &middot; ETA ~<span id="eta">64</span> min</div>
+<div><span id="pct">0.35%</span> of the 2&sup3;&sup2; nonce space &middot; <span id="hashes">15M</span> hashes &middot; <span id="rate">1.05</span> MH/s &middot; ETA ~<span id="eta">68</span> min</div>
 <table>
-<tr><td>Block height</td><td id="height">977374</td></tr>
-<tr><td>Previous block (tip)</td><td><code id="tip">0000000000000000000036f86d2969024910557f0b3928e82fd3f8f127d5732d</code><br><span id="tipheight" style="color:#9a9aa5">height 977373</span></td></tr>
+<tr><td>Block height</td><td id="height">977375</td></tr>
+<tr><td>Previous block (tip)</td><td><code id="tip">000000000000000000000119c42b6ee9b3e4c61db8863306eea5014f5b111a01</code><br><span id="tipheight" style="color:#9a9aa5">height 977374</span></td></tr>
 <tr><td>Bits / target</td><td><code id="bits">17021673</code><br><code id="target">0000000000000000000216730000000000000000000000000000000000000000</code></td></tr>
-<tr><td>Coinbase txid</td><td><code id="coinbase">d7c5ee3dfbdc83c7c9c5e124de0d15a8f820eba227fe49fb3acbfb0887049781</code></td></tr>
-<tr><td>Best hash so far</td><td><code id="besthash">000000a328e0a508e6f53bb8d8a6eb3dfeb6a25c11233641afc08b0893f1e49f</code><br><span id="bestnote" style="color:#9a9aa5">24 leading zero bits on this template (tier 2 near-miss). A block needs 79.</span></td></tr>
-<tr><td>Status</td><td id="status">RUNNING &middot; updated 2026-11-24 13:45:13 CST</td></tr>
+<tr><td>Coinbase txid</td><td><code id="coinbase">47f254bb485ae3943d38799927807b59dea8bd4ac77047da8db28b78e86a538f</code></td></tr>
+<tr><td>Best hash so far</td><td><code id="besthash">00000c74a57147e1bd42ea561e7ef6447df006ef81550c7a6d27974bd61d8e97</code><br><span id="bestnote" style="color:#9a9aa5">20 leading zero bits on this template (tier 3 near-miss). A block needs 79.</span></td></tr>
+<tr><td>Status</td><td id="status">RUNNING &middot; updated 2026-11-24 13:50:11 CST</td></tr>
 </table>
 <div class="odds" id="odds">A full 2^32 sweep has about a 7 in 1,000,000,000,000,000 chance of a block. This is a lottery ticket, not a path. One shot per block, winner takes all. The template rolls to a fresh block every ~10 minutes.</div>
 <p class="note">The sweep grinds every nonce on this template. If one hash lands below target, the block is found and submitted, and the 3.125 BTC goes to the address above. The template rolls to a fresh block every ~10 minutes, so this page follows the rolling sweep. Live numbers come from the running sweep log. The first EXCAL sale lives at <a href="https://holedozer1229.github.io/excalibur-chain/">the offer page</a>.</p>
