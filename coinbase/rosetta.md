@@ -69,6 +69,51 @@ misrepresented as ECDSA or Ed25519. The exact Rosetta CLI and Coinbase
 integration client must be tested to verify acceptance of these extensions
 before claiming full conformance.
 
+### Target-client acceptance — measured 2026-11-23 (Stage 4)
+
+A stock rosetta-cli v0.10.4 / standard Rosetta client **rejects** these
+types in the Construction flow. Evidence:
+
+- The rosetta-sdk-go `types` package defines exactly five
+  `SignatureType` values (`ecdsa`, `ecdsa_recovery`, `ed25519`,
+  `schnorr_1`, `schnorr_poseidon`), and the asserter exposes
+  `SignatureType` validation that fails anything else with "not a
+  supported SignatureType". The v0.10.4 binary carries the same
+  failure strings ("signature type %s is invalid", "signing payload
+  signature type %v is invalid", "cannot determine signature type for
+  payload", "sign: unexpected Signature type while signing"). The
+  CLI's signer can only sign the five standard types, so
+  `check:construction` cannot be run end to end for PQH/QHTLC/KNOT
+  inputs at all — it fails at signing, before the server is involved.
+- `check:data` is **not** evidence about the custom types either way:
+  blocks carry operations only, never signatures, so the Data API
+  never presents a `trifold` or `excal_knot` value to the asserter.
+  The full-range `check:data` run (5,598/49,999 blocks passed, 0
+  failures, when the VM reboot killed it — see `coinbase/README.md`)
+  proves only that the `/network/options` advertisement itself passes
+  asserter validation. Verified live: `rosetta-cli
+  utils:asserter-configuration` against the running server succeeded,
+  and the generated asserter config contains no signature-related key
+  at all — the asserter has no allowlist for signature types.
+- What a third-party client must do: implement the EXCAL signer
+  (local bridges `rosetta/trifold_signer.py` for PQH/QHTLC and
+  `rosetta/knot_signer.py` for KNOT) or equivalent chain-specific
+  code, and bypass/extend the stock asserter's signature-type check
+  for these two values. Read the type from
+  `/network/options` `metadata.excal_extensions`
+  (`trifold_signature_type`, `knot_signature_type`), and read each
+  signing payload's `metadata`: for `trifold`, `hex_bytes` is the
+  32-byte sighash digest to sign with the Trifold one-time key and
+  `Signature.hex_bytes` must be the complete native scriptSig witness
+  bytes, not a 64-byte signature; for `excal_knot`, `hex_bytes` is a
+  correlation digest only — do NOT sign it — and
+  `Signature.hex_bytes` must be the 56-byte preimage witness
+  (16-byte `t_star` followed by the 40-byte KNOT descriptor).
+  `/construction/combine` matches signatures by the exact
+  (digest, signature_type) pair and rejects a witness submitted
+  under the wrong type. Tests:
+  `tests/test_rosetta_custom_signature_types.py` (8 tests).
+
 The separate Uruu-Secure-Recovery app currently uses mock verifier signatures
 and synthetic proof acceptance; it is not a production Trifold signer or
 guardian quorum. The EXCAL wallet's trifold_lockbox.py and txpq.py contain the

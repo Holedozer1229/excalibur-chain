@@ -68,9 +68,9 @@ The focused GitHub Actions workflow is configured, but CI has never
 completed a run: every invocation fails in 4–8s before any job step
 executes (GitHub billing-lock pattern, same as the other repos). VM runs
 are the only real signal and they are green: the full Python suite
-(52 tests, 1 graceful skip for the missing prometheus-client) passes,
-including the Rosetta Data + Construction tests and the ChainState
-submit-block regression tests.
+(116 tests OK, 1 graceful skip for the missing prometheus-client)
+passes, including the Rosetta Data + Construction tests, the
+lock-witness vectors, and the ChainState submit-block regression tests.
 
 Official `rosetta-cli` (mesh-cli v0.10.4) conformance was run against the
 live 50k-block fork chain: `check:data` over blocks 49900–49999 with
@@ -78,9 +78,13 @@ reconciliation enabled (configs in `coinbase/rosetta-cli/`) **passed**:
 100 blocks / 100 transactions / 100 operations, 100 active
 reconciliations, 0 failed, 100% coverage — Request/Response, Response
 Assertion, Block Syncing, Balance Tracking and Reconciliation all PASSED.
-A full 0–49999 sync has not been run yet. The per-height replay blocker
-is removed: ChainState now keeps a persistent per-height UTXO delta
-index (`utxo_index.py`, `ChainState.utxo_at()`; deltas + manifest under
+A full 0–49999 `check:data` run reached block 5,598/49,999 (11.2%, 0
+failures, 100% coverage) before the VM rebooted and killed it; it has
+not been restarted — see the evidence package in `coinbase/README.md`,
+which states the exact numbers and does not present the run as
+complete. The per-height replay blocker is removed: ChainState now
+keeps a persistent per-height UTXO delta index (`utxo_index.py`,
+`ChainState.utxo_at()`; deltas + manifest under
 `<data-dir>/utxo_index/`), so a cold block/balance lookup at any height
 no longer replays the chain from genesis — measured on the live chain
 2026-11-23: cold `/network/status` 17.5s → 0.07s, cold
@@ -93,3 +97,27 @@ vectors, activation/timeout/replay tests, two-node relay/reorg tests,
 and verify that the target Rosetta client accepts EXCAL's custom
 Trifold/KNOT extension types. The Trifold source describes a custom scheme
 without a formal security proof; this adapter does not claim otherwise.
+
+## Target-client acceptance (Stage 4, 2026-11-23)
+
+A stock rosetta-cli v0.10.4 / standard Rosetta client **rejects** the
+`trifold` and `excal_knot` signature types in the Construction flow:
+the SDK defines exactly five `SignatureType` values and the asserter
+fails anything else with "not a supported SignatureType", and the
+CLI's signer cannot produce either type, so `check:construction`
+cannot run end to end for PQH/QHTLC/KNOT inputs. `check:data` is no
+evidence about the custom types either way — blocks carry operations
+only, never signatures. What the server does to stay consumable
+without mislabeling: the types are advertised in `/network/options`
+`metadata.excal_extensions`, and each custom signing payload carries
+`metadata` stating exactly what `Signature.hex_bytes` must contain
+(full native scriptSig witness for `trifold`; 56-byte preimage
+witness for `excal_knot`, whose `hex_bytes` is a correlation digest
+only and must NOT be signed). A third-party client must implement the
+EXCAL signer (`rosetta/trifold_signer.py`, `rosetta/knot_signer.py`)
+or equivalent and bypass/extend the stock asserter's signature-type
+check for these two values. Full evidence, client-handling
+documentation and test pointers are in `coinbase/README.md`
+("Submission evidence package") and `coinbase/rosetta.md`
+("Signature extensions"); tests:
+`tests/test_rosetta_custom_signature_types.py` (8 tests).
