@@ -230,8 +230,32 @@ class Construction:
                 lock, lt = bytes.fromhex(x["lock"]), x["lock_type"]
                 if lt in ("open", "anyone"): continue
                 st = TRIFOLD if lt in ("pqh", "qhtlc") else KNOT if lt == "knot" else "ecdsa"
-                payloads.append({"account_identifier": {"address": "lock:" + lock.hex()},
-                    "hex_bytes": sighash_all(tx, i, lock).hex(), "signature_type": st})
+                payload = {"account_identifier": {"address": "lock:" + lock.hex()},
+                    "hex_bytes": sighash_all(tx, i, lock).hex(), "signature_type": st}
+                # The stock Rosetta asserter only knows ecdsa,
+                # ecdsa_recovery, ed25519, schnorr_1 and schnorr_poseidon,
+                # so a standard client cannot consume these payloads
+                # without chain-specific code. Say in the payload itself
+                # what the returned Signature.hex_bytes must contain, so a
+                # client implementer does not have to guess from the type
+                # string alone. For trifold, hex_bytes IS the 32-byte
+                # sighash digest to sign with the Trifold one-time key and
+                # the signature is the complete native scriptSig witness.
+                # For excal_knot, hex_bytes is only a correlation digest:
+                # the witness is a preimage reveal (16-byte t_star +
+                # 40-byte descriptor), NOT a signature over the digest,
+                # and signing the digest would produce an invalid witness.
+                if st == TRIFOLD:
+                    payload["metadata"] = {
+                        "excal_signature_scheme": "trifold",
+                        "signed_bytes": "hex_bytes is the 32-byte sighash digest; sign it with the Trifold one-time key",
+                        "witness": "Signature.hex_bytes must be the complete native scriptSig witness bytes (txpq.encode_witness), not a 64-byte signature"}
+                elif st == KNOT:
+                    payload["metadata"] = {
+                        "excal_signature_scheme": "excal_knot",
+                        "signed_bytes": "hex_bytes is a correlation digest only; do NOT sign it",
+                        "witness": "Signature.hex_bytes must be the 56-byte native witness: 16-byte t_star followed by the 40-byte KNOT descriptor"}
+                payloads.append(payload)
             return {"unsigned_transaction": ser_tx(tx).hex(), "payloads": payloads}
 
         if path == "/construction/combine":
