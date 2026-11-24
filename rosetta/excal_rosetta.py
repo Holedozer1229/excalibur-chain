@@ -212,8 +212,9 @@ class ExcalRosetta:
     def _cache_view(self, cache, key, view):
         # Views are ~50k entries at the live tip; keep a small rolling
         # window (8 heights) so sequential renders stay cheap without
-        # unbounded memory growth.
-        cache[key] = dict(view)
+        # unbounded memory growth. copy() handles both plain dicts and
+        # UtxoSet views (whose copy() shares the immutable snapshot).
+        cache[key] = view.copy() if callable(getattr(view, "copy", None)) else dict(view)
         while len(cache) > 8:
             del cache[min(cache)]
 
@@ -227,13 +228,26 @@ class ExcalRosetta:
         key = (int(height), prev_hash)
         cached = self._pre_views.get(key)
         if cached is not None:
-            return dict(cached)
+            return cached.copy() if callable(getattr(cached, "copy", None)) else dict(cached)
         # The post-view of the previous block is exactly this pre-view.
         post = self._post_views.get((int(height) - 1, prev_hash))
         if post is not None:
             self._cache_view(self._pre_views, key, post)
-            return dict(post)
+            return post.copy() if callable(getattr(post, "copy", None)) else dict(post)
         replay = getattr(self.cs, "_fork_utxo", None)
+        # Fast path: ChainState.utxo_at answers from the per-height delta
+        # index (no chain replay). Any failure falls through to the
+        # replay path below, which is the long-proven behaviour — the
+        # index is an acceleration, never a new failure mode.
+        fast = getattr(self.cs, "utxo_at", None)
+        if callable(fast):
+            try:
+                view = fast(int(height) - 1, prev_hash)
+            except Exception:
+                view = None
+            if view is not None:
+                self._cache_view(self._pre_views, key, view)
+                return view
         if callable(replay):
             view = replay(previous["hash"])
             view = view.copy() if callable(getattr(view, "copy", None)) else view

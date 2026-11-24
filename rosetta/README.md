@@ -78,12 +78,18 @@ reconciliation enabled (configs in `coinbase/rosetta-cli/`) **passed**:
 100 blocks / 100 transactions / 100 operations, 100 active
 reconciliations, 0 failed, 100% coverage — Request/Response, Response
 Assertion, Block Syncing, Balance Tracking and Reconciliation all PASSED.
-A full 0–49999 sync has not been run: the first render per height still
-replays the chain (~5–15s at tip), so a full-chain CLI sync remains slow
-even with the view cache. This is not Coinbase certification. Before
-production, run the complete Python suite, a full Rosetta CLI sync (after
-a persistent UTXO index removes the per-height replay cost), all lock
-witness vectors, activation/timeout/replay tests, two-node relay/reorg
-tests, and verify that the target Rosetta client accepts EXCAL's custom
+A full 0–49999 sync has not been run yet. The per-height replay blocker
+is removed: ChainState now keeps a persistent per-height UTXO delta
+index (`utxo_index.py`, `ChainState.utxo_at()`; deltas + manifest under
+`<data-dir>/utxo_index/`), so a cold block/balance lookup at any height
+no longer replays the chain from genesis — measured on the live chain
+2026-11-23: cold `/network/status` 17.5s → 0.07s, cold
+`/block` at height 25000 0.13s, cold historical balance lookups
+0.04–0.19s across heights 100–49899 (was 0.5–8.0s), all verified equal
+to the full-replay path and to the known miner balance 2,495,147.9919
+EXCAL at tip. This is not Coinbase certification. Before production,
+run the complete Python suite, a full Rosetta CLI sync, all lock witness
+vectors, activation/timeout/replay tests, two-node relay/reorg tests,
+and verify that the target Rosetta client accepts EXCAL's custom
 Trifold/KNOT extension types. The Trifold source describes a custom scheme
 without a formal security proof; this adapter does not claim otherwise.

@@ -1263,6 +1263,32 @@ def apply_block_txs(txs: list, utxo: dict, height: int):
                 _spend_from_view(utxo, (vin["prev"], vin["idx"]))
         _add_tx_outputs(tx, utxo, height, is_coinbase=(n == 0))
 
+
+def apply_block_txs_delta(txs: list, utxo: dict, height: int):
+    """Like apply_block_txs, but also returns the block's UTXO delta:
+    (spent, created) where spent = [(key, entry)] rows removed (oldest
+    entry first, in tx order) and created = [(key, entry)] rows added,
+    entry = (value, script, is_coinbase, cb_height). The mutation applied
+    to `utxo` is byte-identical to apply_block_txs; a missing input (only
+    possible on an invalid chain) spends nothing and records nothing,
+    exactly as apply_block_txs does."""
+    spent = []
+    created = []
+    for n, tx in enumerate(txs):
+        t = parse_tx(tx)
+        if n > 0:  # not coinbase: spend inputs
+            for vin in t["vin"]:
+                key = (vin["prev"], vin["idx"])
+                e = _spend_from_view(utxo, key)
+                if e is not None:
+                    spent.append((key, e))
+        tid = txid_internal(tx)
+        for j, vout in enumerate(t["vout"]):
+            row = (vout["value"], vout["script"], n == 0, height)
+            utxo.setdefault((tid, j), []).append(row)
+            created.append(((tid, j), row))
+    return spent, created
+
 # ---------------------------------------------------------------- UTXO set
 def build_utxo(chain, base=None) -> dict:
     """Scan the full chain into a UTXO dict. chain[0] may be header-only.

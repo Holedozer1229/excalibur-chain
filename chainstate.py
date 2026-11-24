@@ -18,11 +18,14 @@ from genesis_fork import (GENESIS, genesis_for, genesis_txs,
                           bits_to_target, required_bits, subsidy,
                           check_coinbase_lineage, validate_block,
                           validate_auxpow, _parse_pushes)
-from txscript import (validate_block_txs, apply_block_txs, build_utxo,
-                      utxo_stats, txid_internal, parse_tx)
+from txscript import (validate_block_txs, apply_block_txs_delta,
+                      build_utxo,
+                      utxo_stats, txid_internal, parse_tx,
+                      _spend_from_view)
 from spent_leaf_registry import (SpentLeafRegistry, extract_pairs,
                                  pair_key)
 from utxodb import UtxoSet, SnapshotDB, build_snapshot_db
+import utxo_index
 
 
 def _scan_spent_pairs(records):
@@ -75,6 +78,60 @@ def activation_commitment(height, data_dir):
 
 def _block_work(bits):
     return (1 << 256) // (bits_to_target(bits) + 1)
+
+
+# utxo_at() walks forward from genesis for heights at or below this, and
+# backward (undo) from the tip copy above it. The tip copy costs ~0.4s at
+# the 50k tip while a forward block step costs ~2us, so the break-even is
+# far above this conservative threshold; mid heights take the backward
+# path and stay well under a second either way.
+_UTXO_FORWARD_THRESHOLD = 1000
+
+
+def _copy_view(view):
+    """Private copy of a UTXO view (plain dict or UtxoSet): row lists are
+    copied so the caller may mutate the copy without aliasing the live
+    set's lists. Row tuples are immutable and shared. NOTE: a plain
+    dict.copy() is NOT enough here — it shares the row lists, and the
+    delta undo mutates lists in place (pop/insert); a shallow copy would
+    corrupt the live tip set."""
+    if isinstance(view, dict):
+        return {k: list(v) for k, v in view.items()}
+    if hasattr(view, "copy"):
+        return view.copy()
+    return {k: list(v) for k, v in view.items()}
+
+
+def _apply_delta_forward(view, spent, created):
+    """Apply one block's delta to `view` (dict or UtxoSet)."""
+    for key, _row in spent:
+        _spend_from_view(view, key)
+    for key, row in created:
+        view.setdefault(key, []).append(row)
+
+
+def _apply_delta_backward(view, spent, created):
+    """Undo one block's delta on `view`: remove its creations (newest
+    first), then restore its spends at the front of their entry lists
+    (they were the oldest entries when spent). Spent and created keys
+    are disjoint within a valid block, so the order between the two
+    halves cannot interfere."""
+    for key, row in reversed(created):
+        entries = view.get(key)
+        if not entries:
+            continue
+        for i in range(len(entries) - 1, -1, -1):
+            if entries[i] == row:
+                del entries[i]
+                break
+        if not entries:
+            del view[key]
+    for key, row in reversed(spent):
+        entries = view.get(key)
+        if entries is None:
+            view[key] = [row]
+        else:
+            entries.insert(0, row)
 
 
 def _header_hash(rec):
@@ -142,6 +199,14 @@ class ChainState:
         self._snapshot_unavailable = False
         self._tip_hash = None
         self._active_work = 0
+        # Per-height UTXO delta index for the ACTIVE chain, genesis-first:
+        # [(height, spent, created)] with spent/created tuples of
+        # ((txid, vout), (value, spk, is_cb, cb_h)) rows. Built in
+        # _replay_active (one pass over the already-replayed chain) and
+        # extended on every tip advance; see utxo_at(). None until load().
+        self._utxo_deltas = None
+        # Active-chain height -> block hash bytes (for utxo_at hash checks).
+        self._active_height_hash = {}
         # Spent-leaf set for the ACTIVE chain, mutated in place so a
         # mempool holding a reference to it always sees the current set.
         self.spent_pqh_pairs = set()
@@ -335,8 +400,10 @@ class ChainState:
             if self._snapshot_active_at(tip_height):
                 base = UtxoSet(snapshot=self._snapshot)
         path = self._path_to(self._tip_hash)
-        self.utxo = build_utxo([{"txs": rec["txs"]} for rec in path],
-                               base=base)
+        self.utxo, self._utxo_deltas = self._replay_with_deltas(path, base)
+        self._active_height_hash = {rec["height"]: rec["hash"]
+                                    for rec in path}
+        self._sync_utxo_index_disk()
         # Spent-leaf registry: rebuilt from the confirmed chain, then
         # persisted in the chain data directory (never in a wallet file,
         # so a wallet restore cannot resurrect a spent leaf).
@@ -350,7 +417,121 @@ class ChainState:
             root_hex, idx = key.rsplit(":", 1)
             self.spent_pqh_pairs.add((bytes.fromhex(root_hex), int(idx)))
 
-    # -------------------------------------------------------------- views
+    # --------------------------------------------------- UTXO delta index
+    @staticmethod
+    def _replay_with_deltas(path, base):
+        """Replay the active path into a UTXO set, recording the per-block
+        delta log. Returns (utxo, deltas) with deltas genesis-first as
+        [(height, spent, created)]. The UTXO mutation is identical to
+        build_utxo over the same path (same primitives, same order)."""
+        utxo = base if base is not None else {}
+        deltas = []
+        for rec in path:
+            spent, created = apply_block_txs_delta(rec["txs"], utxo,
+                                                   rec["height"])
+            deltas.append((rec["height"], tuple(spent), tuple(created)))
+        return utxo, deltas
+
+    def _sync_utxo_index_disk(self):
+        """Best-effort: verify the persisted delta log against the derived
+        one and (re)write it when absent, stale, or different. The disk
+        file (data_dir/utxo_index/) is a cache — the in-memory index is
+        authoritative, so any failure here is logged and ignored."""
+        if self._utxo_deltas is None:
+            return
+        try:
+            tip = self.index[self._tip_hash]
+            disk = utxo_index.read_index(self.data_dir, tip["height"],
+                                         tip["hash"])
+            if disk is not None and disk == self._utxo_deltas:
+                return
+            utxo_index.write_index(self.data_dir, self._utxo_deltas,
+                                   tip["height"], tip["hash"])
+        except Exception as exc:  # noqa: BLE001 - disk index is best-effort
+            print(f"utxo_index: disk sync failed ({exc}); continuing "
+                  f"with in-memory index", flush=True)
+
+    def _rebuild_utxo_deltas(self):
+        """Re-derive the whole delta log from the current active path.
+        Used after a reorg, where the intermediate added blocks never had
+        deltas recorded. The live tip UTXO set is left untouched (it was
+        already advanced correctly); the rebuilt log is cross-checked
+        against it by entry count + total value before it replaces the
+        old log."""
+        path = self._path_to(self._tip_hash)
+        base = None
+        if self.net == "fork":
+            if self._snapshot is None and not self._snapshot_unavailable:
+                self._snapshot = self._open_snapshot()
+                if self._snapshot is None:
+                    self._snapshot_unavailable = True
+            tip_height = self.index[self._tip_hash]["height"]
+            if self._snapshot_active_at(tip_height):
+                base = UtxoSet(snapshot=self._snapshot)
+        utxo, deltas = self._replay_with_deltas(path, base)
+        if utxo_stats(utxo) != utxo_stats(self.utxo):
+            raise RuntimeError("UTXO index rebuild disagrees with live "
+                               "tip set")
+        self._utxo_deltas = deltas
+        self._active_height_hash = {rec["height"]: rec["hash"]
+                                    for rec in path}
+        self._sync_utxo_index_disk()
+
+    def utxo_at(self, height, block_hash=None):
+        """UTXO set as of canonical block `height` (post-block view: the
+        set AFTER applying that block). Returns a private copy the caller
+        may mutate at dict level (row lists are copied, so the live tip
+        set is never aliased).
+
+        No chain replay: the set is rebuilt from the per-height delta log
+        — forward from the empty set when `height` is near genesis,
+        backward (undo) from the tip copy otherwise. Cost is O(block
+        deltas walked), worst case ~tip/2 steps at mid heights.
+
+        `block_hash`, when given, must be the canonical block hash at
+        `height` (bytes); a side-branch hash raises ValueError. Raises
+        ValueError for heights outside 0..tip and when the delta index
+        has not been built (load() not run).
+
+        LIMITATION: the delta log describes the ACTIVE chain only. A
+        lookup for a height whose canonical block later reorgs away
+        returns the set for the block that is canonical NOW; callers
+        that cache results across tip changes must key by block hash
+        (the Rosetta pre/post-view cache does).
+        """
+        if self._utxo_deltas is None:
+            raise ValueError("UTXO delta index not built")
+        height = int(height)
+        tip_height = self.index[self._tip_hash]["height"]
+        if height < 0 or height > tip_height:
+            raise ValueError(
+                f"UTXO lookup height {height} outside 0..{tip_height}")
+        if block_hash is not None:
+            want = self._active_height_hash.get(height)
+            if want is None or want != bytes(block_hash):
+                raise ValueError("block hash is not the canonical block "
+                                 f"at height {height}")
+        if height == tip_height:
+            return _copy_view(self.utxo)
+        # Forward from genesis is cheapest near height 0; backward from
+        # the tip copy otherwise. The tip copy itself costs ~0.4s at the
+        # 50k tip, so heights below the threshold walk forward instead.
+        if height <= _UTXO_FORWARD_THRESHOLD:
+            if self._snapshot_active_at(height):
+                view = UtxoSet(snapshot=self._snapshot)
+            else:
+                view = {}
+            for h in range(0, height + 1):
+                _h, spent, created = self._utxo_deltas[h]
+                _apply_delta_forward(view, spent, created)
+            return view
+        view = _copy_view(self.utxo)
+        for h in range(tip_height, height, -1):
+            _h, spent, created = self._utxo_deltas[h]
+            _apply_delta_backward(view, spent, created)
+        return view
+
+    # ---------------------------------------------------------------- views
     def tip(self):
         rec = self.index[self._tip_hash]
         return {"height": rec["height"], "hash": self._tip_hash.hex()}
@@ -517,10 +698,21 @@ class ChainState:
         # Only the new best chain advances the tip; side branches are
         # persisted/indexed above but leave tip and UTXO set untouched.
         if new_work > self._active_work:
-            apply_block_txs(txs, fork_utxo, height)
+            spent, created = apply_block_txs_delta(txs, fork_utxo, height)
             self.utxo = fork_utxo
             self._tip_hash = hh
             self._active_work = new_work
+            # Extend the UTXO delta index for the new tip. After a reorg
+            # the intermediate added blocks never had deltas recorded, so
+            # rebuild the whole log from the new active path instead.
+            if self._utxo_deltas is not None:
+                if removed:
+                    self._rebuild_utxo_deltas()
+                else:
+                    self._utxo_deltas.append(
+                        (height, tuple(spent), tuple(created)))
+                    self._active_height_hash[height] = hh
+                    self._sync_utxo_index_disk()
             # Commit the spent-leaf set in place (mempool holds a
             # reference to this set) and persist it with real txid/height
             # references from the new active path.
