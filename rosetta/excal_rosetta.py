@@ -1,0 +1,593 @@
+#!/usr/bin/env python3
+"""Native EXCAL Rosetta Data API adapter.
+
+Reads the live ChainState object; it does not maintain a second ledger and
+never mutates consensus state. Account identifiers preserve the exact native
+locking script as "lock:<script hex>" so PKH, PQH, HTLC, QHTLC, BRIDGE and
+other script forms are not collapsed into an ECDSA address.
+"""
+import argparse
+import json
+import os
+import sys
+import threading
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+from txscript import parse_tx, txid_internal
+from rosetta.construction import Construction
+
+BLOCKCHAIN = "excal"
+CURRENCY = {"symbol": "EXCAL", "decimals": 8}
+CURRENCIES = {"mainnet": CURRENCY,
+              "testnet": {"symbol": "tEXCAL", "decimals": 8}}
+NETWORK = "mainnet"
+NETWORK_ID = {"blockchain": BLOCKCHAIN, "network": NETWORK}
+ERRORS = [
+    {"code": 1, "message": "invalid network identifier", "retriable": False},
+    {"code": 2, "message": "block not found", "retriable": False},
+    {"code": 3, "message": "transaction not found", "retriable": False},
+    {"code": 4, "message": "invalid account identifier", "retriable": False},
+    {"code": 5, "message": "historical UTXO state lookup unavailable", "retriable": False},
+    {"code": 6, "message": "construction or consensus validation failed", "retriable": False},
+    {"code": 7, "message": "invalid request", "retriable": False},
+]
+ERROR_BY_CODE = {e["code"]: e for e in ERRORS}
+
+
+def _display_hash(raw_hash):
+    if isinstance(raw_hash, bytes):
+        return raw_hash[::-1].hex()
+    value = str(raw_hash)
+    try:
+        return bytes.fromhex(value)[::-1].hex()
+    except ValueError:
+        return value
+
+
+def _script_account(script):
+    return "lock:" + bytes(script).hex()
+
+
+def _coinbase(tx):
+    if len(tx["vin"]) != 1:
+        return False
+    vin = tx["vin"][0]
+    return vin["prev"] == bytes(32) and vin["idx"] == 0xffffffff
+
+
+def _outpoint(txid_wire, vout):
+    return (bytes(txid_wire), int(vout))
+
+
+class ExcalRosetta:
+    """Rosetta Data API backed by a live ChainState instance."""
+
+    def __init__(self, chainstate, network=NETWORK, mempool=None, node=None,
+                 chain_network=None):
+        self.cs = chainstate
+        self.mempool = mempool
+        self.node = node
+        self.currency = CURRENCIES.get(network, CURRENCY)
+        # Consensus network whose activation gates the Construction API
+        # enforces. The Rosetta network label ("mainnet") is separate from
+        # the node consensus network ("fork" for the live Bitcoin-anchored
+        # chain); gates must follow the chain, not the label. Defaults to
+        # the label for standalone/test fixtures with no chain attached.
+        self.chain_network = chain_network or network
+        self.construction = Construction(chainstate, mempool, node, self.currency,
+                                         self._historical_output,
+                                         network=self.chain_network)
+        self.network = network
+        self.network_id = {"blockchain": BLOCKCHAIN, "network": network}
+        self.lock = threading.RLock()
+        self._output_index = {}
+        self._indexed_height = -1
+        self._indexed_tip_hash = None
+        # Pre/post-block UTXO views, keyed by (height, block hash bytes).
+        # _utxo_before replays the whole canonical path through the
+        # ChainState hook, so an uncached /block or /network/status at the
+        # 50k tip costs seconds per call; the cache makes repeat and
+        # sequential (check:data-style) renders O(view copy) instead.
+        # Keys carry the block hash, so a reorg naturally misses and
+        # recomputes; entries are bounded to a small rolling window.
+        self._pre_views = {}
+        self._post_views = {}
+
+    def _ensure_output_index(self):
+        """Incrementally index canonical outputs; rebuild after a reorg."""
+        tip_height, tip_hash = self._tip()
+        if self._indexed_height >= 0:
+            indexed_record = self._record(self._indexed_height)
+            if indexed_record is None or indexed_record["hash"] != self._indexed_tip_hash:
+                self._output_index.clear()
+                self._indexed_height = -1
+        for height in range(self._indexed_height + 1, tip_height + 1):
+            rec = self._record(height)
+            if rec is None:
+                raise ValueError("missing canonical block while indexing height " + str(height))
+            for raw in rec.get("txs", []):
+                tx = parse_tx(raw)
+                txid = txid_internal(raw)
+                for n, out in enumerate(tx["vout"]):
+                    self._output_index[(txid, n)] = out
+        self._indexed_height = tip_height
+        self._indexed_tip_hash = tip_hash
+
+    def _historical_output(self, outpoint):
+        self._ensure_output_index()
+        return self._output_index.get((bytes(outpoint[0]), int(outpoint[1])))
+
+    def _mempool_transaction(self, raw):
+        tx = parse_tx(raw)
+        txid = txid_internal(raw)[::-1].hex()
+        ops = []
+        input_refs = []
+        total_in = 0
+        total_out = sum(int(out["value"]) for out in tx["vout"])
+        for vin in tx["vin"]:
+            key = (vin["prev"], int(vin["idx"]))
+            rows = self.cs.utxo.get(key)
+            if not rows:
+                raise ValueError("mempool input prevout unavailable")
+            value, lock, _cb, _cbh = rows[0]
+            total_in += int(value)
+            idx = len(ops)
+            input_refs.append({"index": idx})
+            ops.append({
+                "operation_identifier": {"index": idx},
+                "type": "transfer", "status": "success",
+                "account": {"address": _script_account(lock)},
+                "amount": {"value": str(-int(value)), "currency": self.currency},
+                "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
+                                "coin_action": "coin_spent"},
+            })
+        for n, out in enumerate(tx["vout"]):
+            idx = len(ops)
+            ops.append({
+                "operation_identifier": {"index": idx},
+                "type": "transfer", "status": "success",
+                "account": {"address": _script_account(out["script"])},
+                "amount": {"value": str(int(out["value"])), "currency": self.currency},
+                "related_operations": input_refs,
+                "coin_change": {"coin_identifier": {"identifier": txid + ":" + str(n)},
+                                "coin_action": "coin_created"},
+            })
+        fee = total_in - total_out
+        if fee < 0:
+            raise ValueError("mempool outputs exceed resolved input value")
+        return {"transaction_identifier": {"hash": txid}, "operations": ops,
+                "metadata": {"raw_transaction": raw.hex(),
+                             "input_count": len(tx["vin"]),
+                             "output_count": len(tx["vout"]),
+                             "fee": str(fee)}}
+
+    def _error(self, code, message=None):
+        e = dict(ERROR_BY_CODE[code])
+        if message:
+            e["message"] = str(message)[:256]
+        return e
+
+    def _check_network(self, body):
+        if body.get("network_identifier") != self.network_id:
+            return self._error(1)
+        return None
+    def _tip(self):
+        tip = self.cs.tip()
+        return int(tip["height"]), tip["hash"]
+
+    def _canonical_records(self):
+        tip_hash = self.cs.tip()["hash"]
+        if isinstance(tip_hash, str):
+            tip_hash = bytes.fromhex(tip_hash)
+        if getattr(self, "_records_tip_hash", None) != tip_hash:
+            path_fn = getattr(self.cs, "_path_to", None)
+            if callable(path_fn):
+                path = path_fn(tip_hash)
+            else:
+                # Small deterministic fixture fallback; production ChainState
+                # always uses _path_to so only its selected active chain is read.
+                fallback = getattr(self.cs, "by_height", None)
+                if not isinstance(fallback, dict):
+                    raise ValueError("ChainState lacks canonical path traversal")
+                path = [fallback[h] for h in sorted(fallback)]
+            self._records_by_height = {int(rec["height"]): rec for rec in path}
+            self._records_tip_hash = tip_hash
+        return self._records_by_height
+
+    def _record(self, height):
+        return self._canonical_records().get(int(height))
+
+    def _record_identifier(self, rec):
+        return {"index": int(rec["height"]), "hash": _display_hash(rec["hash"])}
+
+    @staticmethod
+    def _hash_bytes(value):
+        if isinstance(value, bytes):
+            return value
+        return bytes.fromhex(str(value))
+
+    def _cache_view(self, cache, key, view):
+        # Views are ~50k entries at the live tip; keep a small rolling
+        # window (8 heights) so sequential renders stay cheap without
+        # unbounded memory growth. copy() handles both plain dicts and
+        # UtxoSet views (whose copy() shares the immutable snapshot).
+        cache[key] = view.copy() if callable(getattr(view, "copy", None)) else dict(view)
+        while len(cache) > 8:
+            del cache[min(cache)]
+
+    def _utxo_before(self, height):
+        if int(height) <= 0:
+            return {}
+        previous = self._record(int(height) - 1)
+        if previous is None:
+            raise ValueError("missing previous canonical block")
+        prev_hash = self._hash_bytes(previous["hash"])
+        key = (int(height), prev_hash)
+        cached = self._pre_views.get(key)
+        if cached is not None:
+            return cached.copy() if callable(getattr(cached, "copy", None)) else dict(cached)
+        # The post-view of the previous block is exactly this pre-view.
+        post = self._post_views.get((int(height) - 1, prev_hash))
+        if post is not None:
+            self._cache_view(self._pre_views, key, post)
+            return post.copy() if callable(getattr(post, "copy", None)) else dict(post)
+        replay = getattr(self.cs, "_fork_utxo", None)
+        # Fast path: ChainState.utxo_at answers from the per-height delta
+        # index (no chain replay). Any failure falls through to the
+        # replay path below, which is the long-proven behaviour — the
+        # index is an acceleration, never a new failure mode.
+        fast = getattr(self.cs, "utxo_at", None)
+        if callable(fast):
+            try:
+                view = fast(int(height) - 1, prev_hash)
+            except Exception:
+                view = None
+            if view is not None:
+                self._cache_view(self._pre_views, key, view)
+                return view
+        if callable(replay):
+            view = replay(previous["hash"])
+            view = view.copy() if callable(getattr(view, "copy", None)) else view
+        else:
+            # Deterministic fallback for lightweight tests, not used by live ChainState.
+            view = {}
+            for h in range(int(height)):
+                rec = self._record(h)
+                if rec is None:
+                    raise ValueError("missing canonical block during UTXO replay")
+                for raw in rec.get("txs", []):
+                    tx = parse_tx(raw)
+                    coinbase = _coinbase(tx)
+                    if not coinbase:
+                        for vin in tx["vin"]:
+                            key2 = (vin["prev"], int(vin["idx"]))
+                            if key2 not in view:
+                                raise ValueError("historical replay encountered missing input")
+                            del view[key2]
+                    tid = txid_internal(raw)
+                    for n, out in enumerate(tx["vout"]):
+                        view[(tid, n)] = [(int(out["value"]), bytes(out["script"]),
+                                           coinbase, h if coinbase else 0)]
+        # The caller mutates the returned view into the block's post-view,
+        # so cache a separate copy. Values are read-only rows; only the
+        # dict itself is mutated, so a shallow copy is sufficient.
+        self._cache_view(self._pre_views, key, view)
+        return view
+
+    def _block(self, height):
+        rec = self._record(height)
+        if rec is None:
+            return None
+        prev = self._record(height - 1) if int(height) > 0 else None
+        parent = self._record_identifier(prev) if prev is not None else self._record_identifier(rec)
+        raws = rec.get("txs", [])
+        if prev is None:
+            view = {}
+        else:
+            # _utxo_before uses the live ChainState replay hook when available,
+            # and a deterministic canonical-block replay for lightweight fixtures.
+            # Do not make /network/status or /block fail solely because a test or
+            # alternate ChainState implementation lacks the private _fork_utxo hook.
+            view = self._utxo_before(height)
+        transactions = []
+        for raw in raws:
+            t = parse_tx(raw)
+            tid = txid_internal(raw)
+            tx_hash = tid[::-1].hex()
+            ops = []
+            total_in = 0
+            total_out = sum(int(out["value"]) for out in t["vout"])
+            fee = 0
+            is_coinbase = _coinbase(t)
+            if not is_coinbase:
+                for vin in t["vin"]:
+                    key = (vin["prev"], int(vin["idx"]))
+                    rows = view.get(key)
+                    if not rows:
+                        raise ValueError("input prevout unavailable in pre-block UTXO view at height " + str(height))
+                    value, lock, _cb, _cbh = rows[0]
+                    value, lock = int(value), bytes(lock)
+                    total_in += value
+                    idx = len(ops)
+                    ops.append({
+                        "operation_identifier": {"index": idx},
+                        "type": "transfer", "status": "success",
+                        "account": {"address": _script_account(lock)},
+                        "amount": {"value": str(-value), "currency": self.currency},
+                        "coin_change": {"coin_identifier": {"identifier": vin["prev"][::-1].hex() + ":" + str(vin["idx"])},
+                                        "coin_action": "coin_spent"},
+                    })
+                    del view[key]
+                fee = total_in - total_out
+                if fee < 0:
+                    raise ValueError("transaction outputs exceed resolved input value")
+            for n, out in enumerate(t["vout"]):
+                lock = bytes(out["script"])
+                value = int(out["value"])
+                idx = len(ops)
+                op = {
+                    "operation_identifier": {"index": idx},
+                    "type": "coinbase" if is_coinbase else "transfer",
+                    "status": "success",
+                    "account": {"address": _script_account(lock)},
+                    "amount": {"value": str(value), "currency": self.currency},
+                    "coin_change": {"coin_identifier": {"identifier": tx_hash + ":" + str(n)},
+                                    "coin_action": "coin_created"},
+                }
+                if ops and not is_coinbase:
+                    op["related_operations"] = [{"index": i} for i in range(sum(1 for x in ops if x.get("amount", {}).get("value", "0").startswith("-")))]
+                ops.append(op)
+                view.setdefault((tid, n), [(value, lock, is_coinbase, int(height) if is_coinbase else 0)])
+            transactions.append({
+                "transaction_identifier": {"hash": tx_hash},
+                "operations": ops,
+                "metadata": {"lock_time": int(t["locktime"]), "version": int(t["version"]), "fee": str(fee)},
+            })
+        # `view` is now the block's post-view: cache it so the next
+        # height's pre-view is a copy, not another full-chain replay.
+        self._cache_view(self._post_views, (int(height), self._hash_bytes(rec["hash"])), view)
+        timestamp = int(rec.get("time", 0)) * 1000
+        return {
+            "block_identifier": self._record_identifier(rec),
+            "parent_block_identifier": parent,
+            "timestamp": timestamp,
+            "transactions": transactions,
+            "metadata": {"bits": int(rec.get("bits", 0)), "nonce": int(rec.get("nonce", 0)),
+                         "version": int(rec.get("version", 0))},
+        }
+    def handle(self, path, body):
+        if path == "/network/list":
+            return 200, {"network_identifiers": [self.network_id]}
+        if path == "/network/options":
+            err = self._check_network(body)
+            if err:
+                return 500, err
+            return 200, {
+                "version": {"rosetta_version": "1.4.13", "node_version": "EXCAL-native",
+                            "middleware_version": "excal-rosetta/1.0.0"},
+                "allow": {"operation_statuses": [{"status": "success", "successful": True},
+                                                  {"status": "failure", "successful": False}],
+                          "operation_types": ["coinbase", "transfer", "input", "output", "fee"],
+                          "errors": ERRORS, "historical_balance_lookup": True,
+                          "call_methods": [], "balance_exemptions": []},
+                "metadata": {"excal_extensions": {
+                    "trifold_signature_type": "trifold",
+                    "knot_signature_type": "excal_knot",
+                    "witness_encoding": "native scriptSig hex"}},
+            }
+        err = self._check_network(body)
+        if err:
+            return 500, err
+        if path == "/network/status":
+            with self.lock:
+                height, block_hash = self._tip()
+                current = self._block(height)
+                genesis = self._record(0)
+                if current is None or genesis is None:
+                    return 500, self._error(2, "chainstate has no complete genesis/tip")
+                peers = []
+                if self.node is not None and getattr(self.node, "peermgr", None):
+                    for _session, address in self.node.peermgr.peers:
+                        peer = f"{address[0]}:{address[1]}"
+                        peers.append({"peer_id": peer, "metadata": {"address": peer}})
+                return 200, {
+                    "current_block_identifier": current["block_identifier"],
+                    "current_block_timestamp": current["timestamp"],
+                    "genesis_block_identifier": self._record_identifier(genesis),
+                    "peers": peers,
+                }
+        if path == "/block":
+            ident = body.get("block_identifier") or {}
+            with self.lock:
+                height = ident.get("index")
+                if height is None and ident.get("hash"):
+                    wanted = ident["hash"].lower()
+                    height = next((h for h, r in self._canonical_records().items()
+                                   if _display_hash(r["hash"]) == wanted), None)
+                if height is None:
+                    height = self._tip()[0]
+                block = self._block(int(height))
+                if block is None:
+                    return 500, self._error(2)
+                if ident.get("hash") and block["block_identifier"]["hash"] != ident["hash"].lower():
+                    return 500, self._error(2)
+                return 200, {"block": block}
+        if path == "/block/transaction":
+            ident = body.get("block_identifier") or {}
+            txid = (body.get("transaction_identifier") or {}).get("hash")
+            if not txid:
+                return 500, self._error(7, "transaction_identifier.hash required")
+            with self.lock:
+                height = ident.get("index")
+                if height is None and ident.get("hash"):
+                    height = next((h for h, r in self.cs.by_height.items()
+                                   if _display_hash(r["hash"]) == ident["hash"].lower()), None)
+                if height is None:
+                    return 500, self._error(2)
+                block = self._block(int(height))
+                if block is None:
+                    return 500, self._error(2)
+                for tx in block["transactions"]:
+                    if tx["transaction_identifier"]["hash"] == txid.lower():
+                        return 200, {"transaction": tx}
+                return 500, self._error(3)
+        if path == "/account/balance":
+            account = body.get("account_identifier") or {}
+            address = account.get("address", "")
+            if not isinstance(address, str) or not address.startswith("lock:"):
+                return 500, self._error(4, "address must be lock:<exact locking-script hex>")
+            try:
+                script = bytes.fromhex(address[5:])
+            except ValueError:
+                return 500, self._error(4, "locking script is not valid hex")
+            if not script:
+                return 500, self._error(4, "empty locking script")
+            with self.lock:
+                tip_height, _tip_hash = self._tip()
+                requested = body.get("block_identifier") or {}
+                height = requested.get("index")
+                if height is None and requested.get("hash"):
+                    wanted = requested["hash"].lower()
+                    height = next((h for h, rec in self._canonical_records().items()
+                                   if _display_hash(rec["hash"]) == wanted), None)
+                if height is None:
+                    height = tip_height
+                height = int(height)
+                rec = self._record(height)
+                if rec is None:
+                    return 500, self._error(2, "requested balance block not found")
+                block_hash = rec["hash"]
+                if requested.get("hash") and _display_hash(block_hash) != requested["hash"].lower():
+                    return 500, self._error(2, "block index/hash mismatch")
+                if height == tip_height:
+                    utxo = self.cs.utxo
+                else:
+                    historical = getattr(self.cs, "_fork_utxo", None)
+                    if not callable(historical):
+                        return 500, self._error(5)
+                    try:
+                        # UTXO set as of `height` is the pre-view of the
+                        # next block, so this reuses the cached views that
+                        # _block builds (a direct _fork_utxo call here
+                        # replayed the whole chain on every lookup).
+                        utxo = self._utxo_before(height + 1)
+                    except Exception as exc:
+                        return 500, self._error(5, "historical UTXO replay failed: " + str(exc))
+                total = 0
+                count = 0
+                finder = getattr(utxo, "find_by_spk", None)
+                if callable(finder):
+                    matches = finder(script)
+                else:
+                    matches = []
+                    for key, entries in utxo.items():
+                        if isinstance(entries, tuple):
+                            entries = [entries]
+                        for entry in entries:
+                            if bytes(entry[1]) == script:
+                                matches.append((key, entry))
+                for _key, entry in matches:
+                    total += int(entry[0])
+                    count += 1
+                return 200, {
+                    "block_identifier": {"index": height, "hash": _display_hash(block_hash)},
+                    "balances": [{"value": str(total), "currency": self.currency}],
+                    "metadata": {"utxo_count": count},
+                }
+        if path == "/mempool":
+            if self.mempool is None:
+                return 500, self._error(7, "live mempool is not connected")
+            with self.lock:
+                ids = [{"hash": txid_internal(raw)[::-1].hex()}
+                       for raw in self.mempool.txs.values()]
+            return 200, {"transaction_identifiers": ids}
+        if path == "/mempool/transaction":
+            if self.mempool is None:
+                return 500, self._error(7, "live mempool is not connected")
+            wanted = (body.get("transaction_identifier") or {}).get("hash", "").lower()
+            with self.lock:
+                raw = next((raw for raw in self.mempool.txs.values()
+                            if txid_internal(raw)[::-1].hex() == wanted), None)
+                if raw is None:
+                    return 500, self._error(3)
+                return 200, {"transaction": self._mempool_transaction(raw)}
+        if path.startswith("/construction/"):
+            try:
+                return 200, self.construction.handle(path, body)
+            except KeyError as exc:
+                return 404, self._error(7, str(exc))
+            except Exception as exc:
+                return 500, self._error(6, str(exc))
+        return 404, self._error(7, "unknown endpoint")
+
+
+def make_handler(app):
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_args):
+            pass
+
+        def do_GET(self):
+            if self.path == "/health":
+                try:
+                    height, block_hash = app._tip()
+                    self._reply(200, {"ok": True, "height": height,
+                                      "block_hash": _display_hash(block_hash)})
+                except Exception as exc:
+                    self._reply(503, {"ok": False, "error": str(exc)[:200]})
+            else:
+                self._reply(404, {"error": "not found"})
+
+        def do_POST(self):
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if length <= 0 or length > 2_000_000:
+                    raise ValueError("invalid Content-Length")
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
+                if not isinstance(body, dict):
+                    raise ValueError("request body must be a JSON object")
+                status, result = app.handle(self.path, body)
+                self._reply(status, result)
+            except Exception as exc:
+                self._reply(500, app._error(7, str(exc)))
+
+        def _reply(self, status, obj):
+            raw = json.dumps(obj, separators=(",", ":")).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(raw)
+
+    return Handler
+
+
+def serve(chainstate, host="127.0.0.1", port=8070, network=NETWORK, mempool=None, node=None,
+          chain_network=None):
+    app = ExcalRosetta(chainstate, network=network, mempool=mempool, node=node,
+                       chain_network=chain_network)
+    server = ThreadingHTTPServer((host, int(port)), make_handler(app))
+    server.serve_forever()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="EXCAL Rosetta Data API")
+    parser.add_argument("--data-dir", required=True, help="EXCAL ChainState data directory")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8070)
+    parser.add_argument("--network", default=NETWORK, choices=["mainnet", "testnet"],
+                        help="Rosetta network identifier (separate from node consensus network)")
+    parser.add_argument("--chain-network", default="fork",
+                        choices=["mainnet", "testnet", "fork"],
+                        help="EXCAL node consensus network to load; production Bitcoin-anchored EXCAL uses fork")
+    args = parser.parse_args()
+    from chainstate import ChainState
+    cs = ChainState(args.data_dir, net=args.chain_network).load()
+    serve(cs, args.host, args.port, args.network, chain_network=args.chain_network)
+
+
+if __name__ == "__main__":
+    main()

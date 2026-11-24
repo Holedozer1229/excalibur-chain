@@ -16,6 +16,20 @@ from file_locks import exclusive_file_lock, fsync_directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
+def pair_key(root: bytes, index: int) -> str:
+    """Canonical spent-pair key: "<root hex>:<leaf index>".
+
+    chainstate.py keys its chain-rebuilt spent-pair map by this string
+    (and parses it back with rsplit(":", 1)); keep the format in exactly
+    one place.
+    """
+    if not isinstance(root, bytes) or len(root) != 32:
+        raise ValueError("Trifold root must be 32 bytes")
+    if not isinstance(index, int) or isinstance(index, bool) or index < 0:
+        raise ValueError("Trifold leaf index must be a non-negative integer")
+    return f"{root.hex()}:{index}"
+
+
 def extract_pairs(raw_tx: bytes):
     """Return one-time Trifold (root, index) pairs revealed by a tx."""
     from txpq import decode_witness
@@ -81,6 +95,47 @@ class SpentLeafRegistry:
                         continue
                     try:
                         record = json.loads(line)
+                        if isinstance(record, dict) and "root" not in record:
+                            # Legacy format: a single JSON object mapping
+                            # pair_key ("<root hex>:<index>") to
+                            # {"txid", "height"} — the _scan_spent_pairs map
+                            # an older chainstate persisted verbatim. Expand
+                            # it to records; anything else shaped still fails
+                            # closed below.
+                            for key, ref in record.items():
+                                if (not isinstance(key, str)
+                                        or key.count(":") != 1
+                                        or len(key.split(":")[0]) != 64
+                                        or not isinstance(ref, dict)):
+                                    raise ValueError(
+                                        "invalid legacy spent-pair entry")
+                                root_hex, idx = key.rsplit(":", 1)
+                                try:
+                                    index = int(idx)
+                                    bytes.fromhex(root_hex)
+                                except ValueError as exc:
+                                    raise ValueError(
+                                        "invalid legacy spent-pair key"
+                                    ) from exc
+                                if index < 0:
+                                    raise ValueError(
+                                        "invalid legacy spent-pair index")
+                                txid = ref.get("txid")
+                                height = ref.get("height")
+                                if (txid is not None
+                                        and not isinstance(txid, str)):
+                                    raise ValueError(
+                                        "invalid legacy spent-pair txid")
+                                if (height is not None
+                                        and (not isinstance(height, int)
+                                             or isinstance(height, bool))):
+                                    raise ValueError(
+                                        "invalid legacy spent-pair height")
+                                cache.setdefault(
+                                    (root_hex, index),
+                                    {"root": root_hex, "index": index,
+                                     "txid": txid, "height": height})
+                            continue
                         root = record["root"]
                         index = record["index"]
                         if (not isinstance(root, str) or len(root) != 64
@@ -158,6 +213,53 @@ class SpentLeafRegistry:
                height: int | None = None):
         """Idempotently record a pair; use reserve() when signing."""
         self.reserve(root, index, txid=txid, height=height)
+
+    def replace_with(self, refs: dict) -> None:
+        """Atomically replace the registry with `refs`.
+
+        `refs` maps pair_key strings ("<root hex>:<index>") to
+        {"txid": ..., "height": ...} first-spend references, as produced
+        by chainstate._scan_spent_pairs. The chain is the authority: a
+        rebuild drops pairs no longer on the active chain (e.g. after a
+        reorg) instead of merging them in. A malformed refs map raises
+        and leaves the on-disk registry untouched.
+        """
+        new_cache: dict[tuple[str, int], dict] = {}
+        for key, ref in dict(refs).items():
+            if not isinstance(key, str):
+                raise ValueError("spent-pair key must be a string")
+            root_hex, sep, idx = key.rpartition(":")
+            if not sep or len(root_hex) != 64:
+                raise ValueError(f"invalid spent-pair key: {key!r}")
+            try:
+                index = int(idx)
+                root = bytes.fromhex(root_hex).hex()
+            except ValueError as exc:
+                raise ValueError(f"invalid spent-pair key: {key!r}") from exc
+            if index < 0 or not isinstance(ref, dict):
+                raise ValueError(f"invalid spent-pair ref for {key!r}")
+            txid = ref.get("txid")
+            height = ref.get("height")
+            if txid is not None and not isinstance(txid, str):
+                raise ValueError(f"invalid txid for {key!r}")
+            if height is not None and (not isinstance(height, int)
+                                       or isinstance(height, bool)):
+                raise ValueError(f"invalid height for {key!r}")
+            new_cache.setdefault((root, index),
+                                 {"root": root, "index": index,
+                                  "txid": txid, "height": height})
+        directory = os.path.dirname(os.path.abspath(self.path))
+        os.makedirs(directory, exist_ok=True)
+        with exclusive_file_lock(self.path + ".lock"):
+            tmp_path = self.path + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                for record in new_cache.values():
+                    f.write(json.dumps(record) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, self.path)
+            fsync_directory(directory)
+            self._cache = dict(new_cache)
 
 
 def load_registry(path: str | None = None) -> SpentLeafRegistry:

@@ -7,7 +7,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import secp256k1 as secp
-from genesis_fork import (sha256d, ser_varint, push, subsidy,
+from genesis_fork import (sha256d, ser_varint, push, subsidy, NETWORKS,
                           QLOCK_ACTIVATION, qlock_activation,
                           QDAY_ACTIVATION, qday_activation,
                           HTLC_ACTIVATION, htlc_activation,
@@ -24,6 +24,30 @@ SIGHASH_NONE = 0x02
 SIGHASH_SINGLE = 0x03
 COINBASE_MATURITY = 100
 DUST_THRESHOLD = 546  # ~3 sat/byte for a standard P2PKH spend
+
+
+def _activation_gates(network=None):
+    """Activation heights for `network`, or the process-global ones.
+
+    A named network's gates never depend on genesis_fork's process-global
+    selected network: importing fork_node (or constructing a ChainStore)
+    flips that global to "fork" (qlock_activation 0), which used to make
+    validate_tx retire legacy outputs at height 0 for every caller.
+    Mirrors rosetta/construction.py:_gates; network dicts that do not
+    spell out a gate fall back to the module-level default, exactly as
+    the process-global accessors do.
+    """
+    if network is not None and network in NETWORKS:
+        params = NETWORKS[network]
+        return {"qlock": params.get("qlock_activation", QLOCK_ACTIVATION),
+                "qday": params.get("qday_activation", QDAY_ACTIVATION),
+                "htlc": params.get("htlc_activation", HTLC_ACTIVATION),
+                "qhtlc": params.get("qhtlc_activation", QHTLC_ACTIVATION),
+                "bridge": params.get("bridge_activation", BRIDGE_ACTIVATION),
+                "knot": params.get("knot_activation", KNOT_ACTIVATION)}
+    return {"qlock": qlock_activation(), "qday": qday_activation(),
+            "htlc": htlc_activation(), "qhtlc": qhtlc_activation(),
+            "bridge": bridge_activation(), "knot": knot_activation()}
 
 # ---------------------------------------------------------------- wire parse
 def _read_varint(b: bytes, p: int):
@@ -876,11 +900,17 @@ def _spend_from_view(view: dict, key):
 
 
 def validate_tx(tx: bytes, utxo: dict, height: int, view: dict = None,
-                spent_pairs: set = None):
+                spent_pairs: set = None, network: str = None):
     """Full consensus validation of one non-coinbase tx.
 
     Returns (ok, reason, fee). When view is given, spends apply to the view
     (for intra-block chaining); utxo itself is never mutated.
+
+    `network`: named consensus network whose activation gates apply
+    ("mainnet", "testnet", "fork"). When None, the process-global
+    genesis_fork selection applies (legacy behaviour). Pass it whenever
+    the caller knows the chain — otherwise a flipped process-global
+    silently changes which locks are legal at a height.
 
     Spent-leaf guard (Q-Day, one-time leaves): spent_pairs, when given, is
     a mutable set of (root, index) pairs already spent on the chain (or
@@ -905,12 +935,13 @@ def validate_tx(tx: bytes, utxo: dict, height: int, view: dict = None,
     # copies share the immutable snapshot, so this stays cheap at 10^8
     # outputs; plain-dict callers (tests) get the legacy full copy.
     work = _view_copy(utxo) if view is None else view
-    qlock = height >= qlock_activation()  # Lockbox upgrade active?
-    qday = height >= qday_activation()    # Q-Day (PQH lock) active?
-    htlc_active = height >= htlc_activation()  # HTLC lock active?
-    qhtlc_active = height >= qhtlc_activation()  # QHTLC lock active?
-    bridge_active = height >= bridge_activation()  # Bridge lock active?
-    knot_active = height >= knot_activation()  # KNOT lock active?
+    gates = _activation_gates(network)
+    qlock = height >= gates["qlock"]  # Lockbox upgrade active?
+    qday = height >= gates["qday"]    # Q-Day (PQH lock) active?
+    htlc_active = height >= gates["htlc"]  # HTLC lock active?
+    qhtlc_active = height >= gates["qhtlc"]  # QHTLC lock active?
+    bridge_active = height >= gates["bridge"]  # Bridge lock active?
+    knot_active = height >= gates["knot"]  # KNOT lock active?
     seen = set()
     pqh_pairs = []  # (root, index) pairs revealed by this tx, in order
     total_in = 0
@@ -1198,7 +1229,7 @@ def fusion_pqh_lock() -> bytes:
 
 
 def validate_block_txs(txs: list, utxo: dict, height: int, subsidy: int,
-                       spent_pairs: set = None):
+                       spent_pairs: set = None, network: str = None):
     """Validate all txs of a candidate block (txs[0] = coinbase).
 
     Returns (ok, reason, fees). Never mutates utxo.
@@ -1217,7 +1248,7 @@ def validate_block_txs(txs: list, utxo: dict, height: int, subsidy: int,
     fees = 0
     for tx in txs[1:]:
         ok, reason, fee = validate_tx(tx, utxo, height, view=view,
-                                      spent_pairs=working)
+                                      spent_pairs=working, network=network)
         if not ok:
             return False, f"tx {txid_display(tx)[:16]}: {reason}", 0
         fees += fee
@@ -1262,6 +1293,32 @@ def apply_block_txs(txs: list, utxo: dict, height: int):
             for vin in t["vin"]:
                 _spend_from_view(utxo, (vin["prev"], vin["idx"]))
         _add_tx_outputs(tx, utxo, height, is_coinbase=(n == 0))
+
+
+def apply_block_txs_delta(txs: list, utxo: dict, height: int):
+    """Like apply_block_txs, but also returns the block's UTXO delta:
+    (spent, created) where spent = [(key, entry)] rows removed (oldest
+    entry first, in tx order) and created = [(key, entry)] rows added,
+    entry = (value, script, is_coinbase, cb_height). The mutation applied
+    to `utxo` is byte-identical to apply_block_txs; a missing input (only
+    possible on an invalid chain) spends nothing and records nothing,
+    exactly as apply_block_txs does."""
+    spent = []
+    created = []
+    for n, tx in enumerate(txs):
+        t = parse_tx(tx)
+        if n > 0:  # not coinbase: spend inputs
+            for vin in t["vin"]:
+                key = (vin["prev"], vin["idx"])
+                e = _spend_from_view(utxo, key)
+                if e is not None:
+                    spent.append((key, e))
+        tid = txid_internal(tx)
+        for j, vout in enumerate(t["vout"]):
+            row = (vout["value"], vout["script"], n == 0, height)
+            utxo.setdefault((tid, j), []).append(row)
+            created.append(((tid, j), row))
+    return spent, created
 
 # ---------------------------------------------------------------- UTXO set
 def build_utxo(chain, base=None) -> dict:

@@ -1,0 +1,63 @@
+name: EXCAL Rosetta tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "rosetta/**"
+      - "tests/test_excal_rosetta.py"
+      - "txscript.py"
+      - "txpq.py"
+      - "trifold_lockbox.py"
+      - "spent_leaf_registry.py"
+      - ".github/workflows/rosetta-tests.yml"
+      - ".github/workflows/rosetta-validation.yml"
+  push:
+    branches: [master, feature/excal-rosetta-native-v1]
+    paths:
+      - "rosetta/**"
+      - "tests/test_excal_rosetta.py"
+      - "txscript.py"
+      - "txpq.py"
+      - "trifold_lockbox.py"
+      - "spent_leaf_registry.py"
+      - ".github/workflows/rosetta-tests.yml"
+      - ".github/workflows/rosetta-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: excal-rosetta-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rosetta:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install focused test dependencies
+        run: python -m pip install --upgrade pip numpy cryptography
+      - name: Compile Rosetta modules
+        run: python -m compileall -q rosetta tests/test_excal_rosetta.py
+      - name: Run Rosetta unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -p "test_excal_rosetta.py" -v 2>&1 | tee rosetta-test.log
+      - name: Preserve test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rosetta-test-py${{ matrix.python-version }}
+          path: rosetta-test.log
+          if-no-files-found: ignore

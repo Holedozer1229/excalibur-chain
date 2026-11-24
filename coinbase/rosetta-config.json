@@ -27,10 +27,10 @@
       }
     ],
     "operation_types": [
-      "transfer",
       "coinbase",
-      "nft_mint",
-      "bridge",
+      "transfer",
+      "input",
+      "output",
       "fee"
     ],
     "currencies": [
@@ -40,38 +40,72 @@
       }
     ],
     "fungible_operations": [
-      "transfer",
       "coinbase",
+      "transfer",
+      "input",
+      "output",
       "fee"
     ],
     "related_operations": [
-      {
-        "operation_type": "transfer",
-        "related_operation_types": ["transfer"]
-      },
       {
         "operation_type": "coinbase",
         "related_operation_types": []
       },
       {
-        "operation_type": "nft_mint",
-        "related_operation_types": ["transfer"]
+        "operation_type": "input",
+        "related_operation_types": [
+          "output"
+        ]
       },
       {
-        "operation_type": "bridge",
-        "related_operation_types": ["transfer"]
+        "operation_type": "output",
+        "related_operation_types": [
+          "input"
+        ]
+      },
+      {
+        "operation_type": "transfer",
+        "related_operation_types": [
+          "input",
+          "output"
+        ]
       },
       {
         "operation_type": "fee",
-        "related_operation_types": ["transfer"]
+        "related_operation_types": [
+          "input"
+        ]
       }
     ],
     "errors": [
-      {"code": 1, "message": "block not found"},
-      {"code": 2, "message": "transaction not found"},
-      {"code": 3, "message": "account not found"},
-      {"code": 4, "message": "invalid address format"},
-      {"code": 5, "message": "insufficient balance"}
+      {
+        "code": 1,
+        "message": "invalid network identifier"
+      },
+      {
+        "code": 2,
+        "message": "block not found"
+      },
+      {
+        "code": 3,
+        "message": "transaction not found"
+      },
+      {
+        "code": 4,
+        "message": "invalid account identifier"
+      },
+      {
+        "code": 5,
+        "message": "historical UTXO state lookup unavailable"
+      },
+      {
+        "code": 6,
+        "message": "construction or consensus validation failed"
+      },
+      {
+        "code": 7,
+        "message": "invalid request"
+      }
     ]
   },
   "construction": {
@@ -86,14 +120,19 @@
       }
     ],
     "can_build": [
-      "transfer",
-      "nft_mint",
-      "bridge"
+      "input",
+      "output",
+      "fee"
     ],
     "metadata": {
-      "address_format": "20-char uppercase hex",
-      "signature_type": "SHA-256 hash-only",
-      "encryption": "AES-256-GCM"
+      "address_format": "lock:<exact scriptPubKey hex>",
+      "signature_types": [
+        "ecdsa",
+        "trifold (EXCAL extension)",
+        "excal_knot (EXCAL extension)"
+      ],
+      "witness_format": "native EXCAL scriptSig",
+      "broadcast": "Node.sendrawtransaction validation and P2P relay"
     }
   },
   "storage": {

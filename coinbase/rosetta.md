@@ -1,152 +1,144 @@
-# EXCAL Rosetta API Implementation
+# EXCAL Rosetta API
 
-## Overview
+## Implementation
 
-This directory contains the complete [Coinbase Rosetta](https://www.coinbase.com/cloud/developers/rosetta) implementation for the **AetherionEXCAL** blockchain. Rosetta is an open-source framework that provides a standardized API for blockchain connectivity, enabling seamless integration with exchanges, wallets, and enterprise systems.
+The active adapter is in rosetta/excal_rosetta.py with construction logic in
+rosetta/construction.py. It is backed by the live EXCAL ChainState and UTXO
+set. The network identifier is blockchain "excal", network "mainnet" (or
+"testnet" for the test network). Currency is EXCAL / 8 decimals on mainnet
+and tEXCAL / 8 decimals on testnet.
 
-## File Structure
+This is an implementation under validation, not a statement of Coinbase
+approval or Rosetta certification. The production Bitcoin-anchored EXCAL
+chain uses ChainState consensus network "fork"; the Rosetta network identifier
+presented to Coinbase remains "mainnet". These are separate settings.
 
-```
-coinbase/
-├── rosetta-config.json        # Main Rosetta API configuration
-├── rosetta-cli/
-│   ├── config.json            # Rosetta CLI configuration
-│   ├── mainnet.json           # Mainnet network definition
-│   ├── testnet.json           # Testnet network definition
-│   └── bootstrap_tx.json      # Genesis bootstrap transaction
-├── README.md                  # This file
-├── rosetta.md                 # Detailed Rosetta API documentation
-├── listing-proposal.md        # Exchange listing proposal document
-└── coinbase-listing-letter.md # Formal letter to Coinbase listing team
-```
+## Account identifiers
 
-## Network Parameters
+EXCAL account identifiers preserve the exact native locking script:
 
-| Parameter | Mainnet | Testnet |
-|---|---|---|
-| Blockchain | `excal` | `excal` |
-| Network | `mainnet` | `testnet` |
-| Currency | `EXCAL` | `TEXCAL` |
-| Decimals | 8 | 8 |
-| Genesis Block | 0 | 0 |
-| Block Time | 60 seconds | 60 seconds |
-| Max Supply | 21,000,000 | Unlimited |
+    lock:<scriptPubKey hex>
 
-## Operation Types
+They are not 20-character uppercase addresses. The exact script is retained
+so PKH, PQH, HTLC, QHTLC, BRIDGE, OPEN, P2PK and KNOT locks are not collapsed
+into an unrelated ECDSA address format.
 
-| Type | Description | Fungible |
-|---|---|---|
-| `transfer` | Standard EXCAL transfer between addresses | Yes |
-| `coinbase` | Block reward distribution | Yes |
-| `nft_mint` | NFT minting operation | No |
-| `bridge` | Cross-chain bridge transaction | No |
-| `fee` | Transaction fee deduction | Yes |
+## Data API
 
-## Address Format
+- POST /network/list
+- POST /network/options
+- POST /network/status
+- POST /block
+- POST /block/transaction
+- POST /account/balance (current and historical balances via ChainState replay)
+- POST /mempool
+- POST /mempool/transaction
 
-EXCAL uses **20-character uppercase hexadecimal** addresses derived from SHA-256 hash-only signatures. Example:
+Block and mempool operations use lowercase operation types (coinbase and
+transfer) and exact EXCAL script identifiers. Mempool data is only available
+when the adapter is embedded with the live node.
 
-```
-A1B2C3D4E5F6A7B8C9D0
-```
+## Construction API
 
-## Running the Rosetta CLI
+- POST /construction/derive
+- POST /construction/preprocess
+- POST /construction/metadata
+- POST /construction/payloads
+- POST /construction/combine
+- POST /construction/parse
+- POST /construction/hash
+- POST /construction/submit
 
-### Prerequisites
+Supported lock families: PKH, BRIDGE, legacy P2PK, OPEN/OP_TRUE, PQH,
+HTLC, QHTLC and KNOT. Consensus activation gates are enforced. KNOT remains
+staged until its configured activation height; retired legacy locks are
+refused after their retirement height.
 
-- [Rosetta CLI](https://github.com/coinbase/rosetta-cli) installed
-- Rosetta API server running locally
+PQH and QHTLC use the native Trifold witness codec and one-time spent-leaf
+registry. The local signer bridges are rosetta/trifold_signer.py (PQH/QHTLC) and rosetta/knot_signer.py (KNOT). The Trifold bridge requires an
+already-unlocked EXCAL Wallet object. HTLC claim/refund paths require their
+native descriptor, correct key and (for claims) secret. KNOT requires its
+time/preimage witness and descriptor.
 
-### Data Check
+## Signature extensions
 
-```bash
-# Validate mainnet configuration
-rosetta-cli check:data --configuration-file coinbase/rosetta-cli/config.json --network mainnet
+Rosetta does not define a standard signature type for this chain's Trifold
+one-time hash-based witness or KNOT preimage. The adapter advertises the
+chain-specific signature types "trifold" and "excal_knot". They are not
+misrepresented as ECDSA or Ed25519. The exact Rosetta CLI and Coinbase
+integration client must be tested to verify acceptance of these extensions
+before claiming full conformance.
 
-# Validate testnet configuration
-rosetta-cli check:data --configuration-file coinbase/rosetta-cli/config.json --network testnet
-```
+### Target-client acceptance — measured 2026-11-23 (Stage 4)
 
-### Construction Check
+A stock rosetta-cli v0.10.4 / standard Rosetta client **rejects** these
+types in the Construction flow. Evidence:
 
-```bash
-# Validate transaction construction
-rosetta-cli check:construction --configuration-file coinbase/rosetta-cli/config.json --network mainnet
-```
+- The rosetta-sdk-go `types` package defines exactly five
+  `SignatureType` values (`ecdsa`, `ecdsa_recovery`, `ed25519`,
+  `schnorr_1`, `schnorr_poseidon`), and the asserter exposes
+  `SignatureType` validation that fails anything else with "not a
+  supported SignatureType". The v0.10.4 binary carries the same
+  failure strings ("signature type %s is invalid", "signing payload
+  signature type %v is invalid", "cannot determine signature type for
+  payload", "sign: unexpected Signature type while signing"). The
+  CLI's signer can only sign the five standard types, so
+  `check:construction` cannot be run end to end for PQH/QHTLC/KNOT
+  inputs at all — it fails at signing, before the server is involved.
+- `check:data` is **not** evidence about the custom types either way:
+  blocks carry operations only, never signatures, so the Data API
+  never presents a `trifold` or `excal_knot` value to the asserter.
+  The full-range `check:data` run (5,598/49,999 blocks passed, 0
+  failures, when the VM reboot killed it — see `coinbase/README.md`)
+  proves only that the `/network/options` advertisement itself passes
+  asserter validation. Verified live: `rosetta-cli
+  utils:asserter-configuration` against the running server succeeded,
+  and the generated asserter config contains no signature-related key
+  at all — the asserter has no allowlist for signature types.
+- What a third-party client must do: implement the EXCAL signer
+  (local bridges `rosetta/trifold_signer.py` for PQH/QHTLC and
+  `rosetta/knot_signer.py` for KNOT) or equivalent chain-specific
+  code, and bypass/extend the stock asserter's signature-type check
+  for these two values. Read the type from
+  `/network/options` `metadata.excal_extensions`
+  (`trifold_signature_type`, `knot_signature_type`), and read each
+  signing payload's `metadata`: for `trifold`, `hex_bytes` is the
+  32-byte sighash digest to sign with the Trifold one-time key and
+  `Signature.hex_bytes` must be the complete native scriptSig witness
+  bytes, not a 64-byte signature; for `excal_knot`, `hex_bytes` is a
+  correlation digest only — do NOT sign it — and
+  `Signature.hex_bytes` must be the 56-byte preimage witness
+  (16-byte `t_star` followed by the 40-byte KNOT descriptor).
+  `/construction/combine` matches signatures by the exact
+  (digest, signature_type) pair and rejects a witness submitted
+  under the wrong type. Tests:
+  `tests/test_rosetta_custom_signature_types.py` (8 tests).
 
-### Offline Construction Check
+The separate Uruu-Secure-Recovery app currently uses mock verifier signatures
+and synthetic proof acceptance; it is not a production Trifold signer or
+guardian quorum. The EXCAL wallet's trifold_lockbox.py and txpq.py contain the
+actual Trifold signing and verification code. Frostgate is a separate
+Taproot FROST vault and does not sign EXCAL's native locks.
 
-```bash
-# Validate offline transaction building
-rosetta-cli check:construction:offline --configuration-file coinbase/rosetta-cli/config.json --network mainnet
-```
+## Broadcast
 
-## API Endpoints
+Construction submit is enabled only when the adapter is embedded with the
+live EXCAL Node object. It calls Node.dispatch("sendrawtransaction", ...),
+which invokes the ordinary mempool validation and P2P relay path. A
+standalone ChainState-only adapter cannot broadcast.
 
-The Rosetta API exposes the following endpoints:
+## Rosetta CLI validation
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/network/list` | POST | List supported networks |
-| `/network/status` | POST | Get network status and genesis block |
-| `/block` | POST | Get block by identifier |
-| `/block/transactions` | POST | Get transactions in a block |
-| `/mempool` | POST | Get mempool contents |
-| `/mempool/transaction` | POST | Get specific mempool transaction |
-| `/account/balance` | POST | Get account balance |
-| `/construction/derive` | POST | Derive account from public key |
-| `/construction/preprocess` | POST | Preprocess transaction metadata |
-| `/construction/metadata` | POST | Get transaction metadata |
-| `/construction/payloads` | POST | Build transaction payloads |
-| `/construction/combine` | POST | Combine signed payloads |
-| `/construction/parse` | POST | Parse raw transaction |
+Use the profiles in coinbase/rosetta-cli/mainnet.json and
+coinbase/rosetta-cli/testnet.json with coinbase/rosetta-cli/config.json.
+The unit-test workflow is .github/workflows/rosetta-tests.yml.
 
-## Security
-
-- **AES-256-GCM** encryption for all key storage and network messaging
-- **SHA-256 hash-only** signatures — no elliptic curves in the spend path
-- **scrypt KDF** (N=2^14) for passphrase-derived key encryption
-- **Post-quantum Trifold** signatures for block-level countersigning
-
-## Integration Guide
-
-### 1. Start the Rosetta Server
-
-Deploy the Rosetta API server pointing to the EXCAL chain data:
-
-```bash
-# Example (implementation-specific)
-rosetta-server --config coinbase/rosetta-config.json
-```
-
-### 2. Run Validation
-
-```bash
-rosetta-cli check:data --configuration-file coinbase/rosetta-cli/config.json --network mainnet
-```
-
-### 3. Integrate with Exchange
-
-Use the Rosetta API endpoints to:
-- Query balances and transaction history
-- Build and sign transactions
-- Monitor mempool and block confirmations
-
-## Compliance
-
-This implementation follows the [Coinbase Rosetta Specification v1.4.0](https://www.coinbase.com/cloud/developers/rosetta) and provides:
-
-- ✅ Complete Data API (network, blocks, transactions, accounts, mempool)
-- ✅ Complete Construction API (derive, preprocess, payloads, combine, parse)
-- ✅ Standard error codes and messages
-- ✅ Currency and operation type definitions
-- ✅ Bootstrap transaction for genesis block
-
-## References
-
-- [Coinbase Rosetta Documentation](https://www.coinbase.com/cloud/developers/rosetta)
-- [Rosetta GitHub Repository](https://github.com/coinbase/rosetta)
-- [AetherionEXCAL Documentation](https://www.aetherion-oracle.com)
-- [EXCAL Tokenomics](../TOKENOMICS.md)
-- [EXCAL Governance](../GOVERNANCE.md)
-- [EXCAL Security Audit](../AUDIT.md)
+Required before production or a Coinbase conformance claim:
+- Run the complete Python suite and Rosetta CLI check:data.
+- Test all lock witness vectors, malformed-witness rejection, activation
+  boundaries, HTLC timeout paths, Trifold spent-leaf replay, and KNOT gating.
+- Test construction/offline construction with a wallet client that supports
+  EXCAL's custom Trifold and KNOT extension types.
+- Run two-node broadcast/relay, mempool conflict and reorg tests.
+- Obtain independent review of the custom Trifold construction. The existing
+  source audit explicitly says it has no formal security proof.
