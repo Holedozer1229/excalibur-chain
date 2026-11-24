@@ -5,7 +5,7 @@ builds the exact 56-byte native witness and verifies the descriptor
 commitment before returning the chain-specific Rosetta extension object.
 """
 from txscript import parse_tx, sighash_all, sign_knot_input, lock_knot_for_descriptor
-from genesis_fork import knot_activation
+from genesis_fork import KNOT_ACTIVATION, NETWORKS, knot_activation
 
 
 class KnotSignerError(Exception):
@@ -13,12 +13,17 @@ class KnotSignerError(Exception):
 
 
 def build_knot_signature(unsigned_transaction, input_index, lock_hex,
-                         t_star_hex, descriptor_hex, spend_height):
+                         t_star_hex, descriptor_hex, spend_height,
+                         network=None):
     tx = parse_tx(bytes.fromhex(unsigned_transaction))
     i = int(input_index)
     if i < 0 or i >= len(tx["vin"]):
         raise KnotSignerError("input_index out of range")
-    if int(spend_height) < knot_activation():
+    if network is not None and network in NETWORKS:
+        activation = NETWORKS[network].get("knot_activation", KNOT_ACTIVATION)
+    else:
+        activation = knot_activation()
+    if int(spend_height) < activation:
         raise KnotSignerError("KNOT is not activated at target spend height")
     lock = bytes.fromhex(lock_hex)
     descriptor = bytes.fromhex(descriptor_hex)

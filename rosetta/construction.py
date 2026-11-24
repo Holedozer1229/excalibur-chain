@@ -316,7 +316,8 @@ class Construction:
             if self.mempool is not None and self.mempool.chain_spent_pairs is not None:
                 chain_pairs = self.mempool.chain_spent_pairs
             spent = set(chain_pairs) if chain_pairs is not None else set()
-            ok, reason, fee = validate_tx(raw, self.cs.utxo, height, spent_pairs=spent)
+            ok, reason, fee = validate_tx(raw, self.cs.utxo, height, spent_pairs=spent,
+                                          network=self.network)
             if not ok: raise ValueError("EXCAL consensus rejected tx: " + reason)
             return {"signed_transaction": raw.hex(),
                     "transaction_identifier": {"hash": txid_internal(raw)[::-1].hex()},
