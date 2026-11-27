@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate HEIGHTS.md — the live sponsored-height inventory board.
 
-Reads the fork tip (peer RPC 9532, checkpoint file as fallback) and the
+Reads the fork tip (miner RPC 9432, checkpoint file as fallback) and the
 sponsor registry, then lists the next 120 heights with the exact
 prices the payment watcher enforces. The board header names the tip
 source (live RPC or checkpoint fallback) so a stale fallback is
@@ -31,11 +31,15 @@ def price_for(h):
 
 
 def tip():
-    """Return (height, source). Source is 'live' (peer RPC 9532) or
-    'checkpoint' (fallback when the RPC is unreachable after a retry)."""
+    """Return (height, source). Source is 'live' (miner RPC 9432) or
+    'checkpoint' (fallback when the RPC is unreachable after a retry).
+    (Was peer RPC 9532 while miner RPC 9432 was down under the Nov 5
+    stop-mining order; the peer has since stalled at 42888 while the
+    live node is past 50100, so the board now reads the live node —
+    the same RPC payment_watcher.py uses.)"""
     for attempt in range(2):
         try:
-            c = http.client.HTTPConnection("127.0.0.1", 9532, timeout=8)
+            c = http.client.HTTPConnection("127.0.0.1", 9432, timeout=8)
             c.request("POST", "/", json.dumps(
                 {"jsonrpc": "2.0", "id": 1, "method": "getblockcount",
                  "params": []}))
