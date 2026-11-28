@@ -3,7 +3,6 @@ name: Build Android APK
 on:
   push:
     branches: [master]
-    tags: ['v*']
     paths:
       - 'kivy_wallet/**'
       - 'buildozer.spec'
@@ -80,11 +79,8 @@ jobs:
           if-no-files-found: warn
 
       - name: Publish APK to GitHub Release
-        # Only version tags publish: every master push used to attach a
-        # debug APK to the windows-installer-3.0.0 release, which is a
-        # Windows installer tag, not an Android release.
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref == 'refs/heads/master'
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: windows-installer-3.0.0
           files: bin/*.apk
